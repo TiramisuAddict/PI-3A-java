@@ -1,4 +1,4 @@
-package controller.offres;
+/*package controller.offres;
 
 import entity.EtatOffre;
 import entity.Offre;
@@ -222,4 +222,4 @@ public class OffresController {
             selectedPathCard.getStyleClass().remove("card-selected");
         }
     }
-}
+} */
