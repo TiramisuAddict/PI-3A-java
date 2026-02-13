@@ -8,6 +8,7 @@ import javafx.scene.Scene;
 import javafx.stage.Stage;
 
 import javafx.scene.image.Image;
+
 import java.io.IOException;
 
 public class App extends Application {
@@ -31,6 +32,14 @@ public class App extends Application {
 
             Image appIcon = new Image(getClass().getResourceAsStream("/icons/logo.png"));
             stage.getIcons().add(appIcon);
+
+            //Minimum size of the window
+            stage.setMinWidth(1160);
+            stage.setMinHeight(700);
+
+            //Default size of the window when launched
+            stage.setWidth(1160);
+            stage.setHeight(700);
 
             stage.setTitle("Momentum");
             stage.setScene(scene);

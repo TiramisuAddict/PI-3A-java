@@ -47,7 +47,7 @@
                 <artifactId>javafx-maven-plugin</artifactId>
                 <version>0.0.8</version>
                 <configuration>
-                    <mainClass>Controleur.Home</mainClass>
+                    <mainClass>controller.App</mainClass>
                 </configuration>
             </plugin>
         </plugins>

@@ -16,7 +16,7 @@
 
 <BorderPane fx:id="rootPane" prefHeight="573.0" prefWidth="918.0" stylesheets="@customTheme.css" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controller.MainViewController">
     <left>
-        <VBox fx:id="sidebar" prefWidth="68.0" styleClass="sidebar" BorderPane.alignment="CENTER">
+        <VBox fx:id="sidebar" prefWidth="68.0" styleClass="sidebar" BorderPane.alignment="CENTER" >
             <children>
                 <!-- Toggle Menu Button -->
                 <Button fx:id="btnToggle" maxWidth="Infinity" onAction="#handleToggleSidebar" styleClass="nav-button, logo-button">
@@ -73,8 +73,7 @@
                                 </HBox>
                             </graphic>
                         </Button>
-                        <!-- Add Send, Users, etc., same as above -->
-                        <!-- DEMANDES -->
+                        <!-- DEMANDE -->
                         <Button fx:id="btnDemande" maxWidth="Infinity" onAction="#showDemande" styleClass="nav-button">
                             <graphic>
                                 <HBox alignment="CENTER_LEFT" spacing="20">
