@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+
+<VBox prefHeight="500.0" prefWidth="450.0" spacing="20.0" style="-fx-background-color: -color-base-0;" stylesheets="@customTheme.css" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controller.formations.inscription_formationController">
+    <padding>
+        <Insets bottom="25.0" left="25.0" right="25.0" top="25.0" />
+    </padding>
+    <children>
+        <!-- Header -->
+        <VBox spacing="5.0">
+            <children>
+                <Label style="-fx-font-weight: bold; -fx-font-size: 22px;" text="Inscription à la Formation" />
+                <Label text="Veuillez confirmer votre inscription" textFill="#6e6e6e">
+                    <font>
+                        <Font size="13.0" />
+                    </font>
+                </Label>
+            </children>
+        </VBox>
+
+        <Separator />
+
+        <!-- Formation Details -->
+        <VBox spacing="15.0" style="-fx-background-color: -color-bg-subtle; -fx-background-radius: 5; -fx-padding: 15; -fx-border-color: -color-border-muted; -fx-border-radius: 5;">
+            <children>
+                <Label style="-fx-font-weight: bold; -fx-font-size: 14px;" text="Détails de la Formation" />
+
+                <HBox spacing="10.0">
+                    <children>
+                        <Label style="-fx-font-weight: bold;" text="Titre:" />
+                        <Label fx:id="lblTitre" text="-" />
+                    </children>
+                </HBox>
+
+                <HBox spacing="10.0">
+                    <children>
+                        <Label style="-fx-font-weight: bold;" text="Organisme:" />
+                        <Label fx:id="lblOrganisme" text="-" />
+                    </children>
+                </HBox>
+
+                <HBox spacing="10.0">
+                    <children>
+                        <Label style="-fx-font-weight: bold;" text="Dates:" />
+                        <Label fx:id="lblDates" text="-" />
+                    </children>
+                </HBox>
+
+                <HBox spacing="10.0">
+                    <children>
+                        <Label style="-fx-font-weight: bold;" text="Lieu:" />
+                        <Label fx:id="lblLieu" text="-" />
+                    </children>
+                </HBox>
+
+                <HBox spacing="10.0">
+                    <children>
+                        <Label style="-fx-font-weight: bold;" text="Capacité:" />
+                        <Label fx:id="lblCapacite" text="-" />
+                    </children>
+                </HBox>
+            </children>
+        </VBox>
+
+        <Separator />
+
+        <!-- Employee Info (Temporary until authentication is integrated) -->
+        <VBox spacing="10.0">
+            <children>
+                <Label style="-fx-font-weight: bold; -fx-font-size: 14px;" text="Informations de l'Employé" />
+
+                <VBox spacing="5.0">
+                    <children>
+                        <Label text="Sélectionner un Employé" />
+                        <ComboBox fx:id="comboEmploye" maxWidth="Infinity" promptText="Choisir un employé..." />
+                        <Label style="-fx-font-size: 11px;" text="Note: L'ID sera automatiquement récupéré après l'intégration de l'authentification" textFill="#868686" wrapText="true" />
+                    </children>
+                </VBox>
+
+                <VBox spacing="5.0">
+                    <children>
+                        <Label text="Statut de l'inscription" />
+                        <ComboBox fx:id="comboStatut" disable="true" maxWidth="Infinity" />
+                    </children>
+                </VBox>
+            </children>
+        </VBox>
+
+        <!-- Spacer -->
+        <VBox VBox.vgrow="ALWAYS" />
+
+        <!-- Action Buttons -->
+        <VBox spacing="10.0">
+            <children>
+                <Button fx:id="btnInscrire" maxWidth="Infinity" onAction="#handleInscription" prefHeight="40.0" styleClass="accent" text="Confirmer l'Inscription" />
+                <Button fx:id="btnAnnuler" maxWidth="Infinity" onAction="#handleAnnuler" prefHeight="35.0" styleClass="outline" text="Annuler" />
+            </children>
+        </VBox>
+    </children>
+</VBox>
+

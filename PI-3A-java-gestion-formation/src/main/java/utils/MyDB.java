@@ -2,7 +2,7 @@ package utils;
 import java.sql.*;
 public class MyDB {
     private Connection conn;
-    final private String URL = "jdbc:mysql://localhost:3306/momentum";
+    private static final String URL = "jdbc:mysql://localhost:3306/gestion_formation";
     final private String USER = "root";
     final private String PASS = "";
     private static MyDB instance;
