@@ -9,86 +9,77 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
-<VBox prefHeight="500.0" prefWidth="450.0" spacing="20.0" style="-fx-background-color: -color-base-0;" stylesheets="@customTheme.css" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controller.formations.inscription_formationController">
+<VBox prefHeight="550.0" prefWidth="500.0" spacing="20.0" style="-fx-background-color: -color-base-0;" stylesheets="@customTheme.css" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controller.formations.inscription_formationController">
     <padding>
-        <Insets bottom="25.0" left="25.0" right="25.0" top="25.0" />
+        <Insets bottom="30.0" left="30.0" right="30.0" top="30.0" />
     </padding>
     <children>
-        <!-- Header -->
-        <VBox spacing="5.0">
+        <!-- Header amélioré avec gradient -->
+        <VBox spacing="10.0" style="-fx-background-color: linear-gradient(to right, #667eea 0%, #764ba2 100%); -fx-background-radius: 10; -fx-padding: 20; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 15, 0, 0, 3);">
             <children>
-                <Label style="-fx-font-weight: bold; -fx-font-size: 22px;" text="Inscription à la Formation" />
-                <Label text="Veuillez confirmer votre inscription" textFill="#6e6e6e">
-                    <font>
-                        <Font size="13.0" />
-                    </font>
-                </Label>
+                <Label style="-fx-font-weight: bold; -fx-font-size: 24px; -fx-text-fill: white;" text="✏️ Inscription à la Formation" />
+                <Label text="Confirmez votre participation à cette formation" style="-fx-text-fill: rgba(255,255,255,0.9); -fx-font-size: 13px;" />
             </children>
         </VBox>
 
-        <Separator />
-
-        <!-- Formation Details -->
-        <VBox spacing="15.0" style="-fx-background-color: -color-bg-subtle; -fx-background-radius: 5; -fx-padding: 15; -fx-border-color: -color-border-muted; -fx-border-radius: 5;">
+        <!-- Formation Details avec style amélioré -->
+        <VBox spacing="15.0" style="-fx-background-color: linear-gradient(from 0% 0% to 100% 100%, #f5f7fa 0%, #c3cfe2 100%); -fx-background-radius: 10; -fx-padding: 20; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 8, 0, 0, 2);">
             <children>
-                <Label style="-fx-font-weight: bold; -fx-font-size: 14px;" text="Détails de la Formation" />
+                <Label style="-fx-font-weight: bold; -fx-font-size: 16px; -fx-text-fill: #2c3e50;" text="📚 Détails de la Formation" />
 
                 <HBox spacing="10.0">
                     <children>
-                        <Label style="-fx-font-weight: bold;" text="Titre:" />
-                        <Label fx:id="lblTitre" text="-" />
+                        <Label style="-fx-font-weight: bold; -fx-text-fill: #34495e;" text="📌 Titre:" />
+                        <Label fx:id="lblTitre" text="-" style="-fx-text-fill: #2c3e50;" />
                     </children>
                 </HBox>
 
                 <HBox spacing="10.0">
                     <children>
-                        <Label style="-fx-font-weight: bold;" text="Organisme:" />
-                        <Label fx:id="lblOrganisme" text="-" />
+                        <Label style="-fx-font-weight: bold; -fx-text-fill: #34495e;" text="🏢 Organisme:" />
+                        <Label fx:id="lblOrganisme" text="-" style="-fx-text-fill: #2c3e50;" />
                     </children>
                 </HBox>
 
                 <HBox spacing="10.0">
                     <children>
-                        <Label style="-fx-font-weight: bold;" text="Dates:" />
-                        <Label fx:id="lblDates" text="-" />
+                        <Label style="-fx-font-weight: bold; -fx-text-fill: #34495e;" text="📅 Dates:" />
+                        <Label fx:id="lblDates" text="-" style="-fx-text-fill: #2c3e50;" />
                     </children>
                 </HBox>
 
                 <HBox spacing="10.0">
                     <children>
-                        <Label style="-fx-font-weight: bold;" text="Lieu:" />
-                        <Label fx:id="lblLieu" text="-" />
+                        <Label style="-fx-font-weight: bold; -fx-text-fill: #34495e;" text="📍 Lieu:" />
+                        <Label fx:id="lblLieu" text="-" style="-fx-text-fill: #2c3e50;" />
                     </children>
                 </HBox>
 
                 <HBox spacing="10.0">
                     <children>
-                        <Label style="-fx-font-weight: bold;" text="Capacité:" />
-                        <Label fx:id="lblCapacite" text="-" />
+                        <Label style="-fx-font-weight: bold; -fx-text-fill: #34495e;" text="👥 Capacité:" />
+                        <Label fx:id="lblCapacite" text="-" style="-fx-text-fill: #2c3e50;" />
                     </children>
                 </HBox>
             </children>
         </VBox>
 
-        <Separator />
-
-        <!-- Employee Info (Temporary until authentication is integrated) -->
-        <VBox spacing="10.0">
+        <!-- Employee Info avec style moderne -->
+        <VBox spacing="12.0">
             <children>
-                <Label style="-fx-font-weight: bold; -fx-font-size: 14px;" text="Informations de l'Employé" />
+                <Label style="-fx-font-weight: bold; -fx-font-size: 15px;" text="👤 Informations du Participant" />
 
-                <VBox spacing="5.0">
+                <HBox spacing="10.0" style="-fx-background-color: linear-gradient(from 0% 0% to 100% 100%, #e3f2fd 0%, #bbdefb 100%); -fx-background-radius: 8; -fx-padding: 15; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.08), 5, 0, 0, 1);">
                     <children>
-                        <Label text="Sélectionner un Employé" />
-                        <ComboBox fx:id="comboEmploye" maxWidth="Infinity" promptText="Choisir un employé..." />
-                        <Label style="-fx-font-size: 11px;" text="Note: L'ID sera automatiquement récupéré après l'intégration de l'authentification" textFill="#868686" wrapText="true" />
+                        <Label style="-fx-font-weight: 600; -fx-text-fill: #1976d2;" text="✓ Employé connecté:" />
+                        <Label fx:id="lblEmployeConnecte" text="-" style="-fx-text-fill: #0d47a1; -fx-font-weight: bold;" />
                     </children>
-                </VBox>
+                </HBox>
 
-                <VBox spacing="5.0">
+                <VBox spacing="8.0">
                     <children>
-                        <Label text="Statut de l'inscription" />
-                        <ComboBox fx:id="comboStatut" disable="true" maxWidth="Infinity" />
+                        <Label text="📊 Statut de l'inscription" style="-fx-font-size: 13px; -fx-font-weight: 500;" />
+                        <ComboBox fx:id="comboStatut" disable="true" maxWidth="Infinity" style="-fx-background-color: #f5f5f5; -fx-opacity: 0.8;" />
                     </children>
                 </VBox>
             </children>
@@ -97,11 +88,11 @@
         <!-- Spacer -->
         <VBox VBox.vgrow="ALWAYS" />
 
-        <!-- Action Buttons -->
-        <VBox spacing="10.0">
+        <!-- Action Buttons avec meilleur design -->
+        <VBox spacing="12.0">
             <children>
-                <Button fx:id="btnInscrire" maxWidth="Infinity" onAction="#handleInscription" prefHeight="40.0" styleClass="accent" text="Confirmer l'Inscription" />
-                <Button fx:id="btnAnnuler" maxWidth="Infinity" onAction="#handleAnnuler" prefHeight="35.0" styleClass="outline" text="Annuler" />
+                <Button fx:id="btnInscrire" maxWidth="Infinity" onAction="#handleInscription" prefHeight="45.0" style="-fx-background-color: linear-gradient(to right, #667eea 0%, #764ba2 100%); -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 14px; -fx-background-radius: 8; -fx-cursor: hand; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 10, 0, 0, 3);" text="✓ Confirmer l'Inscription" />
+                <Button fx:id="btnAnnuler" maxWidth="Infinity" onAction="#handleAnnuler" prefHeight="38.0" style="-fx-background-color: transparent; -fx-border-color: #95a5a6; -fx-border-width: 1.5; -fx-text-fill: #7f8c8d; -fx-font-weight: 500; -fx-background-radius: 8; -fx-border-radius: 8; -fx-cursor: hand;" text="✗ Annuler" />
             </children>
         </VBox>
     </children>

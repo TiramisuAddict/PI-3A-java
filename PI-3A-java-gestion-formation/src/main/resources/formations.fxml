@@ -32,52 +32,52 @@
                                     </padding>
                                     <children>
 
-                                        <!-- HEADER -->
-                                        <HBox alignment="CENTER_LEFT" spacing="15.0">
+                                        <!-- HEADER amélioré -->
+                                        <HBox alignment="CENTER_LEFT" spacing="15.0" style="-fx-background-color: linear-gradient(to right, #667eea 0%, #764ba2 100%); -fx-background-radius: 10; -fx-padding: 20; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 15, 0, 0, 3);">
                                             <children>
                                                 <VBox HBox.hgrow="ALWAYS">
                                                     <children>
-                                                        <Label style="-fx-font-weight: bold; -fx-font-size: 24px;" text="Dashboard des Formations" />
-                                                        <Label text="Visualisez et gérez vos sessions de formation" textFill="#6e6e6e" />
+                                                        <Label style="-fx-font-weight: bold; -fx-font-size: 26px; -fx-text-fill: white;" text="📚 Dashboard des Formations" />
+                                                        <Label text="Visualisez et gérez vos sessions de formation" style="-fx-text-fill: rgba(255,255,255,0.9); -fx-font-size: 14px;" />
                                                     </children>
                                                 </VBox>
-                                                <Button mnemonicParsing="false" onAction="#handleNewFormation" prefHeight="35.0" styleClass="accent" text="+ Créer une Formation" />
+                                                <Button mnemonicParsing="false" onAction="#handleNewFormation" prefHeight="40.0" style="-fx-background-color: white; -fx-text-fill: #667eea; -fx-font-weight: bold; -fx-background-radius: 8; -fx-cursor: hand; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 8, 0, 0, 2);" text="✨ Créer une Formation" />
                                             </children>
                                         </HBox>
 
                                         <FlowPane fx:id="statisticsPane" prefHeight="199.0" prefWidth="608.0">
                                             <children>
-                                                <VBox prefWidth="180.0" style="-fx-background-color: -color-bg-subtle; -fx-background-radius: 5; -fx-padding: 15; -fx-border-color: -color-border-muted; -fx-border-radius: 5;">
+                                                <VBox prefWidth="180.0" style="-fx-background-color: linear-gradient(from 0% 0% to 100% 100%, #667eea 0%, #764ba2 100%); -fx-background-radius: 12; -fx-padding: 20; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 10, 0, 0, 3);">
                                                     <children>
-                                                        <Label text="Total" textFill="#868686" />
-                                                        <Label fx:id="lblTotal" style="-fx-font-size: 22; -fx-font-weight: bold;" text="0" />
+                                                        <Label text="📊 Total" style="-fx-text-fill: rgba(255,255,255,0.9); -fx-font-size: 13px; -fx-font-weight: 500;" />
+                                                        <Label fx:id="lblTotal" style="-fx-font-size: 32; -fx-font-weight: bold; -fx-text-fill: white;" text="0" />
                                                     </children>
                                                     <FlowPane.margin>
                                                         <Insets left="10.0" right="10.0" top="20.0" />
                                                     </FlowPane.margin>
                                                 </VBox>
-                                                <VBox prefWidth="180.0" style="-fx-background-color: -color-bg-subtle; -fx-background-radius: 5; -fx-padding: 15; -fx-border-color: -color-border-muted; -fx-border-radius: 5;">
+                                                <VBox prefWidth="180.0" style="-fx-background-color: linear-gradient(from 0% 0% to 100% 100%, #f093fb 0%, #f5576c 100%); -fx-background-radius: 12; -fx-padding: 20; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 10, 0, 0, 3);">
                                                     <children>
-                                                        <Label text="A venir" textFill="#868686" />
-                                                        <Label fx:id="lblUpcoming" style="-fx-font-size: 22; -fx-font-weight: bold;" text="0" />
+                                                        <Label text="🔜 À venir" style="-fx-text-fill: rgba(255,255,255,0.9); -fx-font-size: 13px; -fx-font-weight: 500;" />
+                                                        <Label fx:id="lblUpcoming" style="-fx-font-size: 32; -fx-font-weight: bold; -fx-text-fill: white;" text="0" />
                                                     </children>
                                                     <FlowPane.margin>
                                                         <Insets left="10.0" right="10.0" top="20.0" />
                                                     </FlowPane.margin>
                                                 </VBox>
-                                                <VBox prefWidth="180.0" style="-fx-background-color: -color-bg-subtle; -fx-background-radius: 5; -fx-padding: 15; -fx-border-color: -color-border-muted; -fx-border-radius: 5;">
+                                                <VBox prefWidth="180.0" style="-fx-background-color: linear-gradient(from 0% 0% to 100% 100%, #4facfe 0%, #00f2fe 100%); -fx-background-radius: 12; -fx-padding: 20; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 10, 0, 0, 3);">
                                                     <children>
-                                                        <Label text="En cours" textFill="#868686" />
-                                                        <Label fx:id="lblOngoing" style="-fx-font-size: 22; -fx-font-weight: bold;" text="0" />
+                                                        <Label text="⏳ En cours" style="-fx-text-fill: rgba(255,255,255,0.9); -fx-font-size: 13px; -fx-font-weight: 500;" />
+                                                        <Label fx:id="lblOngoing" style="-fx-font-size: 32; -fx-font-weight: bold; -fx-text-fill: white;" text="0" />
                                                     </children>
                                                     <FlowPane.margin>
                                                         <Insets left="10.0" right="10.0" top="20.0" />
                                                     </FlowPane.margin>
                                                 </VBox>
-                                                <VBox prefWidth="180.0" style="-fx-background-color: -color-bg-subtle; -fx-background-radius: 5; -fx-padding: 15; -fx-border-color: -color-border-muted; -fx-border-radius: 5;">
+                                                <VBox prefWidth="180.0" style="-fx-background-color: linear-gradient(from 0% 0% to 100% 100%, #43e97b 0%, #38f9d7 100%); -fx-background-radius: 12; -fx-padding: 20; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 10, 0, 0, 3);">
                                                     <children>
-                                                        <Label text="Terminees" textFill="#868686" />
-                                                        <Label fx:id="lblCompleted" style="-fx-font-size: 22; -fx-font-weight: bold;" text="0" />
+                                                        <Label text="✅ Terminées" style="-fx-text-fill: rgba(255,255,255,0.9); -fx-font-size: 13px; -fx-font-weight: 500;" />
+                                                        <Label fx:id="lblCompleted" style="-fx-font-size: 32; -fx-font-weight: bold; -fx-text-fill: white;" text="0" />
                                                     </children>
                                                     <FlowPane.margin>
                                                         <Insets left="10.0" right="10.0" top="20.0" />
@@ -112,13 +112,19 @@
                                     </children>
                                 </VBox>
 
-                                <!-- FORM PANEL -->
+                                <!-- FORM PANEL avec header amélioré -->
                                 <VBox prefWidth="350.0" spacing="20.0" style="-fx-background-color: -color-base-0; -fx-border-color: -color-border-muted; -fx-border-width: 0 0 0 1;">
                                     <padding>
                                         <Insets bottom="25.0" left="25.0" right="25.0" top="25.0" />
                                     </padding>
                                     <children>
-                                        <Label style="-fx-font-weight: bold; -fx-font-size: 18px;" text="Details de la Formation" />
+                                        <!-- Header avec icône -->
+                                        <VBox spacing="8.0">
+                                            <children>
+                                                <Label style="-fx-font-weight: bold; -fx-font-size: 20px;" text="📝 Détails de la Formation" />
+                                                <Label text="Remplissez le formulaire ci-dessous" style="-fx-text-fill: #6e6e6e; -fx-font-size: 12px;" />
+                                            </children>
+                                        </VBox>
                                         <Separator />
 
                                         <VBox spacing="15.0" VBox.vgrow="ALWAYS">
@@ -185,13 +191,13 @@
                                 <Insets bottom="25.0" left="25.0" right="25.0" top="25.0" />
                             </padding>
                             <children>
-                                <!-- HEADER -->
-                                <HBox alignment="CENTER_LEFT" spacing="15.0">
+                                <!-- HEADER amélioré -->
+                                <HBox alignment="CENTER_LEFT" spacing="15.0" style="-fx-background-color: linear-gradient(to right, #f093fb 0%, #f5576c 100%); -fx-background-radius: 10; -fx-padding: 20; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 15, 0, 0, 3);">
                                     <children>
                                         <VBox HBox.hgrow="ALWAYS">
                                             <children>
-                                                <Label style="-fx-font-weight: bold; -fx-font-size: 24px;" text="Formations Disponibles" />
-                                                <Label text="Découvrez et inscrivez-vous aux formations proposées" textFill="#6e6e6e" />
+                                                <Label style="-fx-font-weight: bold; -fx-font-size: 26px; -fx-text-fill: white;" text="🎓 Formations Disponibles" />
+                                                <Label text="Découvrez et inscrivez-vous aux formations proposées" style="-fx-text-fill: rgba(255,255,255,0.9); -fx-font-size: 14px;" />
                                             </children>
                                         </VBox>
                                     </children>

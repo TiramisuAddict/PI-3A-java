@@ -29,6 +29,7 @@ import javafx.scene.Scene;
 import javafx.stage.Stage;
 import java.io.IOException;
 import java.sql.SQLException;
+import utils.SessionManager;
 
 public class FormationsController {
 
@@ -77,8 +78,6 @@ public class FormationsController {
     private final formationCRUD formationService = new formationCRUD();
     private final inscription_formationCRUD inscriptionService = new inscription_formationCRUD();
 
-    // ID employé temporaire (sera remplacé par l'authentification)
-    private final int CURRENT_EMPLOYE_ID = 19; // TODO: Remplacer par l'ID de l'utilisateur connecté
 
     @FXML
     private void initialize() {
@@ -112,6 +111,7 @@ public class FormationsController {
             showAlert(AlertType.INFORMATION, "Succes", "Formation ajoutee avec succes.");
             clearForm();
             refreshFormations();
+            refreshAvailableFormations(); // Rafraîchir aussi la liste employé
         } catch (Exception e) {
             showAlert(AlertType.ERROR, "Erreur", "Echec de l'ajout: " + e.getMessage());
         }
@@ -165,24 +165,27 @@ public class FormationsController {
         formationsContainer.getChildren().clear();
 
         for (formation f : formations) {
-            VBox card = new VBox(8);
-            card.setStyle("-fx-background-color: -color-bg-subtle; -fx-background-radius: 6; " +
-                    "-fx-padding: 12; -fx-border-color: -color-border-muted; -fx-border-radius: 6;");
+            VBox card = new VBox(12);
+            card.setStyle("-fx-background-color: white; -fx-background-radius: 12; " +
+                    "-fx-padding: 20; -fx-border-color: #e0e0e0; -fx-border-radius: 12; -fx-border-width: 1; " +
+                    "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.08), 8, 0, 0, 2);");
 
             // Header avec titre et badge
             HBox headerRow = new HBox(10);
             headerRow.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
 
             Label title = new Label(f.getTitre());
-            title.setFont(Font.font(title.getFont().getFamily(), FontWeight.BOLD, 14));
+            title.setFont(Font.font(title.getFont().getFamily(), FontWeight.BOLD, 16));
+            title.setStyle("-fx-text-fill: #2c3e50;");
 
             // Badge pour les inscriptions en attente
             try {
                 int pendingCount = inscriptionService.countPendingInscriptions(f.getId_formation());
                 if (pendingCount > 0) {
                     Label badge = new Label(pendingCount + " en attente");
-                    badge.setStyle("-fx-background-color: #ff9800; -fx-text-fill: white; " +
-                            "-fx-padding: 2 8 2 8; -fx-background-radius: 10; -fx-font-size: 11px;");
+                    badge.setStyle("-fx-background-color: linear-gradient(to right, #ff9800, #ff5722); " +
+                            "-fx-text-fill: white; -fx-padding: 4 12 4 12; -fx-background-radius: 15; " +
+                            "-fx-font-size: 11px; -fx-font-weight: 600;");
                     headerRow.getChildren().addAll(title, badge);
                 } else {
                     headerRow.getChildren().add(title);
@@ -191,30 +194,46 @@ public class FormationsController {
                 headerRow.getChildren().add(title);
             }
 
-            Label organisme = new Label("Organisme: " + safeText(f.getOrganisme()));
+            Label organisme = new Label("🏢 Organisme: " + safeText(f.getOrganisme()));
+            organisme.setStyle("-fx-text-fill: #555; -fx-font-size: 13px;");
 
             String dates = formatDateRange(f.getDate_debut(), f.getDate_fin());
-            Label dateRange = new Label("Dates: " + dates);
+            Label dateRange = new Label("📅 Dates: " + dates);
+            dateRange.setStyle("-fx-text-fill: #555; -fx-font-size: 13px;");
 
-            Label lieu = new Label("Lieu: " + safeText(f.getLieu()));
-            Label capacite = new Label("Capacite: " + safeText(f.getCapacite()));
+            Label lieu = new Label("📍 Lieu: " + safeText(f.getLieu()));
+            lieu.setStyle("-fx-text-fill: #555; -fx-font-size: 13px;");
 
-            HBox metaRow = new HBox(12, lieu, capacite);
+            Label capacite = new Label("👥 Capacité: " + safeText(f.getCapacite()));
+            capacite.setStyle("-fx-text-fill: #555; -fx-font-size: 13px;");
+
+            HBox metaRow = new HBox(15, lieu, capacite);
             metaRow.setFillHeight(true);
 
-            Button btnEdit = new Button("Modifier");
-            btnEdit.getStyleClass().add("accent");
+            // Boutons modernes avec icônes et styles améliorés
+            Button btnEdit = new Button("✏️ Modifier");
+            btnEdit.setStyle("-fx-background-color: linear-gradient(to right, #667eea, #764ba2); " +
+                    "-fx-text-fill: white; -fx-font-weight: 600; -fx-background-radius: 8; " +
+                    "-fx-padding: 8 16 8 16; -fx-cursor: hand; -fx-font-size: 12px; " +
+                    "-fx-effect: dropshadow(gaussian, rgba(102,126,234,0.4), 6, 0, 0, 2);");
             btnEdit.setOnAction(event -> openEditWindow(event, f));
 
-            Button btnDeleteCard = new Button("Supprimer");
-            btnDeleteCard.getStyleClass().addAll("danger", "outline");
+            Button btnDeleteCard = new Button("🗑️ Supprimer");
+            btnDeleteCard.setStyle("-fx-background-color: transparent; -fx-border-color: #e74c3c; " +
+                    "-fx-border-width: 1.5; -fx-border-radius: 8; -fx-text-fill: #e74c3c; " +
+                    "-fx-font-weight: 600; -fx-background-radius: 8; -fx-padding: 8 16 8 16; " +
+                    "-fx-cursor: hand; -fx-font-size: 12px;");
             btnDeleteCard.setOnAction(event -> handleDeleteFromCard(f));
 
-            Button btnAccept = new Button("Accepter Inscriptions");
-            btnAccept.getStyleClass().addAll("accent", "outline");
+            Button btnAccept = new Button("✓ Gérer Inscriptions");
+            btnAccept.setStyle("-fx-background-color: linear-gradient(to right, #43e97b, #38f9d7); " +
+                    "-fx-text-fill: white; -fx-font-weight: 600; -fx-background-radius: 8; " +
+                    "-fx-padding: 8 16 8 16; -fx-cursor: hand; -fx-font-size: 12px; " +
+                    "-fx-effect: dropshadow(gaussian, rgba(67,233,123,0.4), 6, 0, 0, 2);");
             btnAccept.setOnAction(event -> openAcceptInscriptionsWindow(event, f));
 
             HBox actionsRow = new HBox(10, btnEdit, btnDeleteCard, btnAccept);
+            actionsRow.setStyle("-fx-padding: 10 0 0 0;");
 
             card.getChildren().addAll(headerRow, organisme, dateRange, metaRow, actionsRow);
             formationsContainer.getChildren().add(card);
@@ -227,7 +246,10 @@ public class FormationsController {
             Parent root = loader.load();
 
             EditFormationController controller = loader.getController();
-            controller.setFormation(f, this::refreshFormations);
+            controller.setFormation(f, () -> {
+                refreshFormations();
+                refreshAvailableFormations(); // Rafraîchir aussi la liste employé
+            });
 
             Stage stage = new Stage();
             stage.setTitle("Modifier une formation");
@@ -271,6 +293,7 @@ public class FormationsController {
             try {
                 formationService.supprimer(f.getId_formation());
                 refreshFormations();
+                refreshAvailableFormations(); // Rafraîchir aussi la liste employé
             } catch (Exception e) {
                 showAlert(AlertType.ERROR, "Erreur", "Echec de la suppression: " + e.getMessage());
             }
@@ -342,56 +365,75 @@ public class FormationsController {
         availableFormationsContainer.getChildren().clear();
 
         for (formation f : formations) {
-            VBox card = new VBox(10);
-            card.setStyle("-fx-background-color: -color-bg-subtle; -fx-background-radius: 8; " +
-                    "-fx-padding: 18; -fx-border-color: -color-border-muted; -fx-border-radius: 8;");
+            VBox card = new VBox(12);
+            card.setStyle("-fx-background-color: white; -fx-background-radius: 12; " +
+                    "-fx-padding: 20; -fx-border-color: #e0e0e0; -fx-border-radius: 12; -fx-border-width: 1; " +
+                    "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.08), 8, 0, 0, 2);");
 
             Label title = new Label(f.getTitre());
-            title.setFont(Font.font(title.getFont().getFamily(), FontWeight.BOLD, 16));
-            title.setStyle("-fx-text-fill: -color-fg-default;");
+            title.setFont(Font.font(title.getFont().getFamily(), FontWeight.BOLD, 18));
+            title.setStyle("-fx-text-fill: #2c3e50;");
 
-            Label organisme = new Label("📍 Organisme: " + safeText(f.getOrganisme()));
-            organisme.setStyle("-fx-text-fill: -color-fg-muted;");
+            Label organisme = new Label("🏢 Organisme: " + safeText(f.getOrganisme()));
+            organisme.setStyle("-fx-text-fill: #555; -fx-font-size: 14px;");
 
             String dates = formatDateRange(f.getDate_debut(), f.getDate_fin());
             Label dateRange = new Label("📅 Dates: " + dates);
-            dateRange.setStyle("-fx-text-fill: -color-fg-muted;");
+            dateRange.setStyle("-fx-text-fill: #555; -fx-font-size: 14px;");
 
-            Label lieu = new Label("🏢 Lieu: " + safeText(f.getLieu()));
-            lieu.setStyle("-fx-text-fill: -color-fg-muted;");
+            Label lieu = new Label("📍 Lieu: " + safeText(f.getLieu()));
+            lieu.setStyle("-fx-text-fill: #555; -fx-font-size: 14px;");
 
             Label capacite = new Label("👥 Capacité: " + safeText(f.getCapacite()) + " places");
-            capacite.setStyle("-fx-text-fill: -color-fg-muted;");
+            capacite.setStyle("-fx-text-fill: #555; -fx-font-size: 14px;");
 
             // Vérifier si l'employé est déjà inscrit
+            // Utiliser l'ID de l'employé connecté via SessionManager
+            Integer currentEmployeId = SessionManager.getCurrentEmployeId();
+
+            if (currentEmployeId == null) {
+                // Aucun employé connecté
+                Label warningLabel = new Label("⚠️ Veuillez vous connecter pour vous inscrire");
+                warningLabel.setStyle("-fx-text-fill: #ff9800; -fx-font-weight: bold; -fx-font-size: 14px; " +
+                        "-fx-background-color: #fff3e0; -fx-padding: 10; -fx-background-radius: 6;");
+
+                card.getChildren().addAll(title, organisme, dateRange, lieu, capacite, warningLabel);
+                availableFormationsContainer.getChildren().add(card);
+                continue;
+            }
+
             try {
                 inscription_formation existingInscription = inscriptionService.getInscriptionByFormationAndEmploye(
-                    f.getId_formation(), CURRENT_EMPLOYE_ID
+                    f.getId_formation(), currentEmployeId
                 );
 
                 if (existingInscription != null) {
                     // Déjà inscrit - Vérifier le statut
                     StatutInscription statut = existingInscription.getStatut();
 
-                    Label statutLabel = new Label("Statut: " + getStatutText(statut));
+                    Label statutLabel = new Label("📊 " + getStatutText(statut));
                     statutLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: " +
-                        getStatutColor(statut) + "; -fx-font-size: 14px;");
+                        getStatutColor(statut) + "; -fx-font-size: 15px; -fx-padding: 8 12 8 12; " +
+                        "-fx-background-color: " + getStatutBgColor(statut) + "; -fx-background-radius: 8;");
 
                     if (statut == StatutInscription.ACCEPTEE) {
                         // Inscription acceptée - Ne pas permettre l'annulation
-                        Label infoLabel = new Label("✓ Vous êtes inscrit(e) à cette formation");
-                        infoLabel.setStyle("-fx-text-fill: #4caf50; -fx-font-weight: bold; -fx-font-size: 13px;");
+                        Label infoLabel = new Label("✅ Vous êtes inscrit(e) à cette formation");
+                        infoLabel.setStyle("-fx-text-fill: #4caf50; -fx-font-weight: 600; -fx-font-size: 14px;");
 
                         card.getChildren().addAll(title, organisme, dateRange, lieu, capacite, statutLabel, infoLabel);
 
                     } else if (statut == StatutInscription.REFUSEE) {
                         // Inscription refusée - Permettre de se réinscrire
-                        Label infoLabel = new Label("Votre inscription a été refusée. Vous pouvez réessayer.");
-                        infoLabel.setStyle("-fx-text-fill: #f44336; -fx-font-size: 12px;");
+                        Label infoLabel = new Label("❌ Votre inscription a été refusée. Vous pouvez réessayer.");
+                        infoLabel.setStyle("-fx-text-fill: #f44336; -fx-font-size: 13px;");
 
-                        Button btnReinscrire = new Button("↻ Réessayer l'inscription");
-                        btnReinscrire.getStyleClass().add("accent");
-                        btnReinscrire.setPrefHeight(40);
+                        Button btnReinscrire = new Button("🔄 Réessayer l'inscription");
+                        btnReinscrire.setStyle("-fx-background-color: linear-gradient(to right, #667eea, #764ba2); " +
+                                "-fx-text-fill: white; -fx-font-weight: 600; -fx-background-radius: 10; " +
+                                "-fx-padding: 12 20 12 20; -fx-cursor: hand; -fx-font-size: 14px; " +
+                                "-fx-effect: dropshadow(gaussian, rgba(102,126,234,0.4), 8, 0, 0, 3);");
+                        btnReinscrire.setPrefHeight(45);
                         btnReinscrire.setMaxWidth(Double.MAX_VALUE);
                         btnReinscrire.setOnAction(event -> handleReinscrire(existingInscription, f));
 
@@ -399,9 +441,12 @@ public class FormationsController {
 
                     } else {
                         // EN_ATTENTE - Permettre l'annulation
-                        Button btnAnnuler = new Button("✗ Annuler mon inscription");
-                        btnAnnuler.getStyleClass().addAll("danger");
-                        btnAnnuler.setPrefHeight(40);
+                        Button btnAnnuler = new Button("🗑️ Annuler mon inscription");
+                        btnAnnuler.setStyle("-fx-background-color: linear-gradient(to right, #e74c3c, #c0392b); " +
+                                "-fx-text-fill: white; -fx-font-weight: 600; -fx-background-radius: 10; " +
+                                "-fx-padding: 12 20 12 20; -fx-cursor: hand; -fx-font-size: 14px; " +
+                                "-fx-effect: dropshadow(gaussian, rgba(231,76,60,0.4), 8, 0, 0, 3);");
+                        btnAnnuler.setPrefHeight(45);
                         btnAnnuler.setMaxWidth(Double.MAX_VALUE);
                         btnAnnuler.setOnAction(event -> handleAnnulerInscription(existingInscription));
 
@@ -409,9 +454,12 @@ public class FormationsController {
                     }
                 } else {
                     // Pas encore inscrit - Afficher bouton S'inscrire
-                    Button btnInscription = new Button("✓ S'inscrire à cette formation");
-                    btnInscription.getStyleClass().add("accent");
-                    btnInscription.setPrefHeight(40);
+                    Button btnInscription = new Button("✨ S'inscrire à cette formation");
+                    btnInscription.setStyle("-fx-background-color: linear-gradient(to right, #43e97b, #38f9d7); " +
+                            "-fx-text-fill: white; -fx-font-weight: 600; -fx-background-radius: 10; " +
+                            "-fx-padding: 12 20 12 20; -fx-cursor: hand; -fx-font-size: 14px; " +
+                            "-fx-effect: dropshadow(gaussian, rgba(67,233,123,0.4), 8, 0, 0, 3);");
+                    btnInscription.setPrefHeight(45);
                     btnInscription.setMaxWidth(Double.MAX_VALUE);
                     btnInscription.setOnAction(event -> openInscriptionWindow(event, f));
 
@@ -482,9 +530,28 @@ public class FormationsController {
     }
 
     /**
+     * Obtenir la couleur de fond du badge de statut
+     */
+    private String getStatutBgColor(StatutInscription statut) {
+        switch (statut) {
+            case EN_ATTENTE: return "#fff3e0";
+            case ACCEPTEE: return "#e8f5e9";
+            case REFUSEE: return "#ffebee";
+            default: return "#f5f5f5";
+        }
+    }
+
+    /**
      * Annuler l'inscription d'un employé
      */
     private void handleAnnulerInscription(inscription_formation inscription) {
+        // Vérifier que l'inscription n'est pas déjà acceptée
+        if (inscription.getStatut() == StatutInscription.ACCEPTEE) {
+            showAlert(AlertType.ERROR, "Annulation impossible",
+                "Vous ne pouvez pas annuler une inscription qui a été acceptée par le RH.");
+            return;
+        }
+
         Alert confirm = new Alert(AlertType.CONFIRMATION);
         confirm.setTitle("Confirmer l'annulation");
         confirm.setHeaderText("Annuler votre inscription ?");
