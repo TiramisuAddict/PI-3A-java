@@ -440,17 +440,31 @@ public class FormationsController {
                         card.getChildren().addAll(title, organisme, dateRange, lieu, capacite, statutLabel, infoLabel, btnReinscrire);
 
                     } else {
-                        // EN_ATTENTE - Permettre l'annulation
-                        Button btnAnnuler = new Button("🗑️ Annuler mon inscription");
+                        // EN_ATTENTE - Permettre l'annulation et la modification de la raison
+                        HBox actionButtons = new HBox(10);
+                        actionButtons.setStyle("-fx-alignment: center;");
+
+                        Button btnModifierRaison = new Button("✏️ Modifier ma raison");
+                        btnModifierRaison.setStyle("-fx-background-color: linear-gradient(to right, #667eea, #764ba2); " +
+                                "-fx-text-fill: white; -fx-font-weight: 600; -fx-background-radius: 10; " +
+                                "-fx-padding: 12 20 12 20; -fx-cursor: hand; -fx-font-size: 14px; " +
+                                "-fx-effect: dropshadow(gaussian, rgba(102,126,234,0.4), 8, 0, 0, 3);");
+                        btnModifierRaison.setPrefHeight(45);
+                        btnModifierRaison.setMaxWidth(Double.MAX_VALUE);
+                        btnModifierRaison.setOnAction(event -> openModifierRaisonWindow(event, existingInscription, f));
+                        HBox.setHgrow(btnModifierRaison, javafx.scene.layout.Priority.ALWAYS);
+
+                        Button btnAnnuler = new Button("🗑️ Annuler");
                         btnAnnuler.setStyle("-fx-background-color: linear-gradient(to right, #e74c3c, #c0392b); " +
                                 "-fx-text-fill: white; -fx-font-weight: 600; -fx-background-radius: 10; " +
                                 "-fx-padding: 12 20 12 20; -fx-cursor: hand; -fx-font-size: 14px; " +
                                 "-fx-effect: dropshadow(gaussian, rgba(231,76,60,0.4), 8, 0, 0, 3);");
                         btnAnnuler.setPrefHeight(45);
-                        btnAnnuler.setMaxWidth(Double.MAX_VALUE);
+                        btnAnnuler.setPrefWidth(120);
                         btnAnnuler.setOnAction(event -> handleAnnulerInscription(existingInscription));
 
-                        card.getChildren().addAll(title, organisme, dateRange, lieu, capacite, statutLabel, btnAnnuler);
+                        actionButtons.getChildren().addAll(btnModifierRaison, btnAnnuler);
+                        card.getChildren().addAll(title, organisme, dateRange, lieu, capacite, statutLabel, actionButtons);
                     }
                 } else {
                     // Pas encore inscrit - Afficher bouton S'inscrire
@@ -599,6 +613,31 @@ public class FormationsController {
             stage.show();
 
         } catch (IOException | SQLException e) {
+            showAlert(AlertType.ERROR, "Erreur", "Échec d'ouverture: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Ouvrir la fenêtre pour modifier la raison de l'inscription
+     */
+    private void openModifierRaisonWindow(javafx.event.ActionEvent event, inscription_formation inscription, formation f) {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/modifier-raison.fxml"));
+            Parent root = loader.load();
+
+            ModifierRaisonController controller = loader.getController();
+            controller.setInscription(inscription, f.getTitre(), () -> {
+                refreshFormations();
+                refreshAvailableFormations();
+            });
+
+            Stage stage = new Stage();
+            stage.setTitle("Modifier la Raison");
+            stage.setScene(new Scene(root));
+            stage.initOwner(((Node) event.getSource()).getScene().getWindow());
+            stage.show();
+
+        } catch (IOException e) {
             showAlert(AlertType.ERROR, "Erreur", "Échec d'ouverture: " + e.getMessage());
         }
     }

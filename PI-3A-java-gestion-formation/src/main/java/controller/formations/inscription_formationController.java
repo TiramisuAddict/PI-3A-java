@@ -36,6 +36,8 @@ public class inscription_formationController {
     private Label lblEmployeConnecte;
     @FXML
     private ComboBox<StatutInscription> comboStatut;
+    @FXML
+    private javafx.scene.control.TextArea txtRaison;
 
     @FXML
     private Button btnInscrire;
@@ -142,6 +144,22 @@ public class inscription_formationController {
             return;
         }
 
+        // Valider la raison
+        String raison = txtRaison.getText();
+        if (raison == null || raison.trim().isEmpty()) {
+            showAlert(AlertType.WARNING, "Champ requis",
+                "Veuillez expliquer pourquoi vous souhaitez suivre cette formation.");
+            txtRaison.requestFocus();
+            return;
+        }
+
+        if (raison.trim().length() < 10) {
+            showAlert(AlertType.WARNING, "Raison trop courte",
+                "Veuillez fournir une raison plus détaillée (au moins 10 caractères).");
+            txtRaison.requestFocus();
+            return;
+        }
+
         if (!isFormValid()) {
             showAlert(AlertType.WARNING, "Erreur", "Impossible de procéder à l'inscription.");
             return;
@@ -174,11 +192,12 @@ public class inscription_formationController {
                 return;
             }
 
-            // Créer l'inscription avec l'ID de l'employé connecté
+            // Créer l'inscription avec l'ID de l'employé connecté et la raison
             inscription_formation inscription = new inscription_formation(
                 currentFormation.getId_formation(),
                 employeId,
-                comboStatut.getValue()
+                comboStatut.getValue(),
+                raison.trim()
             );
 
             inscriptionService.ajouter(inscription);

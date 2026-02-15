@@ -22,12 +22,13 @@ public class inscription_formationCRUD implements InterfaceCRUD<inscription_form
 
     @Override
     public void ajouter(inscription_formation i) throws SQLException {
-        String req = "INSERT INTO inscription_formation (id_formation, statut, id_employe) VALUES (?, ?, ?)";
+        String req = "INSERT INTO inscription_formation (id_formation, statut, id_employe, raison) VALUES (?, ?, ?, ?)";
 
         PreparedStatement ps = conn.prepareStatement(req);
         ps.setInt(1, i.getId_formation());
         ps.setString(2, i.getStatut().name());
         ps.setInt(3, i.getId_user());
+        ps.setString(4, i.getRaison());
 
         ps.executeUpdate();
         System.out.println("Inscription ajoutee !");
@@ -35,13 +36,14 @@ public class inscription_formationCRUD implements InterfaceCRUD<inscription_form
 
     @Override
     public void modifier(inscription_formation i) throws SQLException {
-        String req = "UPDATE inscription_formation SET id_formation=?, statut=?, id_employe=? WHERE id_inscription=?";
+        String req = "UPDATE inscription_formation SET id_formation=?, statut=?, id_employe=?, raison=? WHERE id_inscription=?";
 
         PreparedStatement ps = conn.prepareStatement(req);
         ps.setInt(1, i.getId_formation());
         ps.setString(2, i.getStatut().name());
         ps.setInt(3, i.getId_user());
-        ps.setInt(4, i.getId_inscription());
+        ps.setString(4, i.getRaison());
+        ps.setInt(5, i.getId_inscription());
 
         ps.executeUpdate();
         System.out.println("Inscription modifiee");
@@ -74,6 +76,7 @@ public class inscription_formationCRUD implements InterfaceCRUD<inscription_form
             i.setId_formation(rs.getInt("id_formation"));
             i.setId_user(rs.getInt("id_employe"));
             i.setStatut(parseStatut(rs.getString("statut")));
+            i.setRaison(rs.getString("raison"));
 
             liste.add(i);
         }
@@ -106,6 +109,7 @@ public class inscription_formationCRUD implements InterfaceCRUD<inscription_form
             i.setId_formation(rs.getInt("id_formation"));
             i.setId_user(rs.getInt("id_employe"));
             i.setStatut(parseStatut(rs.getString("statut")));
+            i.setRaison(rs.getString("raison"));
             return i;
         }
 
@@ -130,6 +134,7 @@ public class inscription_formationCRUD implements InterfaceCRUD<inscription_form
             i.setId_formation(rs.getInt("id_formation"));
             i.setId_user(rs.getInt("id_employe"));
             i.setStatut(parseStatut(rs.getString("statut")));
+            i.setRaison(rs.getString("raison"));
             liste.add(i);
         }
 

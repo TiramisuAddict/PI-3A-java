@@ -6,21 +6,24 @@ public class inscription_formation {
     private int id_formation;
     private int id_user;
     private StatutInscription statut;
+    private String raison;
 
     public inscription_formation() {
     }
 
-    public inscription_formation(int id_formation, int id_user, StatutInscription statut) {
+    public inscription_formation(int id_formation, int id_user, StatutInscription statut, String raison) {
         this.id_formation = id_formation;
         this.id_user = id_user;
         this.statut = statut;
+        this.raison = raison;
     }
 
-    public inscription_formation(int id_inscription, int id_formation, int id_user, StatutInscription statut) {
+    public inscription_formation(int id_inscription, int id_formation, int id_user, StatutInscription statut, String raison) {
         this.id_inscription = id_inscription;
         this.id_formation = id_formation;
         this.id_user = id_user;
         this.statut = statut;
+        this.raison = raison;
     }
 
     // ===== Getters & Setters =====
@@ -55,5 +58,13 @@ public class inscription_formation {
 
     public void setStatut(StatutInscription statut) {
         this.statut = statut;
+    }
+
+    public String getRaison() {
+        return raison;
+    }
+
+    public void setRaison(String raison) {
+        this.raison = raison;
     }
 }

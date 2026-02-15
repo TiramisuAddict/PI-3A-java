@@ -105,6 +105,22 @@ public class GestionInscriptionsController {
         statutLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: " +
             getStatutColor(insc.getStatut()) + "; -fx-font-size: 13px;");
 
+        // Afficher la raison de l'inscription
+        if (insc.getRaison() != null && !insc.getRaison().trim().isEmpty()) {
+            VBox raisonBox = new VBox(5);
+            raisonBox.setStyle("-fx-background-color: #f8f9fa; -fx-padding: 10; -fx-background-radius: 5;");
+
+            Label raisonTitleLabel = new Label("💬 Raison de l'inscription:");
+            raisonTitleLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 12px; -fx-text-fill: #495057;");
+
+            Label raisonTextLabel = new Label(insc.getRaison());
+            raisonTextLabel.setWrapText(true);
+            raisonTextLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #495057; -fx-font-style: italic;");
+
+            raisonBox.getChildren().addAll(raisonTitleLabel, raisonTextLabel);
+            card.getChildren().add(raisonBox);
+        }
+
         // Boutons d'action
         HBox actionsRow = new HBox(10);
         actionsRow.setAlignment(Pos.CENTER_LEFT);
