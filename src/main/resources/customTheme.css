@@ -70,17 +70,365 @@
     -fx-managed: true;
 }
 
-/* card stuff (testing) */
+/* Card Styles */
 
-/* The base state for cards (ensure this is there) */
 .glass-card, .offer-card {
     -fx-transition: all 0.2s ease-in-out;
 }
 
-/* THE SELECTED STATE */
 .card-selected {
+    -fx-border-width: 1 1 1 5;
+}
 
-    /* Blue left indicator bar */
-    /*-fx-border-color: -color-base-4; */
-    -fx-border-width: 1 1 1 5; /* 5px bar on the left */
+/* Annonce Card Styles */
+
+.annonce-card {
+    -fx-background-color: white;
+    -fx-background-radius: 10;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.08), 10, 0, 0, 2);
+    -fx-border-color: #e8e8e8;
+    -fx-border-width: 1;
+    -fx-border-radius: 10;
+}
+
+.annonce-card:hover {
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.12), 15, 0, 0, 3);
+    -fx-cursor: hand;
+}
+
+/* Form Card */
+
+.form-card {
+    -fx-background-color: #f8f9fa;
+    -fx-background-radius: 12;
+    -fx-border-color: #e0e0e0;
+    -fx-border-width: 1;
+    -fx-border-radius: 12;
+}
+
+.form-title {
+    -fx-text-fill: #1a1a1a;
+}
+
+.form-section-title {
+    -fx-text-fill: #333333;
+}
+
+.form-label {
+    -fx-text-fill: #333333;
+}
+
+.form-input {
+    -fx-background-color: white;
+    -fx-background-radius: 6;
+    -fx-border-color: #d0d0d0;
+    -fx-border-width: 1;
+    -fx-border-radius: 6;
+    -fx-padding: 10;
+    -fx-font-size: 13px;
+}
+
+.form-input:focused {
+    -fx-border-color: #4A5DEF;
+    -fx-border-width: 2;
+}
+
+/* ComboBox Styling */
+
+.combo-box {
+    -fx-background-color: white;
+    -fx-background-radius: 6;
+    -fx-border-color: #d0d0d0;
+    -fx-border-width: 1;
+    -fx-border-radius: 6;
+}
+
+.combo-box:focused {
+    -fx-border-color: #4A5DEF;
+    -fx-border-width: 2;
+}
+
+.combo-box .list-cell {
+    -fx-background-color: white;
+    -fx-text-fill: #333333;
+}
+
+/* DatePicker Styling */
+
+.date-picker {
+    -fx-background-color: white;
+    -fx-background-radius: 6;
+    -fx-border-color: #d0d0d0;
+    -fx-border-width: 1;
+    -fx-border-radius: 6;
+}
+
+.date-picker:focused {
+    -fx-border-color: #4A5DEF;
+    -fx-border-width: 2;
+}
+
+.date-picker .text-field {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+/* CheckBox */
+
+.form-checkbox {
+    -fx-text-fill: #333333;
+    -fx-font-weight: bold;
+}
+
+.check-box:selected .box {
+    -fx-background-color: #4A5DEF;
+}
+
+/* Error Label */
+
+.error-label {
+    -fx-text-fill: #dc3545;
+    -fx-font-size: 11px;
+    -fx-padding: 2 0 0 0;
+}
+
+/* Status Badges */
+
+.badge-active {
+    -fx-background-color: #28a745;
+    -fx-text-fill: white;
+    -fx-background-radius: 4;
+    -fx-padding: 4 8 4 8;
+    -fx-font-size: 11px;
+}
+
+.badge-inactive {
+    -fx-background-color: #6c757d;
+    -fx-text-fill: white;
+    -fx-background-radius: 4;
+    -fx-padding: 4 8 4 8;
+    -fx-font-size: 11px;
+}
+
+/* Primary Button */
+
+.btn-primary {
+    -fx-background-color: #F59E0B;
+    -fx-text-fill: white;
+    -fx-background-radius: 8;
+    -fx-cursor: hand;
+    -fx-font-weight: bold;
+}
+
+.btn-primary:hover {
+    -fx-background-color: #D97706;
+}
+
+.btn-primary:pressed {
+    -fx-background-color: #B45309;
+}
+
+/* Secondary Button */
+
+.btn-secondary {
+    -fx-background-color: #e8e8e8;
+    -fx-text-fill: #333333;
+    -fx-background-radius: 8;
+    -fx-cursor: hand;
+}
+
+.btn-secondary:hover {
+    -fx-background-color: #d0d0d0;
+}
+
+/* Card Action Buttons */
+
+.btn-card-modifier {
+    -fx-background-color: #4A5DEF;
+    -fx-text-fill: white;
+    -fx-background-radius: 6;
+    -fx-padding: 8 16 8 16;
+    -fx-cursor: hand;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+}
+
+.btn-card-modifier:hover {
+    -fx-background-color: #3944D5;
+}
+
+.btn-card-supprimer {
+    -fx-background-color: #1a1a1a;
+    -fx-text-fill: white;
+    -fx-background-radius: 6;
+    -fx-padding: 8 16 8 16;
+    -fx-cursor: hand;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+}
+
+.btn-card-supprimer:hover {
+    -fx-background-color: #2d2d2d;
+}
+
+/* Page Title */
+
+.page-title {
+    -fx-text-fill: #1a1a1a;
+    -fx-font-weight: bold;
+}
+
+/* Content Container */
+
+.content-container {
+    -fx-background-color: #ffffff;
+}
+
+/* Main Scroll Pane (for entire content) */
+
+.main-scroll-pane {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.main-scroll-pane > .viewport {
+    -fx-background-color: #ffffff;
+}
+
+.main-scroll-pane .scroll-bar:vertical {
+    -fx-background-color: transparent;
+}
+
+.main-scroll-pane .scroll-bar:vertical .track {
+    -fx-background-color: #f0f0f0;
+    -fx-background-radius: 5;
+}
+
+.main-scroll-pane .scroll-bar:vertical .thumb {
+    -fx-background-color: #c0c0c0;
+    -fx-background-radius: 5;
+}
+
+.main-scroll-pane .scroll-bar:vertical .thumb:hover {
+    -fx-background-color: #a0a0a0;
+}
+
+/* Scroll Pane */
+
+.scroll-pane {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.scroll-pane > .viewport {
+    -fx-background-color: transparent;
+}
+
+.scroll-pane .scroll-bar:vertical {
+    -fx-background-color: transparent;
+}
+
+.scroll-pane .scroll-bar:vertical .track {
+    -fx-background-color: #f0f0f0;
+    -fx-background-radius: 5;
+}
+
+.scroll-pane .scroll-bar:vertical .thumb {
+    -fx-background-color: #c0c0c0;
+    -fx-background-radius: 5;
+}
+
+.scroll-pane .scroll-bar:vertical .thumb:hover {
+    -fx-background-color: #a0a0a0;
+}
+
+/* Separator */
+
+.separator {
+    -fx-background-color: #e0e0e0;
+}
+
+/* ADD THESE STYLES TO YOUR customTheme.css */
+
+/* ========== EVENT CARD STYLES (Different from Annonce) ========== */
+
+.event-card {
+    -fx-background-color: white;
+    -fx-background-radius: 10;
+    -fx-effect: dropshadow(gaussian, rgba(33, 150, 243, 0.15), 12, 0, 0, 2);
+    -fx-border-color: #90CAF9;
+    -fx-border-width: 2;
+    -fx-border-radius: 10;
+}
+
+.event-card:hover {
+    -fx-effect: dropshadow(gaussian, rgba(33, 150, 243, 0.25), 15, 0, 0, 3);
+    -fx-cursor: hand;
+}
+
+/* Badge Type Annonce (Orange) */
+.badge-type-annonce {
+    -fx-background-color: #F59E0B;
+    -fx-text-fill: white;
+    -fx-background-radius: 4;
+    -fx-padding: 4 10 4 10;
+    -fx-font-size: 11px;
+}
+
+/* Badge Type Event (Blue) */
+.badge-type-event {
+    -fx-background-color: #2196F3;
+    -fx-text-fill: white;
+    -fx-background-radius: 4;
+    -fx-padding: 4 10 4 10;
+    -fx-font-size: 11px;
+}
+
+/* ========== FILTER BUTTONS ========== */
+
+.filter-label {
+    -fx-text-fill: #333333;
+}
+
+.btn-filter {
+    -fx-background-color: #e8e8e8;
+    -fx-text-fill: #333333;
+    -fx-background-radius: 6;
+    -fx-cursor: hand;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+}
+
+.btn-filter:hover {
+    -fx-background-color: #d0d0d0;
+}
+
+.btn-filter-annonce {
+    -fx-background-color: #FEF3C7;
+    -fx-text-fill: #92400E;
+    -fx-background-radius: 6;
+    -fx-cursor: hand;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-border-color: #F59E0B;
+    -fx-border-width: 1;
+}
+
+.btn-filter-annonce:hover {
+    -fx-background-color: #FDE68A;
+}
+
+.btn-filter-event {
+    -fx-background-color: #DBEAFE;
+    -fx-text-fill: #1E3A8A;
+    -fx-background-radius: 6;
+    -fx-cursor: hand;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-border-color: #2196F3;
+    -fx-border-width: 1;
+}
+
+.btn-filter-event:hover {
+    -fx-background-color: #BFDBFE;
 }

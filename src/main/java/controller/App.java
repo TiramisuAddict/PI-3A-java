@@ -22,7 +22,7 @@ public class App extends Application {
         try {
             Application.setUserAgentStylesheet(new PrimerLight().getUserAgentStylesheet());
 
-            Parent root = FXMLLoader.load(getClass().getResource("/main-view.fxml"));
+            Parent root = FXMLLoader.load(getClass().getResource("/annonces.fxml"));
 
             Scene scene = new Scene(root);
 
