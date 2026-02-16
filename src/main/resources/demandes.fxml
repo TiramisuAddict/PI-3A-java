@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Font?>
+
+<AnchorPane prefHeight="650.0" prefWidth="1100.0" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controller.demandes.DemandesController">
+    <children>
+        <VBox spacing="10.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+            <padding>
+                <Insets bottom="15.0" left="15.0" right="15.0" top="15.0" />
+            </padding>
+            <children>
+                <!-- Title -->
+                <Label text="Gestion des Demandes" textFill="#2c3e50">
+                    <font>
+                        <Font name="System Bold" size="24.0" />
+                    </font>
+                </Label>
+
+                <!-- Top Bar: Search + Add Button -->
+                <HBox alignment="CENTER_LEFT" spacing="10.0">
+                    <padding>
+                        <Insets top="5.0" bottom="5.0" />
+                    </padding>
+                    <children>
+                        <Label text="🔍" style="-fx-font-size: 16;" />
+                        <TextField fx:id="rechercheField" prefWidth="350.0" promptText="Rechercher par titre..." />
+                        <Region HBox.hgrow="ALWAYS" />
+                        <Button onAction="#ouvrirAjouter" prefWidth="140.0" style="-fx-background-color: #27ae60; -fx-text-fill: white;" text="+ Ajouter">
+                            <font><Font name="System Bold" size="13.0" /></font>
+                        </Button>
+                    </children>
+                </HBox>
+
+                <!-- Main Content: Table + Details Panel -->
+                <SplitPane fx:id="splitPane" dividerPositions="0.6" VBox.vgrow="ALWAYS">
+                    <items>
+                        <!-- Left: Table -->
+                        <VBox spacing="5.0">
+                            <padding>
+                                <Insets right="5.0" />
+                            </padding>
+                            <children>
+                                <TableView fx:id="demandesTable" VBox.vgrow="ALWAYS">
+                                    <columns>
+                                        <TableColumn fx:id="titreCol" prefWidth="130.0" text="Titre" />
+                                        <TableColumn fx:id="categorieCol" prefWidth="90.0" text="Catégorie" />
+                                        <TableColumn fx:id="typeCol" prefWidth="90.0" text="Type" />
+                                        <TableColumn fx:id="prioriteCol" prefWidth="75.0" text="Priorité" />
+                                        <TableColumn fx:id="statusCol" prefWidth="75.0" text="Statut" />
+                                        <TableColumn fx:id="dateCol" prefWidth="90.0" text="Date" />
+                                        <TableColumn fx:id="actionsCol" prefWidth="170.0" text="Actions" />
+                                    </columns>
+                                </TableView>
+                            </children>
+                        </VBox>
+
+                        <!-- Right: Details Panel -->
+                        <ScrollPane fitToWidth="true">
+                            <content>
+                                <VBox fx:id="detailsPanel" spacing="10.0" style="-fx-background-color: #f8f9fa;">
+                                    <padding>
+                                        <Insets bottom="15.0" left="15.0" right="15.0" top="15.0" />
+                                    </padding>
+                                    <children>
+                                        <!-- Placeholder -->
+                                        <VBox fx:id="placeholderBox" alignment="CENTER" spacing="10.0" style="-fx-padding: 50;">
+                                            <children>
+                                                <Label text="📋" style="-fx-font-size: 48;" />
+                                                <Label text="Sélectionnez une demande" style="-fx-font-size: 16; -fx-text-fill: #999;" />
+                                                <Label text="Cliquez sur une ligne pour voir les détails" style="-fx-font-size: 12; -fx-text-fill: #bbb;" />
+                                            </children>
+                                        </VBox>
+
+                                        <!-- Details Content -->
+                                        <VBox fx:id="detailsContent" spacing="10.0" visible="false" managed="false">
+                                            <children>
+                                                <!-- Header -->
+                                                <HBox alignment="CENTER_LEFT" spacing="10.0">
+                                                    <children>
+                                                        <Label fx:id="detailTitreLabel" text="" style="-fx-font-size: 18; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" />
+                                                    </children>
+                                                </HBox>
+
+                                                <Separator />
+
+                                                <!-- Info Grid -->
+                                                <GridPane hgap="10.0" vgap="8.0">
+                                                    <columnConstraints>
+                                                        <ColumnConstraints minWidth="100.0" />
+                                                        <ColumnConstraints hgrow="ALWAYS" />
+                                                    </columnConstraints>
+                                                    <children>
+                                                        <Label text="Catégorie:" style="-fx-font-weight: bold; -fx-text-fill: #666;" GridPane.rowIndex="0" />
+                                                        <Label fx:id="detailCategorieLabel" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+
+                                                        <Label text="Type:" style="-fx-font-weight: bold; -fx-text-fill: #666;" GridPane.rowIndex="1" />
+                                                        <Label fx:id="detailTypeLabel" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+
+                                                        <Label text="Priorité:" style="-fx-font-weight: bold; -fx-text-fill: #666;" GridPane.rowIndex="2" />
+                                                        <Label fx:id="detailPrioriteLabel" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+
+                                                        <Label text="Statut:" style="-fx-font-weight: bold; -fx-text-fill: #666;" GridPane.rowIndex="3" />
+                                                        <Label fx:id="detailStatusLabel" GridPane.columnIndex="1" GridPane.rowIndex="3" />
+
+                                                        <Label text="Date:" style="-fx-font-weight: bold; -fx-text-fill: #666;" GridPane.rowIndex="4" />
+                                                        <Label fx:id="detailDateLabel" GridPane.columnIndex="1" GridPane.rowIndex="4" />
+                                                    </children>
+                                                </GridPane>
+
+                                                <Separator />
+
+                                                <!-- Description -->
+                                                <Label text="Description:" style="-fx-font-weight: bold; -fx-text-fill: #666;" />
+                                                <Label fx:id="detailDescriptionLabel" wrapText="true" style="-fx-padding: 5 10; -fx-background-color: white; -fx-background-radius: 5;" />
+
+                                                <Separator />
+
+                                                <!-- Dynamic Details -->
+                                                <Label text="Détails Spécifiques:" style="-fx-font-weight: bold; -fx-text-fill: #666;" />
+                                                <VBox fx:id="detailSpecificContainer" spacing="5.0" style="-fx-padding: 5 10; -fx-background-color: white; -fx-background-radius: 5;">
+                                                    <children>
+                                                        <Label text="Aucun détail" style="-fx-text-fill: #999;" />
+                                                    </children>
+                                                </VBox>
+
+                                                <Separator />
+
+                                                <!-- Historique Section -->
+                                                <HBox alignment="CENTER_LEFT" spacing="10.0">
+                                                    <children>
+                                                        <Label text="Historique:" style="-fx-font-weight: bold; -fx-text-fill: #666; -fx-font-size: 14;" />
+                                                        <Region HBox.hgrow="ALWAYS" />
+                                                        <Button fx:id="avancerBtn" onAction="#ouvrirAvancer" text="⚡ Avancer Statut" style="-fx-background-color: #f39c12; -fx-text-fill: white;">
+                                                            <font><Font name="System Bold" size="12.0" /></font>
+                                                        </Button>
+                                                    </children>
+                                                </HBox>
+
+                                                <VBox fx:id="historiqueContainer" spacing="8.0">
+                                                    <children>
+                                                        <Label text="Aucun historique" style="-fx-text-fill: #999;" />
+                                                    </children>
+                                                </VBox>
+                                            </children>
+                                        </VBox>
+                                    </children>
+                                </VBox>
+                            </content>
+                        </ScrollPane>
+                    </items>
+                </SplitPane>
+            </children>
+        </VBox>
+    </children>
+</AnchorPane>
