@@ -96,7 +96,7 @@ public class MainViewController {
     }
 
     @FXML private void showOffres(ActionEvent event) {
-        loadView("offres");
+        loadView("recrutement");
         updateActiveButton(btnOffre);
     }
 }

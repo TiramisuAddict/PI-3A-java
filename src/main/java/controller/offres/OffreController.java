@@ -10,14 +10,14 @@ import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import service.OffreCRUD;
+import utils.BadgeFactory;
 import utils.LayoutAnimator;
 
-import java.lang.reflect.Type;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.List;
 
-public class OffresController {
+public class OffreController {
 
     @FXML private TextField txtCode, txtTitre;
     @FXML private ComboBox<TypeContrat> comboType;
@@ -41,7 +41,6 @@ public class OffresController {
         new LayoutAnimator(offersContainer);
         new LayoutAnimator(StatisticsPane);
 
-        // Setup Form ComboBoxes
         comboType.setItems(FXCollections.observableArrayList(TypeContrat.values()));
         comboEtat.setItems(FXCollections.observableArrayList(EtatOffre.values()));
 
@@ -71,7 +70,7 @@ public class OffresController {
             for (Offre o : offres) {
                 addOfferCard(o);
             }
-        }catch (SQLException e) {
+        } catch (SQLException e) {
             System.out.println("Erreur lors du chargement des offres: " + e.getMessage());
         }
     }
@@ -115,13 +114,8 @@ public class OffresController {
         subLabel.getStyleClass().add("text-muted");
         details.getChildren().addAll(titleLabel, subLabel);
 
-        // Status Badge
-        Label badge = new Label(o.getEtat().getDisplayName().toUpperCase());
-        String badgeStyle = o.getEtat().equals(EtatOffre.OUVERT) ? "-color-success-fg" : "-color-danger-fg";
-        String badgeBg = o.getEtat().equals(EtatOffre.OUVERT) ? "-color-success-muted" : "-color-danger-muted";
-        badge.setStyle("-fx-background-color: " + badgeBg + "; -fx-text-fill: " + badgeStyle + "; " + "-fx-padding: 5 12; -fx-background-radius: 20; -fx-font-size: 11; -fx-font-weight: bold;");
+        card.getChildren().addAll(iconBox, details, BadgeFactory.createBadge(o.getEtat().getDisplayName().toUpperCase()));
 
-        card.getChildren().addAll(iconBox, details, badge);
 
         card.setOnMouseClicked(e -> {
             // 1. CLEAR previous selection
@@ -141,24 +135,69 @@ public class OffresController {
         offersContainer.getChildren().add(card);
     }
 
-    @FXML
-    private void handleSave(ActionEvent event) {
-        Offre o = new Offre(txtCode.getText(), 1, txtTitre.getText(), comboType.getValue(), java.sql.Date.valueOf(dpDate.getValue()), comboEtat.getValue());
+    private boolean formOffreValide() {
+        if (txtTitre.getText() == null || txtTitre.getText().length() <= 4) {
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle("Erreur de validation");
+            alert.setHeaderText(null);
+            alert.setContentText("Le titre de l'offre doit contenir au moins 5 caractères.");
+            alert.showAndWait();
 
-        try {
-            crud.ajouter(o);
-        } catch (Exception e) {
-            System.out.println("Erreur lors de l'ajout de l'offre: " + e.getMessage());
-            return;
+            return false;
         }
 
-        addOfferCard(o);
+        if (txtCode.getText() == null ){
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle("Erreur de validation");
+            alert.setHeaderText(null);
+            alert.setContentText("Le code de l'offre ne peut pas être vide.");
+            alert.showAndWait();
 
-        refreshDashboard();
+            return false;
+        }
+
+        if (comboType.getValue() == null) {
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle("Erreur de validation");
+            alert.setHeaderText(null);
+            alert.setContentText("Veuillez sélectionner un type de contrat.");
+            alert.showAndWait();
+
+            return false;
+        }
+
+        if (comboEtat.getValue() == null) {
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle("Erreur de validation");
+            alert.setHeaderText(null);
+            alert.setContentText("Veuillez sélectionner un état pour l'offre.");
+            alert.showAndWait();
+
+            return false;
+        }
+
+        return true;
+    }
+
+    @FXML
+    private void handleSave(ActionEvent event) {
+        if (formOffreValide()) {
+            Offre o = new Offre(txtCode.getText(), 1, txtTitre.getText(), comboType.getValue(), java.sql.Date.valueOf(dpDate.getValue()), comboEtat.getValue());
+
+            try {
+                crud.ajouter(o);
+            } catch (Exception e) {
+                System.out.println("Erreur lors de l'ajout de l'offre: " + e.getMessage());
+                return;
+            }
+            addOfferCard(o);
+
+            refreshDashboard();}
     }
 
     @FXML
     private void handleUpdate(ActionEvent event) {
+        if (formOffreValide()){
         Offre o = new Offre(txtCode.getText(), 1, txtTitre.getText(), comboType.getValue(), java.sql.Date.valueOf(dpDate.getValue()), comboEtat.getValue());
 
         try {
@@ -176,7 +215,7 @@ public class OffresController {
             return;
         }
 
-        refreshDashboard();
+        refreshDashboard();}
     }
 
     @FXML

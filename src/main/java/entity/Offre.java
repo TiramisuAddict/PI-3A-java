@@ -13,6 +13,16 @@ public class Offre {
 
     public Offre() {}
 
+    public Offre (Integer id , String codeOffre, Integer idEmployer, String titrePoste, TypeContrat typeContrat, Date dateLimite, EtatOffre etat) {
+        this.id = id;
+        this.codeOffre = codeOffre;
+        this.idEmployer = idEmployer;
+        this.titrePoste = titrePoste;
+        this.typeContrat = typeContrat;
+        this.dateLimite = dateLimite;
+        this.etat = etat;
+    }
+
     public Offre (String codeOffre, Integer idEmployer, String titrePoste, TypeContrat typeContrat, Date dateLimite, EtatOffre etat) {
         this.codeOffre = codeOffre;
         this.idEmployer = idEmployer;

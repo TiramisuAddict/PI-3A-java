@@ -28,7 +28,6 @@ public class OffreCRUD implements InterfaceCRUD <Offre>{
         throw new SQLException("Offre with code '" + code + "' not found");
     }
 
-
     @Override
     public void ajouter(Offre o) throws SQLException {
         String req = "INSERT INTO offre (code_offre, id_employer, titre_poste, type_contrat, date_limite, etat) " +
@@ -101,5 +100,33 @@ public class OffreCRUD implements InterfaceCRUD <Offre>{
         }
 
         return listeOffres;
+    }
+
+    public Offre getById(int idOffre) {
+        String req = "SELECT * FROM offre WHERE id=?";
+
+        try {
+            PreparedStatement ps = conn.prepareStatement(req);
+            ps.setInt(1, idOffre);
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                Offre o = new Offre();
+
+                o.setId(rs.getInt("id"));
+                o.setCodeOffre(rs.getString("code_offre"));
+                o.setIdEmployer(rs.getInt("id_employer"));
+                o.setTitrePoste(rs.getString("titre_poste"));
+                o.setTypeContrat(TypeContrat.fromDisplayName(rs.getString("type_contrat")));
+                o.setDateLimite(rs.getDate("date_limite"));
+                o.setEtat(EtatOffre.fromDisplayName(rs.getString("etat")));
+
+                return o;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return null;
     }
 }
