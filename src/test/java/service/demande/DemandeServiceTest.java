@@ -43,11 +43,27 @@ public class DemandeServiceTest {
         d.setStatus("Nouvelle");
         d.setDateCreation(new Date());
         d.setTypeDemande("Incident");
+<<<<<<< HEAD
         demandeCRUD.ajouter(d);
         assertTrue(d.getIdDemande() > 0, "ID should be auto-generated");
         idDemandeTest = d.getIdDemande();
         List<Demande> demandes = demandeCRUD.afficher();
         assertFalse(demandes.isEmpty(), "List should not be empty after adding");
+=======
+
+        // Add to database
+        demandeCRUD.ajouter(d);
+
+        // Verify ID was generated
+        assertTrue(d.getIdDemande() > 0, "ID should be auto-generated");
+        idDemandeTest = d.getIdDemande();
+
+        // Verify it exists in database
+        List<Demande> demandes = demandeCRUD.afficher();
+        assertFalse(demandes.isEmpty(), "List should not be empty after adding");
+
+        // Verify the data is correct
+>>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
         boolean found = demandes.stream()
                 .anyMatch(dem -> dem.getTitre().equals("Bug Serveur")
                         && dem.getCategorie().equals("Technique")
@@ -69,6 +85,11 @@ public class DemandeServiceTest {
 
         assertNotNull(demandes, "List should not be null");
         assertFalse(demandes.isEmpty(), "List should not be empty");
+<<<<<<< HEAD
+=======
+
+        // Check the demande we added
+>>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
         Demande found = demandes.stream()
                 .filter(d -> d.getIdDemande() == idDemandeTest)
                 .findFirst()
@@ -99,11 +120,21 @@ public class DemandeServiceTest {
                 .orElse(null);
 
         assertNotNull(toModify, "Demande to modify should exist");
+<<<<<<< HEAD
+=======
+
+        // Modify it
+>>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
         toModify.setTitre("Bug Serveur Critique");
         toModify.setCategorie("Support");
         toModify.setPriorite("HAUTE");
         toModify.setDescription("Problème critique sur le serveur principal");
         demandeCRUD.modifier(toModify);
+<<<<<<< HEAD
+=======
+
+        // Verify modification
+>>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
         List<Demande> updated = demandeCRUD.afficher();
         Demande modified = updated.stream()
                 .filter(d -> d.getIdDemande() == idDemandeTest)
@@ -125,6 +156,10 @@ public class DemandeServiceTest {
     @Order(4)
     @DisplayName("Test Ajouter des Détails à une Demande")
     void testAjouterDetails() throws SQLException {
+<<<<<<< HEAD
+=======
+        // Create details JSON
+>>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
         String detailsJson = "{\"Localisation\":\"Salle Serveur B2\",\"Urgence\":\"Critique\",\"Impact\":\"Élevé\"}";
 
         DemandeDetails details = new DemandeDetails();
@@ -132,7 +167,14 @@ public class DemandeServiceTest {
         details.setDetails(detailsJson);
         detailsCRUD.ajouter(details);
 
+<<<<<<< HEAD
         assertTrue(details.getIdDetails() > 0, "Details ID should be auto-generated");
+=======
+        // Verify details were saved
+        assertTrue(details.getIdDetails() > 0, "Details ID should be auto-generated");
+
+        // Retrieve and verify
+>>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
         DemandeDetails retrieved = detailsCRUD.getByDemande(idDemandeTest);
         assertNotNull(retrieved, "Details should be found");
         assertEquals(idDemandeTest, retrieved.getIdDemande());
@@ -153,10 +195,18 @@ public class DemandeServiceTest {
         DemandeDetails existing = detailsCRUD.getByDemande(idDemandeTest);
         assertNotNull(existing, "Details should exist");
 
+<<<<<<< HEAD
+=======
+        // Modify
+>>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
         String newJson = "{\"Localisation\":\"Salle Serveur A1\",\"Urgence\":\"Majeure\",\"Impact\":\"Moyen\"}";
         existing.setDetails(newJson);
         detailsCRUD.modifier(existing);
 
+<<<<<<< HEAD
+=======
+        // Verify
+>>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
         DemandeDetails modified = detailsCRUD.getByDemande(idDemandeTest);
         assertNotNull(modified);
         assertTrue(modified.getDetails().contains("Salle Serveur A1"));
@@ -173,6 +223,10 @@ public class DemandeServiceTest {
     @Order(6)
     @DisplayName("Test Avancer Statut - Nouvelle → En cours")
     void testAvancerStatutNouvelleVersEnCours() throws SQLException {
+<<<<<<< HEAD
+=======
+        // Get current demande
+>>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
         List<Demande> demandes = demandeCRUD.afficher();
         Demande demande = demandes.stream()
                 .filter(d -> d.getIdDemande() == idDemandeTest)
@@ -181,10 +235,18 @@ public class DemandeServiceTest {
         assertNotNull(demande);
         assertEquals("Nouvelle", demande.getStatus());
 
+<<<<<<< HEAD
+=======
+        // Change status
+>>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
         String ancienStatut = demande.getStatus();
         demande.setStatus("En cours");
         demandeCRUD.modifier(demande);
 
+<<<<<<< HEAD
+=======
+        // Create historique
+>>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
         HistoriqueDemande h = new HistoriqueDemande();
         h.setIdDemande(idDemandeTest);
         h.setAncienStatut(ancienStatut);
@@ -194,6 +256,10 @@ public class DemandeServiceTest {
         h.setCommentaire("Prise en charge du bug serveur");
         historiqueCRUD.ajouter(h);
 
+<<<<<<< HEAD
+=======
+        // Verify status changed
+>>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
         List<Demande> updated = demandeCRUD.afficher();
         Demande updatedDemande = updated.stream()
                 .filter(d -> d.getIdDemande() == idDemandeTest)
@@ -202,6 +268,10 @@ public class DemandeServiceTest {
         assertNotNull(updatedDemande);
         assertEquals("En cours", updatedDemande.getStatus());
 
+<<<<<<< HEAD
+=======
+        // Verify historique created
+>>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
         List<HistoriqueDemande> historiques = historiqueCRUD.getByDemande(idDemandeTest);
         assertFalse(historiques.isEmpty());
         assertEquals(1, historiques.size());
@@ -228,9 +298,17 @@ public class DemandeServiceTest {
         assertNotNull(demande);
         assertEquals("En cours", demande.getStatus());
 
+<<<<<<< HEAD
         demande.setStatus("Résolue");
         demandeCRUD.modifier(demande);
 
+=======
+        // Change status
+        demande.setStatus("Résolue");
+        demandeCRUD.modifier(demande);
+
+        // Create historique
+>>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
         HistoriqueDemande h = new HistoriqueDemande();
         h.setIdDemande(idDemandeTest);
         h.setAncienStatut("En cours");
@@ -240,6 +318,10 @@ public class DemandeServiceTest {
         h.setCommentaire("Bug corrigé et testé");
         historiqueCRUD.ajouter(h);
 
+<<<<<<< HEAD
+=======
+        // Verify 2 historique entries now
+>>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
         List<HistoriqueDemande> historiques = historiqueCRUD.getByDemande(idDemandeTest);
         assertEquals(2, historiques.size(), "Should have 2 historique entries");
 
@@ -257,6 +339,10 @@ public class DemandeServiceTest {
 
         assertEquals(2, historiques.size(), "Should have exactly 2 entries");
 
+<<<<<<< HEAD
+=======
+        // Most recent first (ORDER BY DESC)
+>>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
         HistoriqueDemande latest = historiques.get(0);
         assertEquals("En cours", latest.getAncienStatut());
         assertEquals("Résolue", latest.getNouveauStatut());
@@ -367,8 +453,15 @@ public class DemandeServiceTest {
         DemandeDetails before = detailsCRUD.getByDemande(idDemandeTest);
         assertNotNull(before, "Details should exist before deletion");
 
+<<<<<<< HEAD
         detailsCRUD.supprimerByDemande(idDemandeTest);
 
+=======
+        // Delete
+        detailsCRUD.supprimerByDemande(idDemandeTest);
+
+        // Verify deleted
+>>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
         DemandeDetails after = detailsCRUD.getByDemande(idDemandeTest);
         assertNull(after, "Details should be null after deletion");
 
@@ -382,11 +475,22 @@ public class DemandeServiceTest {
     @Order(15)
     @DisplayName("Test Supprimer l'Historique d'une Demande")
     void testSupprimerHistorique() throws SQLException {
+<<<<<<< HEAD
         List<HistoriqueDemande> before = historiqueCRUD.getByDemande(idDemandeTest);
         assertFalse(before.isEmpty(), "Historique should exist before deletion");
 
         historiqueCRUD.supprimerByDemande(idDemandeTest);
 
+=======
+        // Verify historique exists
+        List<HistoriqueDemande> before = historiqueCRUD.getByDemande(idDemandeTest);
+        assertFalse(before.isEmpty(), "Historique should exist before deletion");
+
+        // Delete
+        historiqueCRUD.supprimerByDemande(idDemandeTest);
+
+        // Verify deleted
+>>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
         List<HistoriqueDemande> after = historiqueCRUD.getByDemande(idDemandeTest);
         assertTrue(after.isEmpty(), "Historique should be empty after deletion");
 
@@ -400,13 +504,24 @@ public class DemandeServiceTest {
     @Order(16)
     @DisplayName("Test Supprimer une Demande")
     void testSupprimerDemande() throws SQLException {
+<<<<<<< HEAD
+=======
+        // Verify demande exists
+>>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
         List<Demande> before = demandeCRUD.afficher();
         boolean existsBefore = before.stream()
                 .anyMatch(d -> d.getIdDemande() == idDemandeTest);
         assertTrue(existsBefore, "Demande should exist before deletion");
 
+<<<<<<< HEAD
         demandeCRUD.supprimer(idDemandeTest);
 
+=======
+        // Delete
+        demandeCRUD.supprimer(idDemandeTest);
+
+        // Verify deleted
+>>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
         List<Demande> after = demandeCRUD.afficher();
         boolean existsAfter = after.stream()
                 .anyMatch(d -> d.getIdDemande() == idDemandeTest);

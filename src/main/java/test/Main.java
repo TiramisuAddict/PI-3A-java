@@ -1,5 +1,6 @@
 package test;
 
+<<<<<<< HEAD
 import entites.Demande;
 import service.demande.DemandeCRUD;
 
@@ -101,3 +102,8 @@ public class Main {
         }
     }
 }
+=======
+public class Main {
+
+}
+>>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5

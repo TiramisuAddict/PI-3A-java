@@ -11,7 +11,11 @@ public class Demande {
     private String status;
     private Date dateCreation;
     private String typeDemande;
+<<<<<<< HEAD
     private String details;
+=======
+    private String details; // JSON from details table
+>>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
 
     public Demande() {}
 

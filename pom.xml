@@ -15,7 +15,22 @@
     </properties>
 
     <dependencies>
+<<<<<<< HEAD
         <!-- JavaFX -->
+=======
+        <dependency>
+            <groupId>io.github.mkpaz</groupId>
+            <artifactId>atlantafx-base</artifactId>
+            <version>2.1.0</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <version>9.3.0</version>
+        </dependency>
+
+>>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
         <dependency>
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-fxml</artifactId>
@@ -27,6 +42,7 @@
             <artifactId>javafx-controls</artifactId>
             <version>21.0.2</version>
         </dependency>
+<<<<<<< HEAD
 
         <!-- AtlantaFX Theme -->
         <dependency>
@@ -57,16 +73,22 @@
             <version>2.2.224</version>
             <scope>test</scope>
         </dependency>
+=======
+>>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
     </dependencies>
 
     <build>
         <plugins>
+<<<<<<< HEAD
             <!-- JavaFX Maven Plugin -->
+=======
+>>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
             <plugin>
                 <groupId>org.openjfx</groupId>
                 <artifactId>javafx-maven-plugin</artifactId>
                 <version>0.0.8</version>
                 <configuration>
+<<<<<<< HEAD
                     <mainClass>controller.AppLauncher</mainClass>
                 </configuration>
             </plugin>
@@ -86,6 +108,9 @@
                 <configuration>
                     <source>21</source>
                     <target>21</target>
+=======
+                    <mainClass>Controleur.Home</mainClass>
+>>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
                 </configuration>
             </plugin>
         </plugins>
