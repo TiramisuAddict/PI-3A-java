@@ -5,13 +5,7 @@ import entites.DemandeDetails;
 import service.demande.DemandeCRUD;
 import service.demande.DemandeDetailsCRUD;
 import javafx.fxml.FXML;
-<<<<<<< HEAD
 import javafx.fxml.Initializable;
-=======
-import javafx.fxml.FXMLLoader;
-import javafx.fxml.Initializable;
-import javafx.scene.Parent;
->>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
 import javafx.scene.control.*;
 import javafx.scene.layout.VBox;
 
@@ -110,17 +104,9 @@ public class ModifierDemandeController implements Initializable {
             dateCreationPicker.setValue(sqlDate.toLocalDate());
         }
 
-<<<<<<< HEAD
         typeDemandeCombo.setValue(demande.getTypeDemande());
         formHelper.updateDynamicFields(demande.getTypeDemande(), dynamicFieldsContainer, detailsPane);
 
-=======
-        // Set type and load dynamic fields
-        typeDemandeCombo.setValue(demande.getTypeDemande());
-        formHelper.updateDynamicFields(demande.getTypeDemande(), dynamicFieldsContainer, detailsPane);
-
-        // Fill dynamic fields with saved details
->>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
         try {
             DemandeDetails details = detailsCRUD.getByDemande(demande.getIdDemande());
             if (details != null) {
@@ -157,10 +143,6 @@ public class ModifierDemandeController implements Initializable {
 
             demandeCRUD.modifier(currentDemande);
 
-<<<<<<< HEAD
-=======
-            // Update details
->>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
             String detailsJson = formHelper.buildDetailsJson();
             DemandeDetails existing = detailsCRUD.getByDemande(currentDemande.getIdDemande());
             if (existing != null) {
@@ -184,13 +166,7 @@ public class ModifierDemandeController implements Initializable {
     @FXML
     private void retourListe() {
         try {
-<<<<<<< HEAD
             NavigationHelper.loadView(titreField, "demandes.fxml");
-=======
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/demandes.fxml"));
-            Parent root = loader.load();
-            titreField.getScene().setRoot(root);
->>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
         } catch (IOException e) {
             e.printStackTrace();
         }

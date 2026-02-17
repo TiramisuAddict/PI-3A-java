@@ -247,10 +247,7 @@ public class DemandeFormHelper {
             clearFieldError(titreField, titreError);
         }
 
-<<<<<<< HEAD
-=======
         // Categorie
->>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
         if (categorieCombo.getValue() == null) {
             setFieldError(categorieCombo, categorieError, "La catégorie est obligatoire");
             isValid = false;
@@ -266,10 +263,7 @@ public class DemandeFormHelper {
             clearFieldError(typeDemandeCombo, typeError);
         }
 
-<<<<<<< HEAD
-=======
         // Priorite
->>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
         if (prioriteCombo.getValue() == null) {
             setFieldError(prioriteCombo, prioriteError, "La priorité est obligatoire");
             isValid = false;
@@ -277,10 +271,7 @@ public class DemandeFormHelper {
             clearFieldError(prioriteCombo, prioriteError);
         }
 
-<<<<<<< HEAD
-=======
         // Description
->>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
         if (descriptionArea.getText().trim().isEmpty()) {
             setFieldError(descriptionArea, descriptionError, "La description est obligatoire");
             isValid = false;
@@ -294,10 +285,7 @@ public class DemandeFormHelper {
             clearFieldError(descriptionArea, descriptionError);
         }
 
-<<<<<<< HEAD
-=======
         // Status
->>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
         if (statusCombo.getValue() == null) {
             setFieldError(statusCombo, statusError, "Le statut est obligatoire");
             isValid = false;
@@ -305,10 +293,7 @@ public class DemandeFormHelper {
             clearFieldError(statusCombo, statusError);
         }
 
-<<<<<<< HEAD
-=======
         // Date
->>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
         if (dateCreationPicker.getValue() == null) {
             setFieldError(dateCreationPicker, dateError, "La date est obligatoire");
             isValid = false;
@@ -319,10 +304,7 @@ public class DemandeFormHelper {
             clearFieldError(dateCreationPicker, dateError);
         }
 
-<<<<<<< HEAD
-=======
         // Dynamic fields
->>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
         if (!validateDynamicFields()) {
             isValid = false;
         }

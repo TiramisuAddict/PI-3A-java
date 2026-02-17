@@ -1,6 +1,5 @@
 package test;
 
-<<<<<<< HEAD
 import entites.Demande;
 import service.demande.DemandeCRUD;
 
@@ -20,7 +19,7 @@ public class Main {
             demande.setTitre("Test Demande");
             demande.setCategorie("Technique");
             demande.setDescription("Ceci est un test");
-            demande.setPriorite("NORMALE");        // ← ENUM value
+            demande.setPriorite("NORMALE");
             demande.setStatus("Nouvelle");
             demande.setDateCreation(new Date());
             demande.setTypeDemande("Incident");
@@ -57,7 +56,7 @@ public class Main {
                 Demande toModify = demandes.get(demandes.size() - 1);
                 toModify.setTitre("Titre Modifié");
                 toModify.setStatus("En cours");
-                toModify.setPriorite("HAUTE");     // ← ENUM value
+                toModify.setPriorite("HAUTE");
                 crud.modifier(toModify);
                 System.out.println("✅ Demande ID " + toModify.getIdDemande() + " modifiée!");
             }
@@ -102,8 +101,3 @@ public class Main {
         }
     }
 }
-=======
-public class Main {
-
-}
->>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5

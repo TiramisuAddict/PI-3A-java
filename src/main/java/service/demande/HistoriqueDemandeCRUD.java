@@ -20,7 +20,7 @@ public class HistoriqueDemandeCRUD {
             pst.setInt(1, h.getIdDemande());
             pst.setString(2, h.getAncienStatut());
             pst.setString(3, h.getNouveauStatut());
-            pst.setTimestamp(4, new java.sql.Timestamp(h.getDateAction().getTime()));
+            pst.setTimestamp(4, new Timestamp(h.getDateAction().getTime()));
             pst.setString(5, h.getActeur());
             pst.setString(6, h.getCommentaire());
             pst.executeUpdate();

@@ -18,10 +18,7 @@ import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
-<<<<<<< HEAD
 import javafx.scene.layout.StackPane;
-=======
->>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
 import javafx.scene.layout.VBox;
 
 import java.io.IOException;
@@ -42,10 +39,7 @@ public class DemandesController implements Initializable {
     @FXML private TableColumn<Demande, Date> dateCol;
     @FXML private TableColumn<Demande, Void> actionsCol;
 
-<<<<<<< HEAD
-=======
     // Details Panel
->>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
     @FXML private VBox placeholderBox;
     @FXML private VBox detailsContent;
     @FXML private Label detailTitreLabel;
@@ -65,11 +59,8 @@ public class DemandesController implements Initializable {
     private DemandeFormHelper formHelper;
     private Demande selectedDemande;
 
-<<<<<<< HEAD
-=======
     // ============ INITIALIZATION ============
 
->>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         demandeCRUD = new DemandeCRUD();
@@ -80,24 +71,16 @@ public class DemandesController implements Initializable {
         initializeTableColumns();
         loadDemandes();
 
-<<<<<<< HEAD
-=======
         // Table selection listener
->>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
         demandesTable.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
             if (newVal != null) {
                 selectedDemande = newVal;
                 showDetails(newVal);
             }
         });
-<<<<<<< HEAD
 
+        // Real-time search
         rechercheField.textProperty().addListener((obs, oldVal, newVal) -> {
-=======
-        // Real-time  — filters as you type
-        rechercheField.textProperty().addListener((obs, oldVal, newVal) -> {
-            // Reset details panel
->>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
             placeholderBox.setVisible(true);
             placeholderBox.setManaged(true);
             detailsContent.setVisible(false);
@@ -105,15 +88,8 @@ public class DemandesController implements Initializable {
             selectedDemande = null;
 
             if (newVal == null || newVal.trim().isEmpty()) {
-<<<<<<< HEAD
                 loadDemandes();
             } else {
-=======
-                // Empty search → reload fresh data from database
-                loadDemandes();
-            } else {
-                // Filter by titre in real-time
->>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
                 String searchTerm = newVal.toLowerCase().trim();
                 ObservableList<Demande> filtered = FXCollections.observableArrayList();
                 for (Demande d : demandesList) {
@@ -127,10 +103,7 @@ public class DemandesController implements Initializable {
         });
     }
 
-<<<<<<< HEAD
-=======
     // ============ TABLE COLUMNS ============
->>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
 
     private void initializeTableColumns() {
         titreCol.setCellValueFactory(new PropertyValueFactory<>("titre"));
@@ -140,10 +113,7 @@ public class DemandesController implements Initializable {
         statusCol.setCellValueFactory(new PropertyValueFactory<>("status"));
         dateCol.setCellValueFactory(new PropertyValueFactory<>("dateCreation"));
 
-<<<<<<< HEAD
-=======
         // Priority colors
->>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
         prioriteCol.setCellFactory(column -> new TableCell<Demande, String>() {
             @Override
             protected void updateItem(String item, boolean empty) {
@@ -163,10 +133,7 @@ public class DemandesController implements Initializable {
             }
         });
 
-<<<<<<< HEAD
-=======
         // Status colors
->>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
         statusCol.setCellFactory(column -> new TableCell<Demande, String>() {
             @Override
             protected void updateItem(String item, boolean empty) {
@@ -188,10 +155,7 @@ public class DemandesController implements Initializable {
             }
         });
 
-<<<<<<< HEAD
-=======
         // Actions column
->>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
         actionsCol.setCellFactory(column -> new TableCell<Demande, Void>() {
             private final Button modifierBtn = new Button("✏ Modifier");
             private final Button supprimerBtn = new Button("🗑 Supprimer");
@@ -221,10 +185,7 @@ public class DemandesController implements Initializable {
         });
     }
 
-<<<<<<< HEAD
-=======
     // ============ DETAILS PANEL ============
->>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
 
     private void showDetails(Demande demande) {
         placeholderBox.setVisible(false);
@@ -232,19 +193,12 @@ public class DemandesController implements Initializable {
         detailsContent.setVisible(true);
         detailsContent.setManaged(true);
 
-<<<<<<< HEAD
-=======
-        // Basic info
->>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
         detailTitreLabel.setText(demande.getTitre());
         detailCategorieLabel.setText(demande.getCategorie());
         detailTypeLabel.setText(demande.getTypeDemande());
         detailDescriptionLabel.setText(demande.getDescription());
 
-<<<<<<< HEAD
-=======
         // Priorite with color
->>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
         detailPrioriteLabel.setText(demande.getPriorite());
         switch (demande.getPriorite()) {
             case "HAUTE": detailPrioriteLabel.setStyle("-fx-text-fill: red; -fx-font-weight: bold; -fx-font-size: 13;"); break;
@@ -252,10 +206,7 @@ public class DemandesController implements Initializable {
             case "BASSE": detailPrioriteLabel.setStyle("-fx-text-fill: green; -fx-font-weight: bold; -fx-font-size: 13;"); break;
         }
 
-<<<<<<< HEAD
-=======
         // Status with color
->>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
         detailStatusLabel.setText(demande.getStatus());
         switch (demande.getStatus()) {
             case "Nouvelle": detailStatusLabel.setStyle("-fx-text-fill: #3498db; -fx-font-weight: bold; -fx-font-size: 13;"); break;
@@ -265,22 +216,11 @@ public class DemandesController implements Initializable {
             case "Fermée": detailStatusLabel.setStyle("-fx-text-fill: #95a5a6; -fx-font-weight: bold; -fx-font-size: 13;"); break;
         }
 
-<<<<<<< HEAD
-=======
-        // Date
->>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
         if (demande.getDateCreation() != null) {
             detailDateLabel.setText(demande.getDateCreation().toString());
         }
 
-<<<<<<< HEAD
         loadSpecificDetails(demande);
-=======
-        // Load specific details
-        loadSpecificDetails(demande);
-
-        // Load historique
->>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
         loadHistorique(demande);
     }
 
@@ -346,10 +286,6 @@ public class DemandesController implements Initializable {
         card.setStyle("-fx-background-color: white; -fx-background-radius: 8; " +
                 "-fx-border-color: #e0e0e0; -fx-border-radius: 8; -fx-padding: 10;");
 
-<<<<<<< HEAD
-=======
-        // Status change line
->>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
         HBox statusLine = new HBox(5);
         statusLine.setAlignment(Pos.CENTER_LEFT);
 
@@ -366,10 +302,6 @@ public class DemandesController implements Initializable {
 
         statusLine.getChildren().addAll(ancienLabel, arrowLabel, nouveauLabel);
 
-<<<<<<< HEAD
-=======
-        // Acteur + Date
->>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
         HBox metaLine = new HBox(15);
         metaLine.setAlignment(Pos.CENTER_LEFT);
 
@@ -381,10 +313,6 @@ public class DemandesController implements Initializable {
 
         metaLine.getChildren().addAll(acteurLabel, dateLabel);
 
-<<<<<<< HEAD
-=======
-        // Comment
->>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
         Label commentLabel = new Label("💬 " + h.getCommentaire());
         commentLabel.setWrapText(true);
         commentLabel.setStyle("-fx-text-fill: #555;");
@@ -404,20 +332,12 @@ public class DemandesController implements Initializable {
         }
     }
 
-<<<<<<< HEAD
-=======
     // ============ DATA LOADING ============
->>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
 
     public void loadDemandes() {
         try {
             demandesList.clear();
             demandesList.addAll(demandeCRUD.afficher());
-<<<<<<< HEAD
-=======
-
-            // Always set a fresh copy to the table
->>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
             ObservableList<Demande> tableData = FXCollections.observableArrayList(demandesList);
             demandesTable.setItems(tableData);
             demandesTable.refresh();
@@ -426,25 +346,14 @@ public class DemandesController implements Initializable {
         }
     }
 
-<<<<<<< HEAD
-=======
-    // ============ NAVIGATION ============
->>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
+    // ============ NAVIGATION — Using NavigationHelper ============
 
     @FXML
     private void ouvrirAjouter() {
         try {
-<<<<<<< HEAD
             FXMLLoader loader = NavigationHelper.loadView(demandesTable, "ajouter-demande.fxml");
             AjouterDemandeController controller = loader.getController();
             controller.setParentController(this);
-=======
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/ajouter-demande.fxml"));
-            Parent root = loader.load();
-            AjouterDemandeController controller = loader.getController();
-            controller.setParentController(this);
-            demandesTable.getScene().setRoot(root);
->>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
         } catch (IOException e) {
             showAlert(Alert.AlertType.ERROR, "Erreur", "Impossible d'ouvrir: " + e.getMessage());
             e.printStackTrace();
@@ -453,19 +362,10 @@ public class DemandesController implements Initializable {
 
     private void ouvrirModifier(Demande demande) {
         try {
-<<<<<<< HEAD
             FXMLLoader loader = NavigationHelper.loadView(demandesTable, "modifier-demande.fxml");
             ModifierDemandeController controller = loader.getController();
             controller.setParentController(this);
             controller.setDemande(demande);
-=======
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/modifier-demande.fxml"));
-            Parent root = loader.load();
-            ModifierDemandeController controller = loader.getController();
-            controller.setParentController(this);
-            controller.setDemande(demande);
-            demandesTable.getScene().setRoot(root);
->>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
         } catch (IOException e) {
             showAlert(Alert.AlertType.ERROR, "Erreur", "Impossible d'ouvrir: " + e.getMessage());
             e.printStackTrace();
@@ -485,29 +385,17 @@ public class DemandesController implements Initializable {
         }
 
         try {
-<<<<<<< HEAD
             FXMLLoader loader = NavigationHelper.loadView(demandesTable, "avancer-demande.fxml");
             AvancerDemandeController controller = loader.getController();
             controller.setParentController(this);
             controller.setDemande(selectedDemande);
-=======
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/avancer-demande.fxml"));
-            Parent root = loader.load();
-            AvancerDemandeController controller = loader.getController();
-            controller.setParentController(this);
-            controller.setDemande(selectedDemande);
-            demandesTable.getScene().setRoot(root);
->>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
         } catch (IOException e) {
             showAlert(Alert.AlertType.ERROR, "Erreur", "Impossible d'ouvrir: " + e.getMessage());
             e.printStackTrace();
         }
     }
 
-<<<<<<< HEAD
-=======
     // ============ DELETE ============
->>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
 
     private void supprimerDemande(Demande demande) {
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
@@ -522,20 +410,11 @@ public class DemandesController implements Initializable {
                 demandeCRUD.supprimer(demande.getIdDemande());
                 loadDemandes();
 
-<<<<<<< HEAD
-=======
-                // Reset details panel
->>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
                 placeholderBox.setVisible(true);
                 placeholderBox.setManaged(true);
                 detailsContent.setVisible(false);
                 detailsContent.setManaged(false);
                 selectedDemande = null;
-<<<<<<< HEAD
-=======
-
-                // Clear search field
->>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
                 rechercheField.clear();
 
                 showAlert(Alert.AlertType.INFORMATION, "Succès", "Demande supprimée!");
@@ -545,11 +424,6 @@ public class DemandesController implements Initializable {
         }
     }
 
-<<<<<<< HEAD
-=======
-    // ============ ALERT ============
-
->>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
     private void showAlert(Alert.AlertType type, String title, String content) {
         Alert alert = new Alert(type);
         alert.setTitle(title);

@@ -7,15 +7,8 @@ import service.demande.HistoriqueDemandeCRUD;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
-<<<<<<< HEAD
 import javafx.fxml.Initializable;
 import javafx.geometry.Pos;
-=======
-import javafx.fxml.FXMLLoader;
-import javafx.fxml.Initializable;
-import javafx.geometry.Pos;
-import javafx.scene.Parent;
->>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.HBox;
@@ -74,10 +67,6 @@ public class AvancerDemandeController implements Initializable {
         demandeCRUD = new DemandeCRUD();
         historiqueCRUD = new HistoriqueDemandeCRUD();
 
-<<<<<<< HEAD
-=======
-        // Acteur ComboBox - matches ENUM('RH','ADMIN','RESPONSABLE')
->>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
         acteurCombo.setItems(FXCollections.observableArrayList(
                 "RH", "ADMIN", "RESPONSABLE"
         ));
@@ -93,69 +82,30 @@ public class AvancerDemandeController implements Initializable {
         dateActionCol.setCellValueFactory(new PropertyValueFactory<>("dateAction"));
         commentaireCol.setCellValueFactory(new PropertyValueFactory<>("commentaire"));
 
-<<<<<<< HEAD
-=======
-        // Color for ancien statut
->>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
         ancienStatutCol.setCellFactory(col -> new TableCell<HistoriqueDemande, String>() {
             @Override
             protected void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
-<<<<<<< HEAD
                 if (empty || item == null) { setText(null); setStyle(""); }
                 else { setText(item); setStyle(getStatusTextStyle(item)); }
             }
         });
 
-=======
-                if (empty || item == null) {
-                    setText(null);
-                    setStyle("");
-                } else {
-                    setText(item);
-                    setStyle(getStatusTextStyle(item));
-                }
-            }
-        });
-
-        // Color for nouveau statut
->>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
         nouveauStatutCol.setCellFactory(col -> new TableCell<HistoriqueDemande, String>() {
             @Override
             protected void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
-<<<<<<< HEAD
                 if (empty || item == null) { setText(null); setStyle(""); }
                 else { setText(item); setStyle(getStatusTextStyle(item)); }
             }
         });
 
-=======
-                if (empty || item == null) {
-                    setText(null);
-                    setStyle("");
-                } else {
-                    setText(item);
-                    setStyle(getStatusTextStyle(item));
-                }
-            }
-        });
-
-        // Color for acteur
->>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
         acteurCol.setCellFactory(col -> new TableCell<HistoriqueDemande, String>() {
             @Override
             protected void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
-<<<<<<< HEAD
                 if (empty || item == null) { setText(null); setStyle(""); }
                 else {
-=======
-                if (empty || item == null) {
-                    setText(null);
-                    setStyle("");
-                } else {
->>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
                     setText(item);
                     switch (item) {
                         case "RH": setStyle("-fx-text-fill: #8e44ad; -fx-font-weight: bold;"); break;
@@ -268,7 +218,6 @@ public class AvancerDemandeController implements Initializable {
 
     private void setupRealtimeValidation() {
         nouveauStatutCombo.valueProperty().addListener((obs, o, n) -> {
-<<<<<<< HEAD
             if (n != null) { statutError.setText(""); nouveauStatutCombo.setStyle(""); }
         });
         acteurCombo.valueProperty().addListener((obs, o, n) -> {
@@ -276,26 +225,6 @@ public class AvancerDemandeController implements Initializable {
         });
         commentaireArea.textProperty().addListener((obs, o, n) -> {
             if (!n.trim().isEmpty()) { commentaireError.setText(""); commentaireArea.setStyle(""); }
-=======
-            if (n != null) {
-                statutError.setText("");
-                nouveauStatutCombo.setStyle("");
-            }
-        });
-
-        acteurCombo.valueProperty().addListener((obs, o, n) -> {
-            if (n != null) {
-                acteurError.setText("");
-                acteurCombo.setStyle("");
-            }
-        });
-
-        commentaireArea.textProperty().addListener((obs, o, n) -> {
-            if (!n.trim().isEmpty()) {
-                commentaireError.setText("");
-                commentaireArea.setStyle("");
-            }
->>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
         });
     }
 
@@ -309,17 +238,9 @@ public class AvancerDemandeController implements Initializable {
         String commentaire = commentaireArea.getText().trim();
 
         try {
-<<<<<<< HEAD
             currentDemande.setStatus(nouveauStatut);
             demandeCRUD.modifier(currentDemande);
 
-=======
-            // Update demande status
-            currentDemande.setStatus(nouveauStatut);
-            demandeCRUD.modifier(currentDemande);
-
-            // Create historique entry
->>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
             HistoriqueDemande historique = new HistoriqueDemande();
             historique.setIdDemande(currentDemande.getIdDemande());
             historique.setAncienStatut(ancienStatut);
@@ -370,13 +291,7 @@ public class AvancerDemandeController implements Initializable {
     @FXML
     private void retourListe() {
         try {
-<<<<<<< HEAD
             NavigationHelper.loadView(infoTitreLabel, "demandes.fxml");
-=======
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/demandes.fxml"));
-            Parent root = loader.load();
-            infoTitreLabel.getScene().setRoot(root);
->>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
         } catch (IOException e) {
             e.printStackTrace();
         }

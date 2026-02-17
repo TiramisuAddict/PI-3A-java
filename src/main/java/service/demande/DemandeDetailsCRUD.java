@@ -35,14 +35,6 @@ public class DemandeDetailsCRUD {
         }
     }
 
-    public void supprimerByDemande(int idDemande) throws SQLException {
-        String req = "DELETE FROM demande_details WHERE id_demande=?";
-        try (PreparedStatement pst = conn.prepareStatement(req)) {
-            pst.setInt(1, idDemande);
-            pst.executeUpdate();
-        }
-    }
-
     public DemandeDetails getByDemande(int idDemande) throws SQLException {
         String req = "SELECT * FROM demande_details WHERE id_demande=?";
         try (PreparedStatement pst = conn.prepareStatement(req)) {
@@ -57,5 +49,13 @@ public class DemandeDetailsCRUD {
             }
         }
         return null;
+    }
+
+    public void supprimerByDemande(int idDemande) throws SQLException {
+        String req = "DELETE FROM demande_details WHERE id_demande=?";
+        try (PreparedStatement pst = conn.prepareStatement(req)) {
+            pst.setInt(1, idDemande);
+            pst.executeUpdate();
+        }
     }
 }

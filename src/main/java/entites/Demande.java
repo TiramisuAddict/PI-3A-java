@@ -11,11 +11,6 @@ public class Demande {
     private String status;
     private Date dateCreation;
     private String typeDemande;
-<<<<<<< HEAD
-    private String details;
-=======
-    private String details; // JSON from details table
->>>>>>> b2242b4f91f46ba2b636098f6c0f8aa2658accf5
 
     public Demande() {}
 
@@ -55,6 +50,16 @@ public class Demande {
     public String getTypeDemande() { return typeDemande; }
     public void setTypeDemande(String typeDemande) { this.typeDemande = typeDemande; }
 
-    public String getDetails() { return details; }
-    public void setDetails(String details) { this.details = details; }
+    @Override
+    public String toString() {
+        return "Demande{" +
+                "id=" + idDemande +
+                ", titre='" + titre + '\'' +
+                ", categorie='" + categorie + '\'' +
+                ", priorite='" + priorite + '\'' +
+                ", status='" + status + '\'' +
+                ", type='" + typeDemande + '\'' +
+                ", date=" + dateCreation +
+                '}';
+    }
 }
