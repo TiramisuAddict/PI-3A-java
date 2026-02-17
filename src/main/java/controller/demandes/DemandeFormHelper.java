@@ -247,7 +247,6 @@ public class DemandeFormHelper {
             clearFieldError(titreField, titreError);
         }
 
-        // Categorie
         if (categorieCombo.getValue() == null) {
             setFieldError(categorieCombo, categorieError, "La catégorie est obligatoire");
             isValid = false;
@@ -263,7 +262,6 @@ public class DemandeFormHelper {
             clearFieldError(typeDemandeCombo, typeError);
         }
 
-        // Priorite
         if (prioriteCombo.getValue() == null) {
             setFieldError(prioriteCombo, prioriteError, "La priorité est obligatoire");
             isValid = false;
@@ -271,7 +269,6 @@ public class DemandeFormHelper {
             clearFieldError(prioriteCombo, prioriteError);
         }
 
-        // Description
         if (descriptionArea.getText().trim().isEmpty()) {
             setFieldError(descriptionArea, descriptionError, "La description est obligatoire");
             isValid = false;
@@ -285,7 +282,6 @@ public class DemandeFormHelper {
             clearFieldError(descriptionArea, descriptionError);
         }
 
-        // Status
         if (statusCombo.getValue() == null) {
             setFieldError(statusCombo, statusError, "Le statut est obligatoire");
             isValid = false;
@@ -293,7 +289,6 @@ public class DemandeFormHelper {
             clearFieldError(statusCombo, statusError);
         }
 
-        // Date
         if (dateCreationPicker.getValue() == null) {
             setFieldError(dateCreationPicker, dateError, "La date est obligatoire");
             isValid = false;
@@ -304,7 +299,6 @@ public class DemandeFormHelper {
             clearFieldError(dateCreationPicker, dateError);
         }
 
-        // Dynamic fields
         if (!validateDynamicFields()) {
             isValid = false;
         }

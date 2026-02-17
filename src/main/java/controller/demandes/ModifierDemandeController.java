@@ -5,9 +5,7 @@ import entites.DemandeDetails;
 import service.demande.DemandeCRUD;
 import service.demande.DemandeDetailsCRUD;
 import javafx.fxml.FXML;
-import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
-import javafx.scene.Parent;
 import javafx.scene.control.*;
 import javafx.scene.layout.VBox;
 
@@ -106,11 +104,9 @@ public class ModifierDemandeController implements Initializable {
             dateCreationPicker.setValue(sqlDate.toLocalDate());
         }
 
-        // Set type and load dynamic fields
         typeDemandeCombo.setValue(demande.getTypeDemande());
         formHelper.updateDynamicFields(demande.getTypeDemande(), dynamicFieldsContainer, detailsPane);
 
-        // Fill dynamic fields with saved details
         try {
             DemandeDetails details = detailsCRUD.getByDemande(demande.getIdDemande());
             if (details != null) {
@@ -147,7 +143,6 @@ public class ModifierDemandeController implements Initializable {
 
             demandeCRUD.modifier(currentDemande);
 
-            // Update details
             String detailsJson = formHelper.buildDetailsJson();
             DemandeDetails existing = detailsCRUD.getByDemande(currentDemande.getIdDemande());
             if (existing != null) {
@@ -171,9 +166,7 @@ public class ModifierDemandeController implements Initializable {
     @FXML
     private void retourListe() {
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/demandes.fxml"));
-            Parent root = loader.load();
-            titreField.getScene().setRoot(root);
+            NavigationHelper.loadView(titreField, "demandes.fxml");
         } catch (IOException e) {
             e.printStackTrace();
         }

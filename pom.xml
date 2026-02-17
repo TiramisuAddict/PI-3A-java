@@ -67,7 +67,7 @@
                 <artifactId>javafx-maven-plugin</artifactId>
                 <version>0.0.8</version>
                 <configuration>
-                    <mainClass>controller.App</mainClass>
+                    <mainClass>controller.AppLauncher</mainClass>
                 </configuration>
             </plugin>
 

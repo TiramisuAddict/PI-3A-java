@@ -5,9 +5,7 @@ import entites.DemandeDetails;
 import service.demande.DemandeCRUD;
 import service.demande.DemandeDetailsCRUD;
 import javafx.fxml.FXML;
-import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
-import javafx.scene.Parent;
 import javafx.scene.control.*;
 import javafx.scene.layout.VBox;
 
@@ -141,7 +139,6 @@ public class AjouterDemandeController implements Initializable {
         dynamicFieldsContainer.getChildren().add(placeholder);
         detailsPane.setText("Détails Spécifiques");
 
-        // Clear errors
         formHelper.clearFieldError(titreField, titreError);
         formHelper.clearFieldError(categorieCombo, categorieError);
         formHelper.clearFieldError(typeDemandeCombo, typeError);
@@ -154,9 +151,7 @@ public class AjouterDemandeController implements Initializable {
     @FXML
     private void retourListe() {
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/demandes.fxml"));
-            Parent root = loader.load();
-            titreField.getScene().setRoot(root);
+            NavigationHelper.loadView(titreField, "demandes.fxml");
         } catch (IOException e) {
             e.printStackTrace();
         }

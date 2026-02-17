@@ -11,7 +11,7 @@ public class Demande {
     private String status;
     private Date dateCreation;
     private String typeDemande;
-    private String details; // JSON from details table
+    private String details;
 
     public Demande() {}
 

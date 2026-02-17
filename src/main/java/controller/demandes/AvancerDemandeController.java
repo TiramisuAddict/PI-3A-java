@@ -7,10 +7,8 @@ import service.demande.HistoriqueDemandeCRUD;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
-import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.geometry.Pos;
-import javafx.scene.Parent;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.HBox;
@@ -69,7 +67,6 @@ public class AvancerDemandeController implements Initializable {
         demandeCRUD = new DemandeCRUD();
         historiqueCRUD = new HistoriqueDemandeCRUD();
 
-        // Acteur ComboBox - matches ENUM('RH','ADMIN','RESPONSABLE')
         acteurCombo.setItems(FXCollections.observableArrayList(
                 "RH", "ADMIN", "RESPONSABLE"
         ));
@@ -85,45 +82,30 @@ public class AvancerDemandeController implements Initializable {
         dateActionCol.setCellValueFactory(new PropertyValueFactory<>("dateAction"));
         commentaireCol.setCellValueFactory(new PropertyValueFactory<>("commentaire"));
 
-        // Color for ancien statut
         ancienStatutCol.setCellFactory(col -> new TableCell<HistoriqueDemande, String>() {
             @Override
             protected void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
-                if (empty || item == null) {
-                    setText(null);
-                    setStyle("");
-                } else {
-                    setText(item);
-                    setStyle(getStatusTextStyle(item));
-                }
+                if (empty || item == null) { setText(null); setStyle(""); }
+                else { setText(item); setStyle(getStatusTextStyle(item)); }
             }
         });
 
-        // Color for nouveau statut
         nouveauStatutCol.setCellFactory(col -> new TableCell<HistoriqueDemande, String>() {
             @Override
             protected void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
-                if (empty || item == null) {
-                    setText(null);
-                    setStyle("");
-                } else {
-                    setText(item);
-                    setStyle(getStatusTextStyle(item));
-                }
+                if (empty || item == null) { setText(null); setStyle(""); }
+                else { setText(item); setStyle(getStatusTextStyle(item)); }
             }
         });
 
-        // Color for acteur
         acteurCol.setCellFactory(col -> new TableCell<HistoriqueDemande, String>() {
             @Override
             protected void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
-                if (empty || item == null) {
-                    setText(null);
-                    setStyle("");
-                } else {
+                if (empty || item == null) { setText(null); setStyle(""); }
+                else {
                     setText(item);
                     switch (item) {
                         case "RH": setStyle("-fx-text-fill: #8e44ad; -fx-font-weight: bold;"); break;
@@ -236,24 +218,13 @@ public class AvancerDemandeController implements Initializable {
 
     private void setupRealtimeValidation() {
         nouveauStatutCombo.valueProperty().addListener((obs, o, n) -> {
-            if (n != null) {
-                statutError.setText("");
-                nouveauStatutCombo.setStyle("");
-            }
+            if (n != null) { statutError.setText(""); nouveauStatutCombo.setStyle(""); }
         });
-
         acteurCombo.valueProperty().addListener((obs, o, n) -> {
-            if (n != null) {
-                acteurError.setText("");
-                acteurCombo.setStyle("");
-            }
+            if (n != null) { acteurError.setText(""); acteurCombo.setStyle(""); }
         });
-
         commentaireArea.textProperty().addListener((obs, o, n) -> {
-            if (!n.trim().isEmpty()) {
-                commentaireError.setText("");
-                commentaireArea.setStyle("");
-            }
+            if (!n.trim().isEmpty()) { commentaireError.setText(""); commentaireArea.setStyle(""); }
         });
     }
 
@@ -267,11 +238,9 @@ public class AvancerDemandeController implements Initializable {
         String commentaire = commentaireArea.getText().trim();
 
         try {
-            // Update demande status
             currentDemande.setStatus(nouveauStatut);
             demandeCRUD.modifier(currentDemande);
 
-            // Create historique entry
             HistoriqueDemande historique = new HistoriqueDemande();
             historique.setIdDemande(currentDemande.getIdDemande());
             historique.setAncienStatut(ancienStatut);
@@ -322,9 +291,7 @@ public class AvancerDemandeController implements Initializable {
     @FXML
     private void retourListe() {
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/demandes.fxml"));
-            Parent root = loader.load();
-            infoTitreLabel.getScene().setRoot(root);
+            NavigationHelper.loadView(infoTitreLabel, "demandes.fxml");
         } catch (IOException e) {
             e.printStackTrace();
         }

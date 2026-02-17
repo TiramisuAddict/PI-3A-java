@@ -1,11 +1,12 @@
-controller\demandes\AvancerDemandeController$3.class
 controller\demandes\DemandeFormHelper.class
-controller\demandes\ModifierDemandeController.class
 controller\demandes\DemandeFormHelper$1.class
-controller\demandes\AvancerDemandeController.class
 controller\demandes\AvancerDemandeController$2.class
-entites\HistoriqueDemande.class
+controller\demandes\NavigationHelper.class
 service\demande\HistoriqueDemandeCRUD.class
 controller\demandes\AjouterDemandeController.class
 controller\demandes\AvancerDemandeController$1.class
+controller\demandes\AvancerDemandeController$3.class
+controller\demandes\ModifierDemandeController.class
+controller\demandes\AvancerDemandeController.class
+entites\HistoriqueDemande.class
 controller\demandes\DemandesController$3.class
