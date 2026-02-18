@@ -2,7 +2,11 @@ package controller.projets;
 
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.control.*;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.scene.Node;
 
@@ -12,6 +16,9 @@ import Models.statut_t;
 
 import service.TacheCRUD;
 import service.Equipe_projet;
+import service.WorkloadBalancingAPI;
+import service.WorkloadBalancingAPI.WorkloadAnalysisResult;
+import service.WorkloadBalancingAPI.EmployeeWorkload;
 
 import java.net.URL;
 import java.sql.SQLException;
@@ -39,9 +46,19 @@ public class AjoutTacheController implements Initializable {
 
     @FXML private Label infoLabel;
 
+    // Workload API components
+    @FXML private VBox suggestionBox;
+    @FXML private Label suggestionLabel;
+    @FXML private Button btnApplySuggestion;
+    @FXML private Button btnViewWorkload;
+
     private int projectId;
     private Runnable onSaved;
     private Tache tacheToEdit = null; // For edit mode
+
+    // Workload API
+    private final WorkloadBalancingAPI workloadAPI = new WorkloadBalancingAPI();
+    private WorkloadAnalysisResult currentAnalysis = null;
 
     private final TacheCRUD tacheCRUD = new TacheCRUD();
     private final Equipe_projet groupeProjetCRUD = new Equipe_projet();
@@ -77,10 +94,104 @@ public class AjoutTacheController implements Initializable {
         try {
             List<EmployeeOption> options = groupeProjetCRUD.getEmployeesForProject(projectId);
             employeeBox.getItems().setAll(options);
+
+            // Run workload analysis and show suggestion (only for new tasks)
+            if (tacheToEdit == null) {
+                analyzeAndSuggestEmployee();
+            }
         } catch (SQLException e) {
             e.printStackTrace();
             showInfo("Erreur chargement employés du projet.");
         }
+    }
+
+    /**
+     * Analyze workload and suggest the best employee
+     */
+    private void analyzeAndSuggestEmployee() {
+        try {
+            currentAnalysis = workloadAPI.analyzeProjectWorkload(projectId);
+
+            if (currentAnalysis.hasSuggestion()) {
+                EmployeeWorkload suggested = currentAnalysis.getSuggestedEmployee();
+
+                // Show suggestion in UI
+                showSuggestion(
+                    "💡 Suggestion IA: " + suggested.getEmployeeName(),
+                    currentAnalysis.getSuggestionReason(),
+                    suggested.getEmployeeId()
+                );
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            // Don't show error - suggestion is optional feature
+        }
+    }
+
+    /**
+     * Display the workload suggestion in the UI
+     */
+    private void showSuggestion(String title, String reason, int suggestedEmployeeId) {
+        if (suggestionBox != null) {
+            suggestionLabel.setText(title + "\n" + reason);
+            suggestionBox.setVisible(true);
+            suggestionBox.setManaged(true);
+
+            btnApplySuggestion.setOnAction(e -> {
+                // Find and select the suggested employee
+                for (EmployeeOption opt : employeeBox.getItems()) {
+                    if (opt.id() == suggestedEmployeeId) {
+                        employeeBox.setValue(opt);
+                        showInfo("✅ Employé suggéré sélectionné!");
+                        break;
+                    }
+                }
+            });
+
+            btnViewWorkload.setOnAction(e -> showWorkloadDetails());
+        }
+    }
+
+    /**
+     * Show detailed workload analysis in a popup
+     */
+    private void showWorkloadDetails() {
+        if (currentAnalysis == null) return;
+
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Analyse de Charge de Travail");
+        alert.setHeaderText("📊 Smart Workload Balancing API");
+
+        // Build detailed content
+        StringBuilder content = new StringBuilder();
+        content.append("Classement des employés (du plus disponible au moins disponible):\n\n");
+
+        int rank = 1;
+        for (EmployeeWorkload w : currentAnalysis.getRankedEmployees()) {
+            content.append(rank++).append(". ").append(w.getAvailabilityStatus())
+                   .append(" ").append(w.getEmployeeName()).append("\n")
+                   .append("    • Tâches actives: ").append(w.getTotalActiveTasks()).append("\n")
+                   .append("    • Haute priorité: ").append(w.getHighPriorityTasks()).append("\n")
+                   .append("    • Tâches urgentes: ").append(w.getUrgentTasks()).append("\n")
+                   .append("    • Score charge: ").append(String.format("%.1f", w.getWorkloadScore())).append("\n\n");
+        }
+
+        if (currentAnalysis.hasSuggestion()) {
+            content.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+            content.append("💡 RECOMMANDATION:\n");
+            content.append(currentAnalysis.getSuggestionReason());
+        }
+
+        TextArea textArea = new TextArea(content.toString());
+        textArea.setEditable(false);
+        textArea.setWrapText(true);
+        textArea.setPrefWidth(500);
+        textArea.setPrefHeight(400);
+        textArea.setStyle("-fx-font-family: 'Consolas', monospace; -fx-font-size: 12px;");
+
+        alert.getDialogPane().setContent(textArea);
+        alert.getDialogPane().setPrefWidth(550);
+        alert.showAndWait();
     }
 
     /**

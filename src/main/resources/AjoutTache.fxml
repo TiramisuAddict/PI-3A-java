@@ -5,7 +5,7 @@
 
 <AnchorPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="controller.projets.AjoutTacheController"
-            prefWidth="560" prefHeight="580"
+            prefWidth="560" prefHeight="680"
             style="-fx-background-color: #F8FAFC;">
 
     <children>
@@ -56,6 +56,24 @@
                                           style="-fx-background-radius: 8;"/>
                             </VBox>
                         </HBox>
+
+                        <!-- AI Workload Suggestion Box -->
+                        <VBox fx:id="suggestionBox" spacing="10" visible="false" managed="false"
+                              style="-fx-background-color: linear-gradient(to right, #EEF2FF, #E0E7FF); -fx-background-radius: 12; -fx-padding: 14; -fx-border-color: #818CF8; -fx-border-radius: 12; -fx-border-width: 1;">
+                            <HBox alignment="CENTER_LEFT" spacing="8">
+                                <Label text="🤖 Smart Workload Balancing" style="-fx-font-weight: 700; -fx-text-fill: #4338CA; -fx-font-size: 13px;"/>
+                                <Region HBox.hgrow="ALWAYS"/>
+                                <Label text="API" style="-fx-background-color: #4338CA; -fx-text-fill: white; -fx-padding: 2 8; -fx-background-radius: 10; -fx-font-size: 10px; -fx-font-weight: 700;"/>
+                            </HBox>
+                            <Label fx:id="suggestionLabel" text="" wrapText="true"
+                                   style="-fx-text-fill: #1E1B4B; -fx-font-size: 12px;"/>
+                            <HBox spacing="8">
+                                <Button fx:id="btnApplySuggestion" text="✓ Appliquer"
+                                        style="-fx-background-color: #4338CA; -fx-text-fill: white; -fx-background-radius: 6; -fx-padding: 6 14; -fx-cursor: hand; -fx-font-size: 11px;"/>
+                                <Button fx:id="btnViewWorkload" text="📊 Voir détails"
+                                        style="-fx-background-color: white; -fx-text-fill: #4338CA; -fx-background-radius: 6; -fx-padding: 6 14; -fx-cursor: hand; -fx-font-size: 11px; -fx-border-color: #4338CA; -fx-border-radius: 6;"/>
+                            </HBox>
+                        </VBox>
 
                         <HBox spacing="16">
                             <VBox spacing="6" HBox.hgrow="ALWAYS">
