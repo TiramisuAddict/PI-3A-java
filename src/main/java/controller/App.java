@@ -41,33 +41,6 @@ public class App extends Application {
             e.printStackTrace();
         }
     }
-   /*@Override
-   public void start(Stage stage) throws Exception {
-       Application.setUserAgentStylesheet(new PrimerLight().getUserAgentStylesheet());
 
-       var fxmlUrl = getClass().getResource("/main-view.fxml");
-       System.out.println("FXML URL = " + fxmlUrl);
-
-       var cssUrl = getClass().getResource("/customTheme.css");
-       System.out.println("CSS URL  = " + cssUrl);
-
-       var iconUrl = getClass().getResource("/icons/logo.png");
-       System.out.println("ICON URL = " + iconUrl);
-
-       Parent root = FXMLLoader.load(fxmlUrl);
-       Scene scene = new Scene(root);
-
-       if (cssUrl != null) {
-           scene.getStylesheets().add(cssUrl.toExternalForm());
-       }
-
-       if (iconUrl != null) {
-           stage.getIcons().add(new Image(iconUrl.toExternalForm()));
-       }
-
-       stage.setTitle("Momentum");
-       stage.setScene(scene);
-       stage.show();
-   }*/
 
 }

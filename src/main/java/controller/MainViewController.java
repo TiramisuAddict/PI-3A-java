@@ -45,7 +45,7 @@ public class MainViewController {
 
     // Logique de Navigation
     @FXML private StackPane contentArea;
-    @FXML private Button btnHome, btnFormation, btnDemande, btnEmployer, btnProjet, btnOffre; //
+    @FXML private Button btnHome, btnFormation, btnDemande, btnEmployer, btnProjet, btnOffre;
 
     // Charger FXML dans StackPane
     private void loadView(String fxmlFileName) {

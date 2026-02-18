@@ -12,7 +12,6 @@ public class TacheCRUD implements InterfaceCRUD<Tache> {
     }
     @Override
     public void ajouter(Tache t) throws SQLException {
-        // Code pour ajouter une tâche à la base de données
         String sql = "INSERT INTO tache(id_projet, id_employe, titre, description, statut_tache, priorite, date_deb, date_limite, progression) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
         PreparedStatement ps= connection.prepareStatement(sql);
         ps.setInt(1, t.getId_projet());
@@ -29,7 +28,6 @@ public class TacheCRUD implements InterfaceCRUD<Tache> {
 
     @Override
     public void modifier(Tache t) throws SQLException {
-        // Code pour modifier une tâche dans la base de données
         String sql = "UPDATE tache SET id_projet = ?, id_employe = ?, titre = ?, description = ?, statut_tache = ?, priorite = ?, date_deb = ?, date_limite = ?, progression = ? WHERE id_tache = ?";
         PreparedStatement ps = connection.prepareStatement(sql);
         ps.setInt(1, t.getId_projet());
@@ -47,7 +45,6 @@ public class TacheCRUD implements InterfaceCRUD<Tache> {
 
     @Override
     public void supprimer(int id) throws SQLException {
-        // Code pour supprimer une tâche de la base de données en utilisant son ID
         String sql = "DELETE FROM tache WHERE id_tache = ?";
         PreparedStatement ps = connection.prepareStatement(sql);
         ps.setInt(1, id);
@@ -56,7 +53,6 @@ public class TacheCRUD implements InterfaceCRUD<Tache> {
 
     @Override
     public List<Tache> afficher() throws SQLException {
-        // Code pour récupérer et retourner la liste des tâches depuis la base de données
         String sql = "SELECT * FROM tache";
         Statement statement = connection.createStatement();
         ResultSet resultSet = statement.executeQuery(sql);
@@ -75,6 +71,6 @@ public class TacheCRUD implements InterfaceCRUD<Tache> {
             tache.setProgression(resultSet.getInt("progression"));
             taches.add(tache);
         }
-        return taches; // Remplacez par le code réel pour retourner la liste des tâches
+        return taches;
     }
 }

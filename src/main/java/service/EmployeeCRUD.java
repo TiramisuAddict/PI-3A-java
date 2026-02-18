@@ -9,10 +9,8 @@ import java.util.List;
 public class EmployeeCRUD {
     private final Connection cnx = MyDB.getInstance().getConn();
 
-    /**
-     * Simple record to hold employee info for display in UI
-     */
-    public record EmployeeInfo(int id, String nom, String prenom) {
+
+    public record EmployeeInfo(int id, String nom, String prenom, String role) {
         public String getFullName() {
             return nom + " " + prenom;
         }
@@ -23,11 +21,8 @@ public class EmployeeCRUD {
         }
     }
 
-    /**
-     * Get all employees from the database
-     */
     public List<EmployeeInfo> getAllEmployees() throws SQLException {
-        String sql = "SELECT id_emp, nom, prenom FROM employee ORDER BY nom, prenom";
+        String sql = "SELECT id_emp, nom, prenom, role FROM employee ORDER BY nom, prenom";
         List<EmployeeInfo> list = new ArrayList<>();
 
         try (Statement stmt = cnx.createStatement();
@@ -36,18 +31,17 @@ public class EmployeeCRUD {
                 list.add(new EmployeeInfo(
                         rs.getInt("id_emp"),
                         rs.getString("nom"),
-                        rs.getString("prenom")
+                        rs.getString("prenom"),
+                        rs.getString("role")
                 ));
             }
         }
         return list;
     }
 
-    /**
-     * Get employee by ID
-     */
+
     public EmployeeInfo getEmployeeById(int id) throws SQLException {
-        String sql = "SELECT id_emp, nom, prenom FROM employee WHERE id_emp = ?";
+        String sql = "SELECT id_emp, nom, prenom, role FROM employee WHERE id_emp = ?";
 
         try (PreparedStatement ps = cnx.prepareStatement(sql)) {
             ps.setInt(1, id);
@@ -56,12 +50,21 @@ public class EmployeeCRUD {
                     return new EmployeeInfo(
                             rs.getInt("id_emp"),
                             rs.getString("nom"),
-                            rs.getString("prenom")
+                            rs.getString("prenom"),
+                            rs.getString("role")
                     );
                 }
             }
         }
         return null;
     }
-}
 
+    /**
+     * Authenticate employee by ID and retrieve their info including role
+     * @param employeeId The employee ID to login with
+     * @return EmployeeInfo if found, null otherwise
+     */
+    public EmployeeInfo authenticateById(int employeeId) throws SQLException {
+        return getEmployeeById(employeeId);
+    }
+}

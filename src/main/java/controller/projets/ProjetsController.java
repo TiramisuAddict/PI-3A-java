@@ -1,8 +1,10 @@
 package controller.projets;
 
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
@@ -21,6 +23,7 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 // ======= ADAPT THESE IMPORTS =======
@@ -34,6 +37,7 @@ import Models.Tache;
 import Models.statut;
 import Models.statut_t;
 import Models.priority;
+import utils.UserSession;
 
 public class ProjetsController {
 
@@ -109,6 +113,10 @@ public class ProjetsController {
 
     @FXML
     public void initialize() {
+        // Simple login - prompt for employee ID if not logged in
+        if (!UserSession.getInstance().isLoggedIn()) {
+            showLoginPrompt();
+        }
 
         // fill filter combos (optional)
         statusFilter.getItems().setAll(statut.values());
@@ -169,8 +177,90 @@ public class ProjetsController {
         detailsInfoLabel.setText("");
         selectedProjectTitle.setText("(Aucun projet sélectionné)");
 
+        // Apply role-based restrictions
+        applyRoleBasedRestrictions();
+
         // load data
         loadProjectsFromDB();
+    }
+
+    /**
+     * Apply UI restrictions based on user role
+     */
+    private void applyRoleBasedRestrictions() {
+        UserSession session = UserSession.getInstance();
+        boolean canManage = session.canManageProjects();
+
+        // Hide/disable create project button for employees
+        btnNewProject.setVisible(canManage);
+        btnNewProject.setManaged(canManage);
+
+        // Hide/disable create task button for employees
+        btnCreateTaskInline.setVisible(canManage);
+        btnCreateTaskInline.setManaged(canManage);
+
+        // For employees, make team list read-only (hide add/remove)
+        if (!canManage) {
+            btnAddEmployee.setVisible(false);
+            btnAddEmployee.setManaged(false);
+            addEmployeeBox.setVisible(false);
+            addEmployeeBox.setManaged(false);
+        }
+    }
+
+    /**
+     * Simple login prompt - asks for employee ID and retrieves role from database
+     */
+    private void showLoginPrompt() {
+        TextInputDialog dialog = new TextInputDialog();
+        dialog.setTitle("Connexion");
+        dialog.setHeaderText("🔐 Connexion requise");
+        dialog.setContentText("Entrez votre ID employé:");
+
+        // Keep asking until valid login or user closes dialog
+        boolean loggedIn = false;
+        while (!loggedIn) {
+            Optional<String> result = dialog.showAndWait();
+
+            if (result.isEmpty()) {
+                // User cancelled - use default guest mode (no special permissions)
+                UserSession.getInstance().setUser(0, "Invité", "", "employee");
+                return;
+            }
+
+            String idText = result.get().trim();
+            if (idText.isEmpty()) {
+                dialog.setHeaderText("⚠️ Veuillez entrer un ID valide");
+                continue;
+            }
+
+            try {
+                int employeeId = Integer.parseInt(idText);
+                EmployeeInfo employee = employeeCRUD.getEmployeeById(employeeId);
+
+                if (employee == null) {
+                    dialog.setHeaderText("⚠️ Aucun employé trouvé avec cet ID");
+                    dialog.getEditor().clear();
+                    continue;
+                }
+
+                // Success - set session
+                UserSession.getInstance().setUser(
+                    employee.id(),
+                    employee.nom(),
+                    employee.prenom(),
+                    employee.role()
+                );
+                loggedIn = true;
+
+            } catch (NumberFormatException e) {
+                dialog.setHeaderText("⚠️ L'ID doit être un nombre");
+                dialog.getEditor().clear();
+            } catch (SQLException e) {
+                dialog.setHeaderText("⚠️ Erreur de connexion à la base de données");
+                e.printStackTrace();
+            }
+        }
     }
 
     private void loadAllEmployees() {
@@ -189,18 +279,19 @@ public class ProjetsController {
 
     private void loadProjectsFromDB() {
         try {
-            List<Projet> data = projetCRUD.afficher(); // adapt if method name differs
+            List<Projet> data = projetCRUD.afficher();
+
+            // For employees, only show projects they are part of
+            UserSession session = UserSession.getInstance();
+            if (session.isEmployee()) {
+                List<Integer> myProjectIds = equipeCRUD.getProjectIdsForEmployee(session.getUserId());
+                data = data.stream()
+                        .filter(p -> myProjectIds.contains(p.getProjet_id()))
+                        .collect(Collectors.toList());
+            }
+
             masterProjects.setAll(data);
             applyFilters();
-
-            // auto select first item if exists
-            /*if (!filteredProjects.isEmpty()) {
-                projectsList.getSelectionModel().selectFirst();
-            } else {
-                selectedProject = null;
-                clearDetails();
-            }*/
-
         } catch (SQLException e) {
             e.printStackTrace();
             showError("Erreur chargement", e.getMessage());
@@ -261,7 +352,6 @@ public class ProjetsController {
         emptyStateLabel.setManaged(empty);
     }
 
-    // ===================== TASKS TABLE SETUP =====================
 
     private void setupTasksTable() {
         // Set up column cell value factories
@@ -272,6 +362,23 @@ public class ProjetsController {
         colDateDebut.setCellValueFactory(new PropertyValueFactory<>("date_deb"));
         colDueDate.setCellValueFactory(new PropertyValueFactory<>("date_limite"));
         colProgress.setCellValueFactory(new PropertyValueFactory<>("progression"));
+
+        // Custom cell factory for assignee to show employee name instead of ID
+        colAssignee.setCellFactory(col -> new TableCell<>() {
+            @Override
+            protected void updateItem(Integer item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null || item == 0) {
+                    setText(null);
+                    setGraphic(null);
+                } else {
+                    String employeeName = getEmployeeNameById(item);
+                    Label badge = new Label(employeeName);
+                    badge.setStyle("-fx-background-color: #E0E7FF; -fx-text-fill: #3730A3; -fx-padding: 4 8; -fx-background-radius: 6; -fx-font-size: 11px;");
+                    setGraphic(badge);
+                }
+            }
+        });
 
         // Custom cell factory for priority with colored badges
         colPriorite.setCellFactory(col -> new TableCell<>() {
@@ -289,78 +396,211 @@ public class ProjetsController {
             }
         });
 
-        // Custom cell factory for status with colored badges
-        colStatut.setCellFactory(col -> new TableCell<>() {
-            @Override
-            protected void updateItem(statut_t item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || item == null) {
+        // For employees: make status column editable with a ComboBox
+        UserSession session = UserSession.getInstance();
+        if (session.isEmployee()) {
+            colStatut.setCellFactory(col -> new TableCell<>() {
+                private final ComboBox<statut_t> statusCombo = new ComboBox<>();
+
+                {
+                    statusCombo.getItems().setAll(statut_t.values());
+                    statusCombo.setStyle("-fx-background-radius: 8; -fx-font-size: 11px;");
+                    statusCombo.setOnAction(e -> {
+                        Tache tache = getTableView().getItems().get(getIndex());
+                        statut_t newStatus = statusCombo.getValue();
+                        if (newStatus != null && newStatus != tache.getStatut_tache()) {
+                            updateTaskStatusInline(tache, newStatus);
+                        }
+                    });
+                }
+
+                @Override
+                protected void updateItem(statut_t item, boolean empty) {
+                    super.updateItem(item, empty);
+                    if (empty || item == null) {
+                        setGraphic(null);
+                    } else {
+                        statusCombo.setValue(item);
+                        setGraphic(statusCombo);
+                    }
+                }
+            });
+
+            // For employees: make progress column editable with a Slider
+            colProgress.setCellFactory(col -> new TableCell<>() {
+                private final Slider slider = new Slider(0, 100, 0);
+                private final Label valueLabel = new Label("0%");
+                private final VBox container = new VBox(4);
+                private boolean updating = false;
+
+                {
+                    slider.setShowTickLabels(false);
+                    slider.setShowTickMarks(false);
+                    slider.setBlockIncrement(10);
+                    slider.setPrefWidth(80);
+                    slider.setStyle("-fx-control-inner-background: #E2E8F0;");
+
+                    valueLabel.setStyle("-fx-font-size: 10px; -fx-text-fill: #64748B;");
+
+                    container.setAlignment(Pos.CENTER);
+                    container.getChildren().addAll(slider, valueLabel);
+
+                    slider.valueProperty().addListener((obs, oldVal, newVal) -> {
+                        valueLabel.setText(newVal.intValue() + "%");
+                    });
+
+                    slider.setOnMouseReleased(e -> {
+                        if (!updating) {
+                            Tache tache = getTableView().getItems().get(getIndex());
+                            int newProgress = (int) slider.getValue();
+                            if (newProgress != tache.getProgression()) {
+                                updateTaskProgressInline(tache, newProgress);
+                            }
+                        }
+                    });
+                }
+
+                @Override
+                protected void updateItem(Integer item, boolean empty) {
+                    super.updateItem(item, empty);
+                    if (empty || item == null) {
+                        setGraphic(null);
+                    } else {
+                        updating = true;
+                        slider.setValue(item);
+                        valueLabel.setText(item + "%");
+                        updating = false;
+                        setGraphic(container);
+                    }
+                }
+            });
+        } else {
+            // Custom cell factory for status with colored badges (for managers)
+            colStatut.setCellFactory(col -> new TableCell<>() {
+                @Override
+                protected void updateItem(statut_t item, boolean empty) {
+                    super.updateItem(item, empty);
+                    if (empty || item == null) {
+                        setText(null);
+                        setGraphic(null);
+                    } else {
+                        Label badge = new Label(prettyEnum(item));
+                        badge.setStyle(getTaskStatusBadgeStyle(item));
+                        setGraphic(badge);
+                    }
+                }
+            });
+
+            // Custom cell factory for progress bar (for managers)
+            colProgress.setCellFactory(col -> new TableCell<>() {
+                @Override
+                protected void updateItem(Integer item, boolean empty) {
+                    super.updateItem(item, empty);
+                    if (empty || item == null) {
+                        setGraphic(null);
+                    } else {
+                        ProgressBar bar = new ProgressBar(item / 100.0);
+                        bar.setPrefWidth(80);
+                        bar.setStyle("-fx-accent: #10B981;");
+                        Label lbl = new Label(item + "%");
+                        lbl.setStyle("-fx-font-size: 11px; -fx-text-fill: #64748B;");
+                        HBox box = new HBox(6, bar, lbl);
+                        box.setAlignment(Pos.CENTER_LEFT);
+                        setGraphic(box);
+                    }
+                }
+            });
+        }
+
+        // Action buttons column - only for managers
+        if (session.canManageTasks()) {
+            colActions.setCellFactory(new Callback<>() {
+                @Override
+                public TableCell<Tache, Void> call(TableColumn<Tache, Void> param) {
+                    return new TableCell<>() {
+                        private final Button btnEdit = new Button("✏️");
+                        private final Button btnDelete = new Button("🗑");
+                        private final HBox pane = new HBox(6, btnEdit, btnDelete);
+
+                        {
+                            btnEdit.setStyle("-fx-background-color: #DBEAFE; -fx-text-fill: #1D4ED8; -fx-background-radius: 6; -fx-cursor: hand; -fx-padding: 4 8;");
+                            btnDelete.setStyle("-fx-background-color: #FEE2E2; -fx-text-fill: #DC2626; -fx-background-radius: 6; -fx-cursor: hand; -fx-padding: 4 8;");
+                            pane.setAlignment(Pos.CENTER);
+
+                            btnEdit.setOnAction(e -> {
+                                Tache tache = getTableView().getItems().get(getIndex());
+                                openEditTaskModal(tache);
+                            });
+
+                            btnDelete.setOnAction(e -> {
+                                Tache tache = getTableView().getItems().get(getIndex());
+                                deleteTask(tache);
+                            });
+                        }
+
+                        @Override
+                        protected void updateItem(Void item, boolean empty) {
+                            super.updateItem(item, empty);
+                            setGraphic(empty ? null : pane);
+                        }
+                    };
+                }
+            });
+        } else {
+            // For employees: hide the actions column or show empty
+            colActions.setCellFactory(col -> new TableCell<>() {
+                @Override
+                protected void updateItem(Void item, boolean empty) {
+                    super.updateItem(item, empty);
+                    setGraphic(null);
                     setText(null);
-                    setGraphic(null);
-                } else {
-                    Label badge = new Label(prettyEnum(item));
-                    badge.setStyle(getTaskStatusBadgeStyle(item));
-                    setGraphic(badge);
                 }
-            }
-        });
-
-        // Custom cell factory for progress bar
-        colProgress.setCellFactory(col -> new TableCell<>() {
-            @Override
-            protected void updateItem(Integer item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || item == null) {
-                    setGraphic(null);
-                } else {
-                    ProgressBar bar = new ProgressBar(item / 100.0);
-                    bar.setPrefWidth(80);
-                    bar.setStyle("-fx-accent: #10B981;");
-                    Label lbl = new Label(item + "%");
-                    lbl.setStyle("-fx-font-size: 11px; -fx-text-fill: #64748B;");
-                    HBox box = new HBox(6, bar, lbl);
-                    box.setAlignment(Pos.CENTER_LEFT);
-                    setGraphic(box);
-                }
-            }
-        });
-
-        // Action buttons column (Edit / Delete)
-        colActions.setCellFactory(new Callback<>() {
-            @Override
-            public TableCell<Tache, Void> call(TableColumn<Tache, Void> param) {
-                return new TableCell<>() {
-                    private final Button btnEdit = new Button("✏️");
-                    private final Button btnDelete = new Button("🗑");
-                    private final HBox pane = new HBox(6, btnEdit, btnDelete);
-
-                    {
-                        btnEdit.setStyle("-fx-background-color: #DBEAFE; -fx-text-fill: #1D4ED8; -fx-background-radius: 6; -fx-cursor: hand; -fx-padding: 4 8;");
-                        btnDelete.setStyle("-fx-background-color: #FEE2E2; -fx-text-fill: #DC2626; -fx-background-radius: 6; -fx-cursor: hand; -fx-padding: 4 8;");
-                        pane.setAlignment(Pos.CENTER);
-
-                        btnEdit.setOnAction(e -> {
-                            Tache tache = getTableView().getItems().get(getIndex());
-                            openEditTaskModal(tache);
-                        });
-
-                        btnDelete.setOnAction(e -> {
-                            Tache tache = getTableView().getItems().get(getIndex());
-                            deleteTask(tache);
-                        });
-                    }
-
-                    @Override
-                    protected void updateItem(Void item, boolean empty) {
-                        super.updateItem(item, empty);
-                        setGraphic(empty ? null : pane);
-                    }
-                };
-            }
-        });
+            });
+            colActions.setVisible(false);
+        }
 
         // Bind table to filtered tasks list
         tasksTable.setItems(filteredTasks);
+    }
+
+    /**
+     * Update task status inline (for employees)
+     */
+    private void updateTaskStatusInline(Tache tache, statut_t newStatus) {
+        try {
+            tache.setStatut_tache(newStatus);
+            // Auto-set progress to 100% if completed
+            if (newStatus == statut_t.TERMINEE) {
+                tache.setProgression(100);
+            }
+            tacheCRUD.modifier(tache);
+            loadTasksForSelectedProject();
+            taskInfoLabel.setText("✅ Statut mis à jour: " + prettyEnum(newStatus));
+        } catch (SQLException e) {
+            e.printStackTrace();
+            showError("Erreur", "Impossible de mettre à jour le statut: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Update task progress inline (for employees)
+     */
+    private void updateTaskProgressInline(Tache tache, int newProgress) {
+        try {
+            tache.setProgression(newProgress);
+            // Auto-set status to completed if progress is 100%
+            if (newProgress == 100 && tache.getStatut_tache() != statut_t.TERMINEE) {
+                tache.setStatut_tache(statut_t.TERMINEE);
+            } else if (newProgress > 0 && newProgress < 100 && tache.getStatut_tache() == statut_t.A_FAIRE) {
+                tache.setStatut_tache(statut_t.EN_COURS);
+            }
+            tacheCRUD.modifier(tache);
+            loadTasksForSelectedProject();
+            taskInfoLabel.setText("✅ Progression mise à jour: " + newProgress + "%");
+        } catch (SQLException e) {
+            e.printStackTrace();
+            showError("Erreur", "Impossible de mettre à jour la progression: " + e.getMessage());
+        }
     }
 
     private String getPriorityBadgeStyle(priority p) {
@@ -402,7 +642,13 @@ public class ProjetsController {
                 container.setAlignment(Pos.CENTER_LEFT);
                 Region spacer = new Region();
                 HBox.setHgrow(spacer, Priority.ALWAYS);
-                container.getChildren().addAll(nameLabel, spacer, btnRemove);
+
+                // Only show remove button for managers
+                if (UserSession.getInstance().canManageProjects()) {
+                    container.getChildren().addAll(nameLabel, spacer, btnRemove);
+                } else {
+                    container.getChildren().addAll(nameLabel, spacer);
+                }
             }
 
             @Override
@@ -547,16 +793,27 @@ public class ProjetsController {
     }
 
     private void setDetailsEnabled(boolean enabled) {
-        detailNomField.setDisable(!enabled);
-        detailDescArea.setDisable(!enabled);
-        detailDebutPicker.setDisable(!enabled);
-        detailFinPrevuePicker.setDisable(!enabled);
-        detailStatutBox.setDisable(!enabled);
-        detailPrioriteBox.setDisable(!enabled);
-        detailResponsableBox.setDisable(!enabled);
+        boolean canManage = UserSession.getInstance().canManageProjects();
 
-        btnSaveDetails.setDisable(!enabled);
-        btnDeleteProject.setDisable(!enabled);
+        // For employees, fields are always disabled (read-only view)
+        boolean editable = enabled && canManage;
+
+        detailNomField.setDisable(!editable);
+        detailDescArea.setDisable(!editable);
+        detailDebutPicker.setDisable(!editable);
+        detailFinPrevuePicker.setDisable(!editable);
+        detailStatutBox.setDisable(!editable);
+        detailPrioriteBox.setDisable(!editable);
+        detailResponsableBox.setDisable(!editable);
+
+        // Hide save/delete buttons for employees
+        btnSaveDetails.setDisable(!editable);
+        btnSaveDetails.setVisible(canManage);
+        btnSaveDetails.setManaged(canManage);
+
+        btnDeleteProject.setDisable(!editable);
+        btnDeleteProject.setVisible(canManage);
+        btnDeleteProject.setManaged(canManage);
     }
 
     // ===================== SAVE / DELETE =====================
@@ -735,6 +992,15 @@ public class ProjetsController {
         return d == null ? LocalDate.MIN : d;
     }
 
+    private String getEmployeeNameById(int employeeId) {
+        for (EmployeeInfo emp : allEmployees) {
+            if (emp.id() == employeeId) {
+                return emp.getFullName();
+            }
+        }
+        return "Inconnu";
+    }
+
     private String badgeStyleForStatut(Object statutObj) {
         String base = "-fx-padding: 6 12; -fx-background-radius: 999; -fx-font-weight: 800;";
         if (statutObj == null) return base + "-fx-background-color: #E5E7EB; -fx-text-fill: #374151;";
@@ -794,11 +1060,19 @@ public class ProjetsController {
 
         try {
             List<Tache> allTasks = tacheCRUD.afficher();
+            UserSession session = UserSession.getInstance();
 
             // Filter tasks for the selected project
             List<Tache> projectTasks = allTasks.stream()
                     .filter(t -> t.getId_projet() == selectedProject.getProjet_id())
                     .collect(Collectors.toList());
+
+            // For employees, only show their assigned tasks
+            if (session.isEmployee()) {
+                projectTasks = projectTasks.stream()
+                        .filter(t -> t.getId_employe() == session.getUserId())
+                        .collect(Collectors.toList());
+            }
 
             masterTasks.setAll(projectTasks);
             applyTaskFilters();
