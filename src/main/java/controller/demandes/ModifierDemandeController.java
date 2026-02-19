@@ -1,7 +1,7 @@
 package controller.demandes;
 
-import entites.Demande;
-import entites.DemandeDetails;
+import entities.demande.Demande;
+import entities.demande.DemandeDetails;
 import service.demande.DemandeCRUD;
 import service.demande.DemandeDetailsCRUD;
 import javafx.fxml.FXML;

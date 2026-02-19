@@ -1,11 +1,13 @@
 package service.demande;
 
-import entites.HistoriqueDemande;
+import entities.demande.HistoriqueDemande;
 import utils.MyDB;
 
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 public class HistoriqueDemandeCRUD {
     private final Connection conn;
@@ -60,4 +62,23 @@ public class HistoriqueDemandeCRUD {
             pst.executeUpdate();
         }
     }
-}
+    // Add these methods at the end of your existing HistoriqueDemandeCRUD.java class
+
+    public int countAll() throws SQLException {
+        String req = "SELECT COUNT(*) FROM historique_demande";
+        try (Statement st = conn.createStatement(); ResultSet rs = st.executeQuery(req)) {
+            if (rs.next()) return rs.getInt(1);
+        }
+        return 0;
+    }
+
+    public Map<String, Integer> countGroupByActeur() throws SQLException {
+        Map<String, Integer> map = new LinkedHashMap<>();
+        String req = "SELECT acteur, COUNT(*) as total FROM historique_demande GROUP BY acteur";
+        try (Statement st = conn.createStatement(); ResultSet rs = st.executeQuery(req)) {
+            while (rs.next()) {
+                map.put(rs.getString("acteur"), rs.getInt("total"));
+            }
+        }
+        return map;
+    }}

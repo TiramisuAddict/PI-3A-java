@@ -1,8 +1,8 @@
 package controller.demandes;
 
-import entites.Demande;
-import entites.DemandeDetails;
-import entites.HistoriqueDemande;
+import entities.demande.Demande;
+import entities.demande.DemandeDetails;
+import entities.demande.HistoriqueDemande;
 import service.demande.DemandeCRUD;
 import service.demande.DemandeDetailsCRUD;
 import service.demande.HistoriqueDemandeCRUD;
@@ -11,6 +11,7 @@ import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Parent;
 import javafx.scene.control.*;
@@ -29,6 +30,10 @@ import java.util.stream.Collectors;
 
 public class DemandesController implements Initializable {
 
+    // Tab Pane
+    @FXML private TabPane mainTabPane;
+
+    // Demandes Tab
     @FXML private TextField rechercheField;
     @FXML private TableView<Demande> demandesTable;
     @FXML private TableColumn<Demande, String> titreCol;
@@ -51,6 +56,16 @@ public class DemandesController implements Initializable {
     @FXML private Label detailDescriptionLabel;
     @FXML private VBox detailSpecificContainer;
     @FXML private VBox historiqueContainer;
+
+    // Statistics Tab
+    @FXML private Label lblTotalDemandes;
+    @FXML private Label lblTotalHistorique;
+    @FXML private Label lblDemandesResolues;
+    @FXML private HBox statutStatsContainer;
+    @FXML private HBox prioriteStatsContainer;
+    @FXML private HBox typeStatsContainer;
+    @FXML private HBox categorieStatsContainer;
+    @FXML private HBox acteurStatsContainer;
 
     private ObservableList<Demande> demandesList = FXCollections.observableArrayList();
     private DemandeCRUD demandeCRUD;
@@ -101,6 +116,16 @@ public class DemandesController implements Initializable {
                 demandesTable.refresh();
             }
         });
+
+        // Load statistics when switching to stats tab
+        mainTabPane.getSelectionModel().selectedItemProperty().addListener((obs, oldTab, newTab) -> {
+            if (newTab != null && newTab.getText().contains("Statistiques")) {
+                loadStatistiques();
+            }
+        });
+
+        // Initial statistics load
+        loadStatistiques();
     }
 
     // ============ TABLE COLUMNS ============
@@ -113,15 +138,12 @@ public class DemandesController implements Initializable {
         statusCol.setCellValueFactory(new PropertyValueFactory<>("status"));
         dateCol.setCellValueFactory(new PropertyValueFactory<>("dateCreation"));
 
-        // Priority colors
         prioriteCol.setCellFactory(column -> new TableCell<Demande, String>() {
             @Override
             protected void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
-                if (empty || item == null) {
-                    setText(null);
-                    setStyle("");
-                } else {
+                if (empty || item == null) { setText(null); setStyle(""); }
+                else {
                     setText(item);
                     switch (item) {
                         case "HAUTE": setStyle("-fx-text-fill: red; -fx-font-weight: bold;"); break;
@@ -133,15 +155,12 @@ public class DemandesController implements Initializable {
             }
         });
 
-        // Status colors
         statusCol.setCellFactory(column -> new TableCell<Demande, String>() {
             @Override
             protected void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
-                if (empty || item == null) {
-                    setText(null);
-                    setStyle("");
-                } else {
+                if (empty || item == null) { setText(null); setStyle(""); }
+                else {
                     setText(item);
                     switch (item) {
                         case "Nouvelle": setStyle("-fx-text-fill: #3498db; -fx-font-weight: bold;"); break;
@@ -155,7 +174,6 @@ public class DemandesController implements Initializable {
             }
         });
 
-        // Actions column
         actionsCol.setCellFactory(column -> new TableCell<Demande, Void>() {
             private final Button modifierBtn = new Button("✏ Modifier");
             private final Button supprimerBtn = new Button("🗑 Supprimer");
@@ -198,7 +216,6 @@ public class DemandesController implements Initializable {
         detailTypeLabel.setText(demande.getTypeDemande());
         detailDescriptionLabel.setText(demande.getDescription());
 
-        // Priorite with color
         detailPrioriteLabel.setText(demande.getPriorite());
         switch (demande.getPriorite()) {
             case "HAUTE": detailPrioriteLabel.setStyle("-fx-text-fill: red; -fx-font-weight: bold; -fx-font-size: 13;"); break;
@@ -206,7 +223,6 @@ public class DemandesController implements Initializable {
             case "BASSE": detailPrioriteLabel.setStyle("-fx-text-fill: green; -fx-font-weight: bold; -fx-font-size: 13;"); break;
         }
 
-        // Status with color
         detailStatusLabel.setText(demande.getStatus());
         switch (demande.getStatus()) {
             case "Nouvelle": detailStatusLabel.setStyle("-fx-text-fill: #3498db; -fx-font-weight: bold; -fx-font-size: 13;"); break;
@@ -230,25 +246,20 @@ public class DemandesController implements Initializable {
             DemandeDetails details = detailsCRUD.getByDemande(demande.getIdDemande());
             if (details != null && !details.getDetails().equals("{}")) {
                 Map<String, String> parsed = formHelper.parseDetailsJson(details.getDetails());
-
                 GridPane grid = new GridPane();
                 grid.setHgap(10);
                 grid.setVgap(5);
-
                 int row = 0;
                 for (Map.Entry<String, String> entry : parsed.entrySet()) {
                     Label keyLabel = new Label(entry.getKey() + ":");
                     keyLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: #555;");
                     keyLabel.setMinWidth(130);
-
                     Label valueLabel = new Label(entry.getValue());
                     valueLabel.setWrapText(true);
-
                     grid.add(keyLabel, 0, row);
                     grid.add(valueLabel, 1, row);
                     row++;
                 }
-
                 detailSpecificContainer.getChildren().add(grid);
             } else {
                 Label noDetails = new Label("Aucun détail spécifique");
@@ -264,17 +275,14 @@ public class DemandesController implements Initializable {
         historiqueContainer.getChildren().clear();
         try {
             List<HistoriqueDemande> historiques = historiqueCRUD.getByDemande(demande.getIdDemande());
-
             if (historiques.isEmpty()) {
                 Label noHistory = new Label("Aucun historique disponible");
                 noHistory.setStyle("-fx-text-fill: #999; -fx-font-style: italic;");
                 historiqueContainer.getChildren().add(noHistory);
                 return;
             }
-
             for (HistoriqueDemande h : historiques) {
-                VBox card = createHistoriqueCard(h);
-                historiqueContainer.getChildren().add(card);
+                historiqueContainer.getChildren().add(createHistoriqueCard(h));
             }
         } catch (SQLException e) {
             System.out.println("Error loading historique: " + e.getMessage());
@@ -283,34 +291,24 @@ public class DemandesController implements Initializable {
 
     private VBox createHistoriqueCard(HistoriqueDemande h) {
         VBox card = new VBox(5);
-        card.setStyle("-fx-background-color: white; -fx-background-radius: 8; " +
-                "-fx-border-color: #e0e0e0; -fx-border-radius: 8; -fx-padding: 10;");
+        card.setStyle("-fx-background-color: white; -fx-background-radius: 8; -fx-border-color: #e0e0e0; -fx-border-radius: 8; -fx-padding: 10;");
 
         HBox statusLine = new HBox(5);
         statusLine.setAlignment(Pos.CENTER_LEFT);
-
         Label ancienLabel = new Label(h.getAncienStatut());
-        ancienLabel.setStyle(getStatusStyle(h.getAncienStatut()) +
-                "-fx-padding: 3 8; -fx-background-radius: 10;");
-
+        ancienLabel.setStyle(getStatusStyle(h.getAncienStatut()) + "-fx-padding: 3 8; -fx-background-radius: 10;");
         Label arrowLabel = new Label("  →  ");
         arrowLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 14;");
-
         Label nouveauLabel = new Label(h.getNouveauStatut());
-        nouveauLabel.setStyle(getStatusStyle(h.getNouveauStatut()) +
-                "-fx-padding: 3 8; -fx-background-radius: 10;");
-
+        nouveauLabel.setStyle(getStatusStyle(h.getNouveauStatut()) + "-fx-padding: 3 8; -fx-background-radius: 10;");
         statusLine.getChildren().addAll(ancienLabel, arrowLabel, nouveauLabel);
 
         HBox metaLine = new HBox(15);
         metaLine.setAlignment(Pos.CENTER_LEFT);
-
         Label acteurLabel = new Label("👤 " + h.getActeur());
         acteurLabel.setStyle("-fx-text-fill: #8e44ad; -fx-font-weight: bold; -fx-font-size: 11;");
-
         Label dateLabel = new Label("📅 " + h.getDateAction().toString());
         dateLabel.setStyle("-fx-text-fill: #888; -fx-font-size: 11;");
-
         metaLine.getChildren().addAll(acteurLabel, dateLabel);
 
         Label commentLabel = new Label("💬 " + h.getCommentaire());
@@ -332,6 +330,101 @@ public class DemandesController implements Initializable {
         }
     }
 
+    // ============ STATISTICS ============
+
+    @FXML
+    private void refreshStatistiques() {
+        loadStatistiques();
+    }
+
+    private void loadStatistiques() {
+        try {
+            // Big cards
+            int totalDemandes = demandeCRUD.countAll();
+            int totalHistorique = historiqueCRUD.countAll();
+            int resolues = demandeCRUD.countByStatus("Résolue");
+
+            lblTotalDemandes.setText(String.valueOf(totalDemandes));
+            lblTotalHistorique.setText(String.valueOf(totalHistorique));
+            lblDemandesResolues.setText(String.valueOf(resolues));
+
+            // By Status
+            Map<String, Integer> byStatus = demandeCRUD.countGroupByStatus();
+            buildStatCards(statutStatsContainer, byStatus, new String[]{
+                    "#3498db", "#f39c12", "#e67e22", "#27ae60", "#95a5a6"
+            });
+
+            // By Priorite
+            Map<String, Integer> byPriorite = demandeCRUD.countGroupByPriorite();
+            buildStatCards(prioriteStatsContainer, byPriorite, new String[]{
+                    "#27ae60", "#3498db", "#e74c3c"
+            });
+
+            // By Type
+            Map<String, Integer> byType = demandeCRUD.countGroupByType();
+            buildStatCards(typeStatsContainer, byType, new String[]{
+                    "#9b59b6", "#1abc9c", "#e67e22", "#3498db", "#e74c3c"
+            });
+
+            // By Categorie
+            Map<String, Integer> byCategorie = demandeCRUD.countGroupByCategorie();
+            buildStatCards(categorieStatsContainer, byCategorie, new String[]{
+                    "#2ecc71", "#3498db", "#e74c3c", "#f39c12", "#9b59b6"
+            });
+
+            // By Acteur
+            Map<String, Integer> byActeur = historiqueCRUD.countGroupByActeur();
+            buildStatCards(acteurStatsContainer, byActeur, new String[]{
+                    "#8e44ad", "#c0392b", "#2980b9"
+            });
+
+        } catch (SQLException e) {
+            System.out.println("Error loading statistics: " + e.getMessage());
+        }
+    }
+
+    private void buildStatCards(HBox container, Map<String, Integer> data, String[] colors) {
+        container.getChildren().clear();
+
+        if (data.isEmpty()) {
+            Label noData = new Label("Aucune donnée");
+            noData.setStyle("-fx-text-fill: #999; -fx-font-style: italic;");
+            container.getChildren().add(noData);
+            return;
+        }
+
+        int colorIndex = 0;
+        for (Map.Entry<String, Integer> entry : data.entrySet()) {
+            String color = colors[colorIndex % colors.length];
+
+            VBox card = new VBox(8);
+            card.setAlignment(Pos.CENTER);
+            card.setPrefWidth(150);
+            card.setMinWidth(120);
+            card.setStyle("-fx-background-color: white; -fx-padding: 20; -fx-background-radius: 10; " +
+                    "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.08), 8, 0, 0, 2);");
+
+            Label valueLabel = new Label(String.valueOf(entry.getValue()));
+            valueLabel.setStyle("-fx-font-size: 32; -fx-font-weight: bold; -fx-text-fill: " + color + ";");
+
+            Label nameLabel = new Label(entry.getKey());
+            nameLabel.setStyle("-fx-font-size: 12; -fx-text-fill: #7f8c8d; -fx-text-alignment: center;");
+            nameLabel.setWrapText(true);
+            nameLabel.setAlignment(Pos.CENTER);
+
+            // Progress bar style indicator
+            Region bar = new Region();
+            bar.setPrefHeight(4);
+            bar.setMaxWidth(80);
+            bar.setStyle("-fx-background-color: " + color + "; -fx-background-radius: 2;");
+
+            card.getChildren().addAll(valueLabel, bar, nameLabel);
+            container.getChildren().add(card);
+
+            colorIndex++;
+        }
+    }
+
     // ============ DATA LOADING ============
 
     public void loadDemandes() {
@@ -346,7 +439,7 @@ public class DemandesController implements Initializable {
         }
     }
 
-    // ============ NAVIGATION — Using NavigationHelper ============
+    // ============ NAVIGATION ============
 
     @FXML
     private void ouvrirAjouter() {
@@ -378,12 +471,10 @@ public class DemandesController implements Initializable {
             showAlert(Alert.AlertType.WARNING, "Avertissement", "Sélectionnez une demande!");
             return;
         }
-
         if (selectedDemande.getStatus().equals("Fermée")) {
             showAlert(Alert.AlertType.WARNING, "Avertissement", "Cette demande est déjà fermée!");
             return;
         }
-
         try {
             FXMLLoader loader = NavigationHelper.loadView(demandesTable, "avancer-demande.fxml");
             AvancerDemandeController controller = loader.getController();

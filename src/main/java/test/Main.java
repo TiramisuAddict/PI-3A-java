@@ -1,6 +1,6 @@
 package test;
 
-import entites.Demande;
+import entities.demande.Demande;
 import service.demande.DemandeCRUD;
 
 import java.sql.SQLException;

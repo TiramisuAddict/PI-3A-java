@@ -1,8 +1,8 @@
 package service.demande;
 
-import entites.Demande;
-import entites.DemandeDetails;
-import entites.HistoriqueDemande;
+import entities.demande.Demande;
+import entities.demande.DemandeDetails;
+import entities.demande.HistoriqueDemande;
 import org.junit.jupiter.api.*;
 
 import static org.junit.jupiter.api.Assertions.*;

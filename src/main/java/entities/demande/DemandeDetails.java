@@ -1,4 +1,4 @@
-package entites;
+package entities.demande;
 
 public class DemandeDetails {
     private int idDetails;

@@ -1,6 +1,6 @@
 package service.demande;
 
-import entites.HistoriqueDemande;
+import entities.demande.HistoriqueDemande;
 
 import java.sql.*;
 import java.util.ArrayList;

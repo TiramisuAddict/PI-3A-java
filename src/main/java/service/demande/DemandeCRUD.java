@@ -1,12 +1,14 @@
 package service.demande;
 
-import entites.Demande;
+import entities.demande.Demande;
 import service.InterfaceCRUD;
 import utils.MyDB;
 
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 public class DemandeCRUD implements InterfaceCRUD<Demande> {
     private final Connection conn;
@@ -78,4 +80,96 @@ public class DemandeCRUD implements InterfaceCRUD<Demande> {
         pst.setDate(6, new java.sql.Date(demande.getDateCreation().getTime()));
         pst.setString(7, demande.getTypeDemande());
     }
-}
+    // Add these methods at the end of your existing DemandeCRUD.java class
+
+    public int countAll() throws SQLException {
+        String req = "SELECT COUNT(*) FROM demande";
+        try (Statement st = conn.createStatement(); ResultSet rs = st.executeQuery(req)) {
+            if (rs.next()) return rs.getInt(1);
+        }
+        return 0;
+    }
+
+    public int countByStatus(String status) throws SQLException {
+        String req = "SELECT COUNT(*) FROM demande WHERE status=?";
+        try (PreparedStatement pst = conn.prepareStatement(req)) {
+            pst.setString(1, status);
+            ResultSet rs = pst.executeQuery();
+            if (rs.next()) return rs.getInt(1);
+        }
+        return 0;
+    }
+
+    public int countByPriorite(String priorite) throws SQLException {
+        String req = "SELECT COUNT(*) FROM demande WHERE priorite=?";
+        try (PreparedStatement pst = conn.prepareStatement(req)) {
+            pst.setString(1, priorite);
+            ResultSet rs = pst.executeQuery();
+            if (rs.next()) return rs.getInt(1);
+        }
+        return 0;
+    }
+
+    public int countByType(String typeDemande) throws SQLException {
+        String req = "SELECT COUNT(*) FROM demande WHERE type_demande=?";
+        try (PreparedStatement pst = conn.prepareStatement(req)) {
+            pst.setString(1, typeDemande);
+            ResultSet rs = pst.executeQuery();
+            if (rs.next()) return rs.getInt(1);
+        }
+        return 0;
+    }
+
+    public int countByCategorie(String categorie) throws SQLException {
+        String req = "SELECT COUNT(*) FROM demande WHERE categorie=?";
+        try (PreparedStatement pst = conn.prepareStatement(req)) {
+            pst.setString(1, categorie);
+            ResultSet rs = pst.executeQuery();
+            if (rs.next()) return rs.getInt(1);
+        }
+        return 0;
+    }
+
+    public Map<String, Integer> countGroupByStatus() throws SQLException {
+        Map<String, Integer> map = new LinkedHashMap<>();
+        String req = "SELECT status, COUNT(*) as total FROM demande GROUP BY status";
+        try (Statement st = conn.createStatement(); ResultSet rs = st.executeQuery(req)) {
+            while (rs.next()) {
+                map.put(rs.getString("status"), rs.getInt("total"));
+            }
+        }
+        return map;
+    }
+
+    public Map<String, Integer> countGroupByPriorite() throws SQLException {
+        Map<String, Integer> map = new LinkedHashMap<>();
+        String req = "SELECT priorite, COUNT(*) as total FROM demande GROUP BY priorite";
+        try (Statement st = conn.createStatement(); ResultSet rs = st.executeQuery(req)) {
+            while (rs.next()) {
+                map.put(rs.getString("priorite"), rs.getInt("total"));
+            }
+        }
+        return map;
+    }
+
+    public Map<String, Integer> countGroupByType() throws SQLException {
+        Map<String, Integer> map = new LinkedHashMap<>();
+        String req = "SELECT type_demande, COUNT(*) as total FROM demande GROUP BY type_demande";
+        try (Statement st = conn.createStatement(); ResultSet rs = st.executeQuery(req)) {
+            while (rs.next()) {
+                map.put(rs.getString("type_demande"), rs.getInt("total"));
+            }
+        }
+        return map;
+    }
+
+    public Map<String, Integer> countGroupByCategorie() throws SQLException {
+        Map<String, Integer> map = new LinkedHashMap<>();
+        String req = "SELECT categorie, COUNT(*) as total FROM demande GROUP BY categorie";
+        try (Statement st = conn.createStatement(); ResultSet rs = st.executeQuery(req)) {
+            while (rs.next()) {
+                map.put(rs.getString("categorie"), rs.getInt("total"));
+            }
+        }
+        return map;
+    }}

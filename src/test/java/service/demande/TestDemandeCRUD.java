@@ -1,6 +1,6 @@
 package service.demande;
 
-import entites.Demande;
+import entities.demande.Demande;
 
 import java.sql.*;
 import java.util.ArrayList;

@@ -1,6 +1,6 @@
 package service.demande;
 
-import entites.DemandeDetails;
+import entities.demande.DemandeDetails;
 import utils.MyDB;
 
 import java.sql.*;

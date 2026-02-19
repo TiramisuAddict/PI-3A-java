@@ -1,7 +1,7 @@
 package controller.demandes;
 
-import entites.Demande;
-import entites.HistoriqueDemande;
+import entities.demande.Demande;
+import entities.demande.HistoriqueDemande;
 import service.demande.DemandeCRUD;
 import service.demande.HistoriqueDemandeCRUD;
 import javafx.collections.FXCollections;
