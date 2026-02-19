@@ -1,9 +1,6 @@
 package controller.employers;
 
-import entities.administrateur_systeme;
-import entities.compte;
-import entities.employe;
-import entities.session;
+import entities.*;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -83,10 +80,17 @@ public class login {
                     session.setCompte(compteConnecte);
                     session.setEmploye(emp);
 
-                    System.out.println("Connexion réussie : " + emp.getRole());
-                    openEmployeInterface();
+                    role r = emp.getRole();
+                    System.out.println("Connexion : " + emp.getNom() + " (Rôle: " + r + ")");
+
+                    if (r == role.ADMINISTRATEUR_ENTREPRISE || r == role.RH) {
+                        openRHetAdminInterface();
+                    } else {
+                        openInterfaceEmployeSimple();
+                    }
+
                 } else {
-                    errorLabel.setText("Compte trouvé mais aucun employé associé.");
+                    errorLabel.setText("Compte trouvé mais aucun profil employé associé.");
                 }
                 return;
             }
@@ -98,13 +102,13 @@ public class login {
         }
     }
 
-    private void openEmployeInterface() {
+    private void openRHetAdminInterface() {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/emp/RHetAdminE/RHetAdminE.fxml"));
             Parent root = loader.load();
 
             Stage stage = new Stage();
-            stage.setTitle("Espace RH & Entreprise");
+            stage.setTitle("Espace RH ");
             stage.setScene(new Scene(root));
             stage.show();
             closeLoginWindow();
@@ -149,5 +153,21 @@ public class login {
     private void closeLoginWindow() {
         Stage stage = (Stage) buttonConnecter.getScene().getWindow();
         stage.close();
+    }
+    private void openInterfaceEmployeSimple() {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/emp/employes/employe.fxml"));
+            Parent root = loader.load();
+
+            Stage stage = new Stage();
+            stage.setTitle("Espace Employé");
+            stage.setScene(new Scene(root));
+            stage.show();
+
+            closeLoginWindow();
+        } catch (IOException e) {
+            e.printStackTrace();
+            errorLabel.setText("Erreur ouverture interface Employé.");
+        }
     }
 }

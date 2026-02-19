@@ -42,6 +42,14 @@ public class employeCRUD {
         String motDePasse = generationMotDePasse.generer();
         compte c = new compte(employe.getE_mail(), motDePasse, idEmploye);
         compteCRUD.ajouter(c);
+        String sujet = "Création de votre compte employé";
+        String corps = "Bonjour " + employe.getPrenom() + ",\n\n"
+                + "Un compte a été créé pour vous.\n"
+                + "Email : " + employe.getE_mail() + "\n"
+                + "Mot de passe : " + motDePasse + "\n\n"
+                + "Bonne journée.";
+
+        serviceEmail.envoyer(employe.getE_mail(), sujet, corps);
         return idEmploye;
     }
 

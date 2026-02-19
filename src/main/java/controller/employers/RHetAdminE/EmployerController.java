@@ -31,7 +31,6 @@ public class EmployerController implements Initializable {
     @FXML private TabPane tabPane;
     @FXML private Tab tabListe, tabDetails, tabAjouter;
     @FXML private VBox employesContainer;
-    @FXML private TextField searchField;
     @FXML private Label lblNombreEmployes;
     @FXML private Button btnImportCSV;
     @FXML private VBox formCardDetails;
@@ -56,7 +55,6 @@ public class EmployerController implements Initializable {
             initComboBoxRoles();
             configurerDesign();
             chargerEmployes();
-            searchField.textProperty().addListener((obs, o, n) -> rechercherEmployes(n));
 
         } catch (SQLException e) {
             afficherErreur("Erreur Init", e.getMessage());
@@ -88,7 +86,6 @@ public class EmployerController implements Initializable {
             btnImportCSV.setOnMouseEntered(e -> btnImportCSV.setStyle("-fx-background-color: #059669; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 8; -fx-cursor: hand; -fx-padding: 8 15;"));
             btnImportCSV.setOnMouseExited(e -> btnImportCSV.setStyle("-fx-background-color: #10b981; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 8; -fx-cursor: hand; -fx-padding: 8 15;"));
         }
-        searchField.setStyle("-fx-background-color: white; -fx-background-radius: 20; -fx-border-color: #e2e8f0; -fx-padding: 8 15;");
     }
 
     private void stylerInputs(Control... controls) {

@@ -73,7 +73,7 @@ public class compteCRUD implements InterfaceCRUD<compte> {
 
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, email);
-            ps.setString(2, password); // Note: Idéalement, hachez le mdp ici si stocké haché
+            ps.setString(2, password);
 
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
@@ -88,7 +88,7 @@ public class compteCRUD implements InterfaceCRUD<compte> {
         } catch (SQLException e) {
             e.printStackTrace();
         }
-        return null; // Échec de connexion
+        return null;
     }
 
 }

@@ -15,7 +15,7 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
-<AnchorPane prefHeight="720.0" prefWidth="1080.0" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controller.employers.RHetAdminE.EmployerController">
+<AnchorPane prefHeight="720.0" prefWidth="1080.0" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controller.employers.RHetAdminE.EmployerController">
 
     <children>
         <TabPane fx:id="tabPane" tabClosingPolicy="UNAVAILABLE" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
@@ -46,12 +46,6 @@
                                         </VBox>
 
                                         <Region HBox.hgrow="ALWAYS" />
-                                        <HBox alignment="CENTER_LEFT" prefWidth="350.0" spacing="10.0" style="-fx-background-color: white; -fx-background-radius: 12; -fx-padding: 8 15; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.03), 5, 0, 0, 2);">
-                                            <children>
-                                                <Label text="🔍" textFill="#94a3b8" />
-                                                <TextField fx:id="searchField" promptText="Rechercher..." style="-fx-background-color: transparent; -fx-text-fill: #1e293b; -fx-font-size: 13px;" HBox.hgrow="ALWAYS" />
-                                            </children>
-                                        </HBox>
 
                                         <Button fx:id="btnAjouter" onAction="#ouvrirAjoutEmploye" text="Ajouter employé" textFill="WHITE">
                                             <font>
@@ -96,31 +90,31 @@
                                         </HBox>
                                         <VBox spacing="20.0">
                                             <HBox spacing="30.0">
-                                                <VBox HBox.hgrow="ALWAYS" spacing="8.0">
+                                                <VBox spacing="8.0" HBox.hgrow="ALWAYS">
                                                     <Label style="-fx-font-weight: bold; -fx-text-fill: #475569;" text="Nom" />
                                                     <TextField fx:id="txtNom" promptText="Nom de famille" style="-fx-background-color: #f1f5f9; -fx-background-radius: 8; -fx-padding: 12;" />
                                                 </VBox>
-                                                <VBox HBox.hgrow="ALWAYS" spacing="8.0">
+                                                <VBox spacing="8.0" HBox.hgrow="ALWAYS">
                                                     <Label style="-fx-font-weight: bold; -fx-text-fill: #475569;" text="Prénom" />
                                                     <TextField fx:id="txtPrenom" promptText="Prénom" style="-fx-background-color: #f1f5f9; -fx-background-radius: 8; -fx-padding: 12;" />
                                                 </VBox>
                                             </HBox>
                                             <HBox spacing="30.0">
-                                                <VBox HBox.hgrow="ALWAYS" spacing="8.0">
+                                                <VBox spacing="8.0" HBox.hgrow="ALWAYS">
                                                     <Label style="-fx-font-weight: bold; -fx-text-fill: #475569;" text="Email" />
                                                     <TextField fx:id="txtEmail" promptText="email@entreprise.com" style="-fx-background-color: #f1f5f9; -fx-background-radius: 8; -fx-padding: 12;" />
                                                 </VBox>
-                                                <VBox HBox.hgrow="ALWAYS" spacing="8.0">
+                                                <VBox spacing="8.0" HBox.hgrow="ALWAYS">
                                                     <Label style="-fx-font-weight: bold; -fx-text-fill: #475569;" text="Téléphone" />
                                                     <TextField fx:id="txtTelephone" promptText="Numéro de mobile" style="-fx-background-color: #f1f5f9; -fx-background-radius: 8; -fx-padding: 12;" />
                                                 </VBox>
                                             </HBox>
                                             <HBox spacing="30.0">
-                                                <VBox HBox.hgrow="ALWAYS" spacing="8.0">
+                                                <VBox spacing="8.0" HBox.hgrow="ALWAYS">
                                                     <Label style="-fx-font-weight: bold; -fx-text-fill: #475569;" text="Poste / Fonction" />
                                                     <TextField fx:id="txtPoste" promptText="Intitulé du poste" style="-fx-background-color: #f1f5f9; -fx-background-radius: 8; -fx-padding: 12;" />
                                                 </VBox>
-                                                <VBox HBox.hgrow="ALWAYS" spacing="8.0">
+                                                <VBox spacing="8.0" HBox.hgrow="ALWAYS">
                                                     <Label style="-fx-font-weight: bold; -fx-text-fill: #475569;" text="Rôle système" />
                                                     <ComboBox fx:id="comboRole" maxWidth="Infinity" style="-fx-background-color: #f1f5f9; -fx-background-radius: 8; -fx-padding: 5;" />
                                                 </VBox>
@@ -133,9 +127,7 @@
                                             </HBox>
                                         </VBox>
                                         <HBox alignment="CENTER_RIGHT" spacing="15.0">
-                                            <Label fx:id="lblError" prefHeight="18.0" alignment="CENTER"
-                                                   maxWidth="1.7976931348623157E308"
-                                                   textFill="#ef4444"/>
+                                            <Label fx:id="lblError" alignment="CENTER" maxWidth="1.7976931348623157E308" prefHeight="18.0" textFill="#ef4444" />
                                             <Region HBox.hgrow="ALWAYS" />
                                             <Button onAction="#retourListe" text="Annuler" textFill="WHITE">
                                                 <font>
@@ -204,32 +196,32 @@
                                         <Region prefHeight="1.0" style="-fx-background-color: #f1f5f9;" />
                                         <VBox spacing="20.0">
                                             <HBox spacing="30.0">
-                                                <VBox HBox.hgrow="ALWAYS" spacing="8.0">
+                                                <VBox spacing="8.0" HBox.hgrow="ALWAYS">
                                                     <Label style="-fx-font-weight: bold; -fx-text-fill: #475569;" text="Nom *" />
                                                     <TextField fx:id="txtNomAjout" promptText="Nom de famille" style="-fx-background-color: #f1f5f9; -fx-background-radius: 8; -fx-padding: 12;" />
                                                 </VBox>
-                                                <VBox HBox.hgrow="ALWAYS" spacing="8.0">
+                                                <VBox spacing="8.0" HBox.hgrow="ALWAYS">
                                                     <Label style="-fx-font-weight: bold; -fx-text-fill: #475569;" text="Prénom *" />
                                                     <TextField fx:id="txtPrenomAjout" promptText="Prénom" style="-fx-background-color: #f1f5f9; -fx-background-radius: 8; -fx-padding: 12;" />
                                                 </VBox>
                                             </HBox>
                                             <HBox spacing="30.0">
-                                                <VBox HBox.hgrow="ALWAYS" spacing="8.0">
+                                                <VBox spacing="8.0" HBox.hgrow="ALWAYS">
                                                     <Label style="-fx-font-weight: bold; -fx-text-fill: #475569;" text="Email *" />
                                                     <TextField fx:id="txtEmailAjout" promptText="email@entreprise.com" style="-fx-background-color: #f1f5f9; -fx-background-radius: 8; -fx-padding: 12;" />
                                                 </VBox>
-                                                <VBox HBox.hgrow="ALWAYS" spacing="8.0">
+                                                <VBox spacing="8.0" HBox.hgrow="ALWAYS">
                                                     <Label style="-fx-font-weight: bold; -fx-text-fill: #475569;" text="Téléphone *" />
                                                     <TextField fx:id="txtTelephoneAjout" promptText="Numéro de mobile" style="-fx-background-color: #f1f5f9; -fx-background-radius: 8; -fx-padding: 12;" />
                                                 </VBox>
                                             </HBox>
 
                                             <HBox spacing="30.0">
-                                                <VBox HBox.hgrow="ALWAYS" spacing="8.0">
+                                                <VBox spacing="8.0" HBox.hgrow="ALWAYS">
                                                     <Label style="-fx-font-weight: bold; -fx-text-fill: #475569;" text="Poste *" />
                                                     <TextField fx:id="txtPosteAjout" promptText="Intitulé du poste" style="-fx-background-color: #f1f5f9; -fx-background-radius: 8; -fx-padding: 12;" />
                                                 </VBox>
-                                                <VBox HBox.hgrow="ALWAYS" spacing="8.0">
+                                                <VBox spacing="8.0" HBox.hgrow="ALWAYS">
                                                     <Label style="-fx-font-weight: bold; -fx-text-fill: #475569;" text="Rôle *" />
                                                     <ComboBox fx:id="comboRoleAjout" maxWidth="Infinity" style="-fx-background-color: #f1f5f9; -fx-background-radius: 8; -fx-padding: 5;" />
                                                 </VBox>
@@ -243,9 +235,7 @@
                                             </HBox>
                                         </VBox>
                                         <HBox alignment="CENTER_RIGHT" spacing="15.0">
-                                            <Label fx:id="lblErrorAjout" prefHeight="18.0" alignment="CENTER"
-                                                   maxWidth="1.7976931348623157E308"
-                                                   textFill="#ef4444"/>
+                                            <Label fx:id="lblErrorAjout" alignment="CENTER" maxWidth="1.7976931348623157E308" prefHeight="18.0" textFill="#ef4444" />
                                             <Region HBox.hgrow="ALWAYS" />
                                             <Button onAction="#retourListe" text="Annuler" textFill="WHITE">
                                                 <font>

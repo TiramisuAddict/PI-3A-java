@@ -1,81 +1,94 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.geometry.Insets?>
+<?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.Separator?>
 <?import javafx.scene.control.TextField?>
-<?import javafx.scene.effect.DropShadow?>
 <?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.FlowPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.VBox?>
-<?import javafx.scene.text.Font?>
 
-<AnchorPane prefHeight="700.0" prefWidth="1000.0" style="-fx-background-color: #f3f4f6;" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controller.employers.admin_sys.demandes_entreprise">
+<AnchorPane
+        xmlns="http://javafx.com/javafx/21"
+        xmlns:fx="http://javafx.com/fxml/1"
+        fx:controller="controller.employers.admin_sys.demandes_entreprise">
 
     <children>
-        <VBox alignment="TOP_CENTER" spacing="20.0" AnchorPane.bottomAnchor="20.0" AnchorPane.leftAnchor="30.0" AnchorPane.rightAnchor="30.0" AnchorPane.topAnchor="30.0">
-            <HBox alignment="CENTER_LEFT" spacing="20.0">
-                <children>
-                    <VBox alignment="CENTER_LEFT" spacing="2.0">
-                        <children>
-                            <Label text="Demandes d'inscription" textFill="#1e293b">
-                                <font><Font name="System Bold" size="26.0" /></font>
-                            </Label>
-                            <Label text="Gérez les entreprises en attente" textFill="#64748b">
-                                <font><Font size="13.0" /></font>
-                            </Label>
-                        </children>
-                    </VBox>
-                    <Region HBox.hgrow="ALWAYS" />
-                </children>
-            </HBox>
-            <HBox alignment="CENTER" spacing="20.0">
-                <children>
-                    <!-- Card: Total -->
-                    <VBox alignment="CENTER_LEFT" prefHeight="110.0" prefWidth="180.0" style="-fx-background-color: white; -fx-background-radius: 12; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 8, 0, 0, 4);">
-                        <padding><Insets left="20" top="15" bottom="15"/></padding>
-                        <children>
-                            <Label text="Total" ><font><Font size="14.0" /></font></Label>
-                            <Label fx:id="lblTotal" text="0" ><font><Font name="System Bold" size="36.0" /></font></Label>
-                        </children>
-                    </VBox>
+        <VBox spacing="25.0"
+              AnchorPane.bottomAnchor="0.0"
+              AnchorPane.leftAnchor="0.0"
+              AnchorPane.rightAnchor="0.0"
+              AnchorPane.topAnchor="0.0">
 
-                    <VBox alignment="CENTER_LEFT" prefHeight="110.0" prefWidth="180.0" style="-fx-background-color: white; -fx-background-radius: 12; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 8, 0, 0, 4);">
-                        <padding><Insets left="20" top="15" bottom="15"/></padding>
-                        <children>
-                            <Label text="En attente" ><font><Font size="14.0" /></font></Label>
-                            <Label fx:id="lblEnAttente" text="0" ><font><Font name="System Bold" size="36.0" /></font></Label>
-                        </children>
-                    </VBox>
-                    <VBox alignment="CENTER_LEFT" prefHeight="110.0" prefWidth="180.0" style="-fx-background-color: white; -fx-background-radius: 12; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 8, 0, 0, 4);">
-                        <padding><Insets left="20" top="15" bottom="15"/></padding>
-                        <children>
-                            <Label text="Acceptées"><font><Font size="14.0" /></font></Label>
-                            <Label fx:id="lblAcceptees" text="0"><font><Font name="System Bold" size="36.0" /></font></Label>
-                        </children>
-                    </VBox>
-                    <VBox alignment="CENTER_LEFT" prefHeight="110.0" prefWidth="180.0" style="-fx-background-color: white; -fx-background-radius: 12; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 8, 0, 0, 4);">
-                        <padding><Insets left="20" top="15" bottom="15"/></padding>
-                        <children>
-                            <Label text="Refusées" ><font><Font size="14.0" /></font></Label>
-                            <Label fx:id="lblRefusees" text="0"><font><Font name="System Bold" size="36.0" /></font></Label>
-                        </children>
-                    </VBox>
-                </children>
+            <padding>
+                <Insets bottom="25.0" left="25.0" right="25.0" top="25.0" />
+            </padding>
+
+            <!-- ========== HEADER ========== -->
+            <HBox alignment="CENTER_LEFT" spacing="15.0">
+                <VBox HBox.hgrow="ALWAYS">
+                    <Label style="-fx-font-weight: bold; -fx-font-size: 24px;"
+                           text="Demandes d'inscription" />
+                    <Label text="Gérez les entreprises en attente d'approbation"
+                           textFill="#6e6e6e" />
+                </VBox>
             </HBox>
 
-            <HBox alignment="CENTER_LEFT">
-                <HBox alignment="CENTER_LEFT" prefWidth="350.0" spacing="10.0" style="-fx-background-color: white; -fx-background-radius: 12; -fx-padding: 8 15; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.03), 5, 0, 0, 2);">
-                    <children>
-                        <Label textFill="#94a3b8" />
-                        <TextField fx:id="searchField" promptText="Rechercher..." style="-fx-background-color: transparent; -fx-text-fill: #1e293b; -fx-font-size: 13px;" HBox.hgrow="ALWAYS" />
-                    </children>
-                </HBox>
+            <!-- ========== STATISTICS CARDS ========== -->
+            <FlowPane fx:id="statisticsPane" hgap="15.0" vgap="15.0">
+                <padding>
+                    <Insets top="-10.0" />
+                </padding>
+
+                <!-- Card: Total -->
+                <VBox prefWidth="180.0"
+                      style="-fx-background-color: -color-bg-subtle;-fx-background-radius: 5;-fx-padding: 15;-fx-border-color: -color-border-muted;-fx-border-radius: 5;">
+                    <Label text="Total" textFill="#868686" />
+                    <Label fx:id="lblTotal" style="-fx-font-size: 22; -fx-font-weight: bold;" text="0" />
+                </VBox>
+
+                <!-- Card: En attente -->
+                <VBox prefWidth="180.0"
+                      style="-fx-background-color: -color-bg-subtle;-fx-background-radius: 5;-fx-padding: 15;-fx-border-color: -color-border-muted;-fx-border-radius: 5;">
+                    <Label text="En attente" textFill="#868686" />
+                    <Label fx:id="lblEnAttente"
+                           style="-fx-font-size: 22; -fx-font-weight: bold;"
+                           text="0" />
+                </VBox>
+
+                <!-- Card: Acceptées -->
+                <VBox prefWidth="180.0" style="-fx-background-color: -color-bg-subtle;-fx-background-radius: 5;-fx-padding: 15;-fx-border-color: -color-border-muted;-fx-border-radius: 5;">
+                    <Label text="Acceptées" textFill="#868686" />
+                    <Label fx:id="lblAcceptees" style="-fx-font-size: 22; -fx-font-weight: bold;" text="0" />
+                </VBox>
+
+                <!-- Card: Refusées -->
+                <VBox prefWidth="180.0"
+                      style="-fx-background-color: -color-bg-subtle;-fx-background-radius: 5;-fx-padding: 15;-fx-border-color: -color-border-muted;-fx-border-radius: 5;">
+                    <Label text="Refusées" textFill="#868686" />
+                    <Label fx:id="lblRefusees" style="-fx-font-size: 22; -fx-font-weight: bold;" text="0" />
+                </VBox>
+            </FlowPane>
+
+            <!-- ========== SEARCH & FILTER BAR ========== -->
+            <HBox alignment="CENTER_LEFT" spacing="10.0">
+                <TextField fx:id="searchField" prefHeight="35.0" prefWidth="350.0" promptText="Rechercher par nom ou email..." />
+                <Region HBox.hgrow="ALWAYS" />
+                <ComboBox fx:id="filterStatut" prefHeight="35.0" promptText="Filtrer par statut" />
             </HBox>
-            <ScrollPane fitToWidth="true" style="-fx-background-color: transparent; -fx-background: transparent; -fx-padding: 0;" VBox.vgrow="ALWAYS">
+
+            <!-- ========== SCROLLABLE LIST ========== -->
+            <ScrollPane fitToWidth="true" style="-fx-background-color: transparent;-fx-background: transparent;" VBox.vgrow="ALWAYS">
                 <content>
-                    <VBox fx:id="demandesContainer" spacing="10.0" style="-fx-padding: 2;">
+                    <VBox fx:id="demandesContainer" spacing="12.0">
+                        <padding>
+                            <Insets right="10.0" />
+                        </padding>
+                        <!-- Demande cards injected here via Java -->
                     </VBox>
                 </content>
             </ScrollPane>

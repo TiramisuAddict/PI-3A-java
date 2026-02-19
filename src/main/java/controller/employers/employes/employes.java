@@ -1,24 +1,23 @@
-package controller.employers.RHetAdminE;
-
-import javafx.fxml.FXML;
-import javafx.scene.layout.VBox;
-
-import javafx.event.ActionEvent;
-import javafx.fxml.FXMLLoader;
-import javafx.scene.Parent;
-import javafx.scene.control.Button;
-import javafx.scene.layout.StackPane;
-import java.io.IOException;
+package controller.employers.employes;
 
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
+import javafx.event.ActionEvent;
+import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
+import javafx.scene.control.Button;
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import javafx.util.Duration;
 
-public class RHetAdminE {
+import java.io.IOException;
 
-    // Logique Sidebar Toggle
-    @FXML private VBox sidebar;
+public class employes {
+
+    @FXML
+    private VBox sidebar;
     private boolean isExpanded = false;
 
     @FXML
@@ -44,7 +43,7 @@ public class RHetAdminE {
 
 
     @FXML private StackPane contentArea;
-    @FXML private Button btnHome, btnFormation, btnDemande, btnEmployer, btnProjet, btnOffre;
+    @FXML private Button btnHome, btnFormation, btnDemande, btnProjet, btnOffre;
 
     private void loadView(String fxmlFileName) {
         try {
@@ -59,7 +58,6 @@ public class RHetAdminE {
         btnHome.getStyleClass().remove("nav-active");
         btnFormation.getStyleClass().remove("nav-active");
         btnDemande.getStyleClass().remove("nav-active");
-        btnEmployer.getStyleClass().remove("nav-active");
         btnProjet.getStyleClass().remove("nav-active");
         btnOffre.getStyleClass().remove("nav-active");
 
@@ -82,10 +80,6 @@ public class RHetAdminE {
         updateActiveButton(btnDemande);
     }
 
-    @FXML private void showEmployer(ActionEvent event) {
-        loadView("emp/RHetAdminE/employers");
-        updateActiveButton(btnEmployer);
-    }
 
     @FXML private void showProjet(ActionEvent event) {
         loadView("projets");

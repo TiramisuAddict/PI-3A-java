@@ -154,6 +154,15 @@ public class entrepriseCRUD implements InterfaceCRUD<entreprise> {
             compte c = new compte(e.getE_mail(), motDePasse, idEmploye);
             compteCRUD.ajouter(c);
             conn.commit();
+            String sujet = "Bienvenue sur momentum !";
+            String corps = "Bonjour " + e.getPrenom() + ",\n\n"
+                    + "Votre entreprise " + e.getNom_entreprise() + " a été validée.\n"
+                    + "Voici vos identifiants de connexion :\n\n"
+                    + "Email : " + e.getE_mail() + "\n"
+                    + "Mot de passe : " + motDePasse + "\n\n"
+                    + "Veuillez changer votre mot de passe après la première connexion.\n"
+                    + "Cordialement,\nL'équipe Admin.";
+            serviceEmail.envoyer(e.getE_mail(), sujet, corps);
         } catch (SQLException ex) {
             conn.rollback();
             throw ex;
