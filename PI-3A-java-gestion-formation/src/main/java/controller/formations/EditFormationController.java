@@ -8,7 +8,7 @@ import javafx.scene.control.DatePicker;
 import javafx.scene.control.TextField;
 import javafx.stage.Stage;
 import models.formation;
-import service.formationCRUD;
+import service.formation.formationCRUD;
 
 public class EditFormationController {
 

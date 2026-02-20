@@ -15,7 +15,8 @@ import javafx.stage.Stage;
 import models.formation;
 import models.inscription_formation;
 import models.StatutInscription;
-import service.inscription_formationCRUD;
+import service.formation.inscription_formationCRUD;
+import utils.RaisonAnalyzer;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -118,6 +119,37 @@ public class GestionInscriptionsController {
             raisonTextLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #495057; -fx-font-style: italic;");
 
             raisonBox.getChildren().addAll(raisonTitleLabel, raisonTextLabel);
+
+            // 🤖 AJOUT DE L'ANALYSE IA POUR LA RH
+            RaisonAnalyzer.AnalysisResult aiAnalysis = RaisonAnalyzer.analyzeRaison(insc.getRaison());
+            if (aiAnalysis != null) {
+                VBox aiBox = new VBox(3);
+                aiBox.setStyle("-fx-padding: 8 0 0 0;");
+
+                // Score et feedback
+                HBox scoreRow = new HBox(8);
+                scoreRow.setAlignment(Pos.CENTER_LEFT);
+
+                Label aiLabel = new Label("🤖 Analyse IA:");
+                aiLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 11px; -fx-text-fill: #6c757d;");
+
+                Label scoreLabel = new Label(aiAnalysis.getScoreEmoji() + " " + aiAnalysis.getRelevanceScore() + "%");
+                scoreLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 11px; -fx-text-fill: " +
+                    getScoreColor(aiAnalysis.getRelevanceScore()) + ";");
+
+                Label categoryLabel = new Label("• " + aiAnalysis.getCategoryDisplayName());
+                categoryLabel.setStyle("-fx-font-size: 10px; -fx-text-fill: #6c757d;");
+
+                scoreRow.getChildren().addAll(aiLabel, scoreLabel, categoryLabel);
+
+                Label feedbackLabel = new Label(aiAnalysis.getFeedback());
+                feedbackLabel.setWrapText(true);
+                feedbackLabel.setStyle("-fx-font-size: 10px; -fx-text-fill: #6c757d; -fx-font-style: italic;");
+
+                aiBox.getChildren().addAll(scoreRow, feedbackLabel);
+                raisonBox.getChildren().add(aiBox);
+            }
+
             card.getChildren().add(raisonBox);
         }
 
@@ -255,6 +287,16 @@ public class GestionInscriptionsController {
             case REFUSEE: return "#f44336";
             default: return "#666666";
         }
+    }
+
+    /**
+     * 🤖 Obtenir la couleur selon le score IA
+     */
+    private String getScoreColor(int score) {
+        if (score >= 80) return "#4caf50";  // Vert - Excellent
+        if (score >= 60) return "#ff9800";  // Orange - Bon
+        if (score >= 40) return "#ff5722";  // Orange foncé - Acceptable
+        return "#f44336";                    // Rouge - Faible
     }
 
     /**

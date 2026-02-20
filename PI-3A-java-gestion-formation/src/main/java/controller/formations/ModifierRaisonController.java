@@ -9,7 +9,7 @@ import javafx.scene.control.TextArea;
 import javafx.stage.Stage;
 import models.inscription_formation;
 import models.StatutInscription;
-import service.inscription_formationCRUD;
+import service.formation.inscription_formationCRUD;
 
 import java.sql.SQLException;
 

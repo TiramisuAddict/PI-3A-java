@@ -9,6 +9,7 @@ import javafx.scene.Parent;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.BorderPane;
 import java.io.IOException;
 
 import javafx.animation.KeyFrame;
@@ -16,23 +17,17 @@ import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
 import javafx.util.Duration;
 
-// Ajouts pour la sélection d'employé
-import javafx.scene.control.TextInputDialog;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-
-import utils.MyDB;
-import utils.SessionManager;
+import models.employe.session;
+import models.employe.employe;
 
 public class MainViewController {
 
     // Logique Sidebar Toggle
     @FXML private VBox sidebar;
+    @FXML private BorderPane rootPane;
     private boolean isExpanded = false;
 
     // Label pour afficher l'employé courant
@@ -61,15 +56,50 @@ public class MainViewController {
         isExpanded = !isExpanded;
     }
 
-    // Initialisation : demander la sélection de l'employé au démarrage
+    // Initialisation : récupérer l'employé depuis la session et afficher le menu selon le rôle
     @FXML
     private void initialize() {
         updateEmployeLabel();
+        configureMenuByRole();
+    }
 
-        // Forcer la sélection d'un employé si aucun n'est connecté
-        if (!SessionManager.isEmployeSelected()) {
-            // Utiliser Platform.runLater pour attendre que la fenêtre soit affichée
-            javafx.application.Platform.runLater(this::promptEmployeSelection);
+    // Configurer le menu selon le rôle de l'utilisateur
+    private void configureMenuByRole() {
+        employe emp = session.getEmploye();
+
+        if (emp != null) {
+            String role = emp.getRole();
+
+            // Normaliser le rôle pour comparaison
+            if (role != null) {
+                role = role.toLowerCase().trim();
+
+                // EMPLOYE : ne voit que Home, Formations (inscription), Demandes, Projets
+                if (role.equals("employé") || role.equals("employe")) {
+                    btnEmployer.setVisible(false);
+                    btnOffre.setVisible(false);
+                }
+                // RH : voit tout
+                else if (role.equals("rh")) {
+                    btnEmployer.setVisible(true);
+                    btnOffre.setVisible(true);
+                }
+                // ADMINISTRATEUR_ENTREPRISE : voit tout
+                else if (role.equals("administrateur entreprise")) {
+                    btnEmployer.setVisible(true);
+                    btnOffre.setVisible(true);
+                }
+                // CHEF_PROJET : peut voir tout sauf peut-être employés (à ajuster selon vos besoins)
+                else if (role.equals("chef projet")) {
+                    btnEmployer.setVisible(true);
+                    btnOffre.setVisible(true);
+                }
+                else {
+                    // Par défaut, afficher tous les boutons
+                    btnEmployer.setVisible(true);
+                    btnOffre.setVisible(true);
+                }
+            }
         }
     }
 
@@ -134,7 +164,7 @@ public class MainViewController {
     }
 
     @FXML private void showEmployer(ActionEvent event) {
-        loadView("employers");
+        loadView("emp/RHetAdminE/employers");
         currentButton = btnEmployer;
         updateActiveButton(btnEmployer);
     }
@@ -151,119 +181,31 @@ public class MainViewController {
         updateActiveButton(btnOffre);
     }
 
-    // Demander la sélection d'un employé
-    private void promptEmployeSelection() {
-        TextInputDialog dialog = new TextInputDialog();
-        dialog.setTitle("Connexion Employé");
-        dialog.setHeaderText("Bienvenue ! Veuillez vous identifier");
-        dialog.setContentText("Entrez votre ID employé :");
-
-        boolean validSelection = false;
-
-        while (!validSelection) {
-            dialog.showAndWait().ifPresent(input -> {
-                try {
-                    int id = Integer.parseInt(input.trim());
-
-                    if (employeExiste(id)) {
-                        SessionManager.setCurrentEmployeId(id);
-                        updateEmployeLabel();
-                    } else {
-                        Alert alert = new Alert(AlertType.ERROR);
-                        alert.setTitle("ID invalide");
-                        alert.setHeaderText(null);
-                        alert.setContentText("Aucun employé trouvé avec cet ID.");
-                        alert.showAndWait();
-                    }
-                } catch (NumberFormatException e) {
-                    Alert alert = new Alert(AlertType.ERROR);
-                    alert.setTitle("Format invalide");
-                    alert.setHeaderText(null);
-                    alert.setContentText("Veuillez saisir un nombre entier valide.");
-                    alert.showAndWait();
-                }
-            });
-
-            // Si un employé a été sélectionné, sortir de la boucle
-            if (SessionManager.isEmployeSelected()) {
-                validSelection = true;
-            } else {
-                // Si l'utilisateur annule sans sélectionner, afficher un avertissement
-                Alert alert = new Alert(AlertType.WARNING);
-                alert.setTitle("Sélection requise");
-                alert.setHeaderText(null);
-                alert.setContentText("Vous devez sélectionner un employé pour utiliser l'application.");
-                alert.showAndWait();
-            }
-        }
-    }
-
-    // Bouton de déconnexion : changer d'employé
+    // Bouton de déconnexion : retourner au login
     @FXML
     private void handleDeconnexion(ActionEvent event) {
-        SessionManager.clear();
-        updateEmployeLabel();
-        promptEmployeSelection();
+        session.logout();
 
-        // Rafraîchir la vue actuelle pour afficher les données du nouvel employé
-        refreshCurrentView();
+        try {
+            // Retourner à la page de login
+            Parent loginView = FXMLLoader.load(getClass().getResource("/emp/Login.fxml"));
+            rootPane.getScene().setRoot(loginView);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     // Mettre à jour le label affichant l'employé courant
     private void updateEmployeLabel() {
-        if (SessionManager.isEmployeSelected()) {
-            Integer id = SessionManager.getCurrentEmployeId();
-            // Optionnel : récupérer le nom/prénom depuis la BDD
-            String employeInfo = getEmployeInfo(id);
-            lblEmployeCourant.setText(employeInfo != null ? employeInfo : "Employé ID: " + id);
-            // Toujours en blanc sur le gradient
+        employe emp = session.getEmploye();
+
+        if (emp != null) {
+            String employeInfo = emp.getPrenom() + " " + emp.getNom();
+            lblEmployeCourant.setText(employeInfo);
             lblEmployeCourant.setStyle("-fx-font-weight: bold; -fx-font-size: 13px; -fx-text-fill: white;");
         } else {
             lblEmployeCourant.setText("Non connecté");
-            // En blanc aussi pour rester cohérent avec le gradient
             lblEmployeCourant.setStyle("-fx-font-weight: bold; -fx-font-size: 13px; -fx-text-fill: rgba(255,255,255,0.8);");
-        }
-    }
-
-    // Récupérer le nom et prénom de l'employé
-    private String getEmployeInfo(int idEmploye) {
-        String sql = "SELECT nom, prenom FROM employé WHERE id_employe = ?";
-
-        try {
-            Connection conn = MyDB.getInstance().getConn();
-            PreparedStatement ps = conn.prepareStatement(sql);
-            ps.setInt(1, idEmploye);
-            ResultSet rs = ps.executeQuery();
-
-            if (rs.next()) {
-                String nom = rs.getString("nom");
-                String prenom = rs.getString("prenom");
-                return prenom + " " + nom;
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-
-        return null;
-    }
-
-    private boolean employeExiste(int idEmploye) {
-        String sql = "SELECT 1 FROM employé WHERE id_employe = ?";
-
-        try {
-            Connection conn = MyDB.getInstance().getConn();
-            PreparedStatement ps = conn.prepareStatement(sql);
-            ps.setInt(1, idEmploye);
-            ResultSet rs = ps.executeQuery();
-            return rs.next();
-        } catch (SQLException e) {
-            e.printStackTrace();
-            Alert alert = new Alert(AlertType.ERROR);
-            alert.setTitle("Erreur base de données");
-            alert.setHeaderText(null);
-            alert.setContentText("Impossible de vérifier l'existence de l'employé.");
-            alert.showAndWait();
-            return false;
         }
     }
 }

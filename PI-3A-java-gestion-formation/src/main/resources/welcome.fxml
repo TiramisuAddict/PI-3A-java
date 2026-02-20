@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+
+<AnchorPane prefHeight="600.0" prefWidth="900.0" style="-fx-background-color: #f5f7fa;" stylesheets="@customTheme.css" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controller.WelcomeController">
+    <children>
+        <!-- Conteneur principal centré -->
+        <StackPane AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+            <children>
+                <VBox alignment="CENTER" spacing="30.0">
+                    <padding>
+                        <Insets bottom="50.0" left="50.0" right="50.0" top="50.0" />
+                    </padding>
+                    <children>
+                        <!-- Logo -->
+                        <HBox alignment="CENTER" spacing="15.0">
+                            <children>
+                                <ImageView fitHeight="50.0" fitWidth="50.0" preserveRatio="true">
+                                    <image>
+                                        <Image url="@icons/logo.png" />
+                                    </image>
+                                </ImageView>
+                                <Label style="-fx-font-size: 32px; -fx-font-weight: bold; -fx-text-fill: #667eea;" text="Momentum" />
+                            </children>
+                        </HBox>
+
+                        <!-- Espace -->
+                        <VBox spacing="5.0" />
+
+                        <!-- Mini Interface de Bienvenue -->
+                        <VBox alignment="CENTER" spacing="20.0">
+                            <children>
+                                <!-- Carte de Bienvenue -->
+                                <VBox spacing="15.0" style="-fx-background-color: linear-gradient(to right, #667eea 0%, #764ba2 100%); -fx-background-radius: 15; -fx-padding: 40; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 15, 0, 0, 5);">
+                                    <children>
+                                        <Label style="-fx-font-size: 18px; -fx-text-fill: rgba(255,255,255,0.9); -fx-font-weight: 500;" text="👤 Bienvenue" />
+                                        <Label fx:id="lblEmployeName" style="-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: white;" text="Nom Employé" />
+                                        <Label style="-fx-font-size: 12px; -fx-text-fill: rgba(255,255,255,0.8);" text="Connecté à Momentum" wrapText="true" />
+                                    </children>
+                                </VBox>
+
+                                <!-- Espace -->
+                                <VBox spacing="10.0" />
+
+                                <!-- Messages de Bienvenue -->
+                                <Label style="-fx-font-size: 16px; -fx-text-fill: #333; -fx-font-weight: 600;" text="Bienvenue dans votre espace de gestion de formations !" />
+                                <Label style="-fx-font-size: 13px; -fx-text-fill: #666; -fx-wrap-text: true;" text="Vous êtes maintenant connecté et prêt à explorer les formations disponibles, gérer vos inscriptions et suivre votre progression." wrapText="true" />
+
+                                <!-- Espace -->
+                                <VBox spacing="15.0" />
+
+                                <!-- Boutons -->
+                                <HBox alignment="CENTER" spacing="20.0">
+                                    <children>
+                                        <Button fx:id="btnContinue" prefHeight="45.0" prefWidth="200.0" style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-background-color: #667eea; -fx-text-fill: white; -fx-background-radius: 8; -fx-cursor: hand; -fx-padding: 0;" text="Continuer" onAction="#handleContinue" />
+                                        <Button fx:id="btnCancel" prefHeight="45.0" prefWidth="200.0" style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-background-color: transparent; -fx-text-fill: #667eea; -fx-border-color: #667eea; -fx-border-width: 2; -fx-background-radius: 8; -fx-cursor: hand; -fx-padding: 0;" text="🔄 Annuler" onAction="#handleCancel" />
+                                    </children>
+                                </HBox>
+                            </children>
+                        </VBox>
+                    </children>
+                </VBox>
+            </children>
+        </StackPane>
+    </children>
+</AnchorPane>
+

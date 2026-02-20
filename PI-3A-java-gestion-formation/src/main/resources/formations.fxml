@@ -19,9 +19,9 @@
 
 <AnchorPane prefHeight="700.0" prefWidth="1000.0" stylesheets="@customTheme.css" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controller.formations.FormationsController">
     <children>
-        <TabPane tabClosingPolicy="UNAVAILABLE" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+        <TabPane fx:id="tabPane" tabClosingPolicy="UNAVAILABLE" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
             <tabs>
-                <Tab text="Formations">
+                <Tab fx:id="tabFormations" text="Formations">
                     <content>
                         <HBox>
                             <children>
@@ -184,7 +184,7 @@
                         </HBox>
                     </content>
                 </Tab>
-                <Tab text="Liste des Formations Disponibles">
+                <Tab fx:id="tabListeFormations" text="Liste des Formations Disponibles">
                     <content>
                         <VBox spacing="25.0">
                             <padding>

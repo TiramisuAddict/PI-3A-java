@@ -6,6 +6,8 @@ import javafx.scene.control.ComboBox;
 import javafx.scene.control.DatePicker;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
+import javafx.scene.control.Tab;
+import javafx.scene.control.TabPane;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.control.Alert;
@@ -13,8 +15,10 @@ import javafx.scene.control.Alert.AlertType;
 import models.formation;
 import models.inscription_formation;
 import models.StatutInscription;
-import service.formationCRUD;
-import service.inscription_formationCRUD;
+import models.employe.session;
+import models.employe.employe;
+import service.formation.formationCRUD;
+import service.formation.inscription_formationCRUD;
 import javafx.scene.layout.HBox;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
@@ -29,9 +33,15 @@ import javafx.scene.Scene;
 import javafx.stage.Stage;
 import java.io.IOException;
 import java.sql.SQLException;
-import utils.SessionManager;
 
 public class FormationsController {
+
+    @FXML
+    private TabPane tabPane;
+    @FXML
+    private Tab tabFormations;
+    @FXML
+    private Tab tabListeFormations;
 
     @FXML
     private FlowPane statisticsPane;
@@ -81,8 +91,50 @@ public class FormationsController {
 
     @FXML
     private void initialize() {
+        // Configurer les onglets selon le rôle
+        configureTabsByRole();
         refreshFormations();
         refreshAvailableFormations();
+    }
+
+    /**
+     * Configurer les onglets visibles selon le rôle de l'utilisateur
+     */
+    private void configureTabsByRole() {
+        employe emp = session.getEmploye();
+
+        // Vérifier le rôle de l'utilisateur
+        if (emp != null) {
+            String role = emp.getRole();
+            System.out.println("DEBUG: Rôle brut de l'utilisateur: '" + role + "'");
+
+            if (role != null) {
+                role = role.toLowerCase().trim();
+                System.out.println("DEBUG: Rôle normalisé: '" + role + "'");
+
+                if (role.equals("employé") || role.equals("employe")) {
+                    // Les employés simples ne voient que l'onglet "Liste des Formations Disponibles"
+                    System.out.println("DEBUG: Employé détecté - Masquage de l'onglet Formations");
+
+                    // Supprimer l'onglet "Formations" (Dashboard RH)
+                    if (tabPane != null && tabFormations != null) {
+                        tabPane.getTabs().remove(tabFormations);
+                        System.out.println("DEBUG: Onglet Formations supprimé avec succès");
+                    }
+
+                    // Sélectionner automatiquement l'onglet "Liste des Formations Disponibles"
+                    if (tabPane != null && tabListeFormations != null) {
+                        tabPane.getSelectionModel().select(tabListeFormations);
+                        System.out.println("DEBUG: Onglet Liste des Formations sélectionné");
+                    }
+                } else {
+                    // RH, Admin Entreprise, Chef Projet voient tous les onglets
+                    System.out.println("DEBUG: Rôle '" + role + "' - Affichage de tous les onglets");
+                }
+            }
+        } else {
+            System.out.println("DEBUG: Aucun employé connecté");
+        }
     }
 
     @FXML
@@ -153,7 +205,7 @@ public class FormationsController {
 
     private void refreshFormations() {
         try {
-            List<formation> formations = formationService.afficher();
+            List<formation> formations = formationService.afficher(); // te5o donner mel base
             renderFormations(formations);
             updateStats(formations);
         } catch (Exception e) {
@@ -162,7 +214,7 @@ public class FormationsController {
     }
 
     private void renderFormations(List<formation> formations) {
-        formationsContainer.getChildren().clear();
+        formationsContainer.getChildren().clear(); // tfr8 el list ta3na
 
         for (formation f : formations) {
             VBox card = new VBox(12);
@@ -388,8 +440,9 @@ public class FormationsController {
             capacite.setStyle("-fx-text-fill: #555; -fx-font-size: 14px;");
 
             // Vérifier si l'employé est déjà inscrit
-            // Utiliser l'ID de l'employé connecté via SessionManager
-            Integer currentEmployeId = SessionManager.getCurrentEmployeId();
+            // Récupérer l'employé connecté depuis la session
+            employe currentEmploye = session.getEmploye();
+            Integer currentEmployeId = (currentEmploye != null) ? currentEmploye.getId_employé() : null;
 
             if (currentEmployeId == null) {
                 // Aucun employé connecté
