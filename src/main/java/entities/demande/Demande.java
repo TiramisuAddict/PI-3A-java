@@ -4,6 +4,7 @@ import java.util.Date;
 
 public class Demande {
     private int idDemande;
+    private int idEmploye;
     private String categorie;
     private String titre;
     private String description;
@@ -14,9 +15,11 @@ public class Demande {
 
     public Demande() {}
 
-    public Demande(int idDemande, String categorie, String titre, String description,
-                   String priorite, String status, Date dateCreation, String typeDemande) {
+    public Demande(int idDemande, int idEmploye, String categorie,
+                   String titre, String description, String priorite,
+                   String status, Date dateCreation, String typeDemande) {
         this.idDemande = idDemande;
+        this.idEmploye = idEmploye;
         this.categorie = categorie;
         this.titre = titre;
         this.description = description;
@@ -28,6 +31,9 @@ public class Demande {
 
     public int getIdDemande() { return idDemande; }
     public void setIdDemande(int idDemande) { this.idDemande = idDemande; }
+
+    public int getIdEmploye() { return idEmploye; }
+    public void setIdEmploye(int idEmploye) { this.idEmploye = idEmploye; }
 
     public String getCategorie() { return categorie; }
     public void setCategorie(String categorie) { this.categorie = categorie; }
@@ -52,14 +58,7 @@ public class Demande {
 
     @Override
     public String toString() {
-        return "Demande{" +
-                "id=" + idDemande +
-                ", titre='" + titre + '\'' +
-                ", categorie='" + categorie + '\'' +
-                ", priorite='" + priorite + '\'' +
-                ", status='" + status + '\'' +
-                ", type='" + typeDemande + '\'' +
-                ", date=" + dateCreation +
-                '}';
+        return "Demande{id=" + idDemande + ", idEmploye=" + idEmploye
+                + ", titre='" + titre + "', status='" + status + "'}";
     }
 }

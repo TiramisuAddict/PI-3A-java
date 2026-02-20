@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Font?>
+
+<AnchorPane prefHeight="650.0" prefWidth="1100.0"
+            xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="controller.employers.employes.DemandesEmployeController">
+    <children>
+        <TabPane fx:id="mainTabPane" tabClosingPolicy="UNAVAILABLE"
+                 AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0"
+                 AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+            <tabs>
+                <Tab text="📋 Mes Demandes" closable="false">
+                    <VBox spacing="10.0">
+                        <padding>
+                            <Insets bottom="15.0" left="15.0"
+                                    right="15.0" top="15.0" />
+                        </padding>
+                        <children>
+                            <Label text="Mes Demandes" textFill="#2c3e50">
+                                <font>
+                                    <Font name="System Bold" size="24.0" />
+                                </font>
+                            </Label>
+
+                            <!-- Top Bar -->
+                            <HBox alignment="CENTER_LEFT" spacing="10.0">
+                                <padding>
+                                    <Insets top="5.0" bottom="5.0" />
+                                </padding>
+                                <children>
+                                    <Label text="🔍" style="-fx-font-size: 16;" />
+                                    <TextField fx:id="rechercheField"
+                                               prefWidth="250.0"
+                                               promptText="Rechercher..." />
+                                    <ComboBox fx:id="filterStatutCombo"
+                                              prefWidth="140.0"
+                                              promptText="Statut" />
+                                    <ComboBox fx:id="filterPrioriteCombo"
+                                              prefWidth="140.0"
+                                              promptText="Priorité" />
+                                    <Region HBox.hgrow="ALWAYS" />
+                                    <Button onAction="#ouvrirAjouter"
+                                            prefWidth="170.0"
+                                            style="-fx-background-color: #27ae60; -fx-text-fill: white; -fx-cursor: hand;"
+                                            text="+ Nouvelle Demande">
+                                        <font>
+                                            <Font name="System Bold" size="13.0" />
+                                        </font>
+                                    </Button>
+                                </children>
+                            </HBox>
+
+                            <!-- Summary Bar -->
+                            <HBox spacing="15.0" alignment="CENTER_LEFT"
+                                  style="-fx-padding: 8 15; -fx-background-color: #f0f3f5; -fx-background-radius: 8;">
+                                <children>
+                                    <Label fx:id="lblSummaryTotal" text="Total: 0"
+                                           style="-fx-font-weight: bold; -fx-text-fill: #2c3e50;" />
+                                    <Separator orientation="VERTICAL" prefHeight="20.0" />
+                                    <Label fx:id="lblSummaryNouvelle" text="🔵 Nouvelle: 0"
+                                           style="-fx-text-fill: #3498db; -fx-font-weight: bold;" />
+                                    <Label fx:id="lblSummaryEnCours" text="🟡 En cours: 0"
+                                           style="-fx-text-fill: #f39c12; -fx-font-weight: bold;" />
+                                    <Label fx:id="lblSummaryEnAttente" text="🟠 En attente: 0"
+                                           style="-fx-text-fill: #e67e22; -fx-font-weight: bold;" />
+                                    <Label fx:id="lblSummaryResolue" text="🟢 Résolue: 0"
+                                           style="-fx-text-fill: #27ae60; -fx-font-weight: bold;" />
+                                    <Label fx:id="lblSummaryFermee" text="⚫ Fermée: 0"
+                                           style="-fx-text-fill: #95a5a6; -fx-font-weight: bold;" />
+                                </children>
+                            </HBox>
+
+                            <!-- Main Content -->
+                            <SplitPane dividerPositions="0.45" VBox.vgrow="ALWAYS">
+                                <items>
+                                    <!-- Left: Cards -->
+                                    <VBox spacing="5.0">
+                                        <padding><Insets right="5.0" /></padding>
+                                        <children>
+                                            <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS"
+                                                        style="-fx-background-color: transparent;">
+                                                <content>
+                                                    <VBox fx:id="cardsContainer" spacing="10.0"
+                                                          style="-fx-padding: 5;" />
+                                                </content>
+                                            </ScrollPane>
+                                        </children>
+                                    </VBox>
+
+                                    <!-- Right: Details + Read-Only Historique -->
+                                    <ScrollPane fitToWidth="true">
+                                        <content>
+                                            <VBox spacing="10.0"
+                                                  style="-fx-background-color: #f8f9fa;">
+                                                <padding>
+                                                    <Insets bottom="15.0" left="15.0"
+                                                            right="15.0" top="15.0" />
+                                                </padding>
+                                                <children>
+                                                    <!-- Placeholder -->
+                                                    <VBox fx:id="placeholderBox" alignment="CENTER"
+                                                          spacing="10.0" style="-fx-padding: 50;">
+                                                        <children>
+                                                            <Label text="📋" style="-fx-font-size: 48;" />
+                                                            <Label text="Sélectionnez une demande"
+                                                                   style="-fx-font-size: 16; -fx-text-fill: #999;" />
+                                                            <Label text="Cliquez sur une carte pour voir les détails"
+                                                                   style="-fx-font-size: 12; -fx-text-fill: #bbb;" />
+                                                        </children>
+                                                    </VBox>
+
+                                                    <!-- Details Content -->
+                                                    <VBox fx:id="detailsContent" spacing="10.0"
+                                                          visible="false" managed="false">
+                                                        <children>
+                                                            <!-- Title + Badge -->
+                                                            <HBox alignment="CENTER_LEFT" spacing="10.0">
+                                                                <children>
+                                                                    <Label fx:id="detailTitreLabel"
+                                                                           style="-fx-font-size: 18; -fx-font-weight: bold; -fx-text-fill: #2c3e50;"
+                                                                           HBox.hgrow="ALWAYS" />
+                                                                    <Label fx:id="detailStatusBadge"
+                                                                           style="-fx-padding: 5 12; -fx-background-radius: 15; -fx-font-weight: bold;" />
+                                                                </children>
+                                                            </HBox>
+
+                                                            <Separator />
+
+                                                            <!-- Info Grid -->
+                                                            <GridPane hgap="10.0" vgap="8.0">
+                                                                <columnConstraints>
+                                                                    <ColumnConstraints minWidth="110.0" />
+                                                                    <ColumnConstraints hgrow="ALWAYS" />
+                                                                </columnConstraints>
+                                                                <children>
+                                                                    <Label text="Catégorie:" style="-fx-font-weight: bold; -fx-text-fill: #666;" GridPane.rowIndex="0" />
+                                                                    <Label fx:id="detailCategorieLabel" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+                                                                    <Label text="Type:" style="-fx-font-weight: bold; -fx-text-fill: #666;" GridPane.rowIndex="1" />
+                                                                    <Label fx:id="detailTypeLabel" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                                                                    <Label text="Priorité:" style="-fx-font-weight: bold; -fx-text-fill: #666;" GridPane.rowIndex="2" />
+                                                                    <Label fx:id="detailPrioriteLabel" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+                                                                    <Label text="Statut:" style="-fx-font-weight: bold; -fx-text-fill: #666;" GridPane.rowIndex="3" />
+                                                                    <Label fx:id="detailStatusLabel" GridPane.columnIndex="1" GridPane.rowIndex="3" />
+                                                                    <Label text="Date:" style="-fx-font-weight: bold; -fx-text-fill: #666;" GridPane.rowIndex="4" />
+                                                                    <Label fx:id="detailDateLabel" GridPane.columnIndex="1" GridPane.rowIndex="4" />
+                                                                </children>
+                                                            </GridPane>
+
+                                                            <Separator />
+
+                                                            <!-- Description -->
+                                                            <Label text="Description:" style="-fx-font-weight: bold; -fx-text-fill: #666;" />
+                                                            <Label fx:id="detailDescriptionLabel" wrapText="true"
+                                                                   style="-fx-padding: 10; -fx-background-color: white; -fx-background-radius: 5; -fx-border-color: #e0e0e0; -fx-border-radius: 5;" />
+
+                                                            <Separator />
+
+                                                            <!-- Specific Details -->
+                                                            <Label text="Détails Spécifiques:" style="-fx-font-weight: bold; -fx-text-fill: #666;" />
+                                                            <VBox fx:id="detailSpecificContainer" spacing="5.0"
+                                                                  style="-fx-padding: 10; -fx-background-color: white; -fx-background-radius: 5; -fx-border-color: #e0e0e0; -fx-border-radius: 5;" />
+
+                                                            <Separator />
+
+                                                            <!-- Status Progress -->
+                                                            <Label text="📍 Progression du Statut:" style="-fx-font-weight: bold; -fx-text-fill: #666; -fx-font-size: 14;" />
+                                                            <HBox fx:id="statusProgressBar" spacing="5.0" alignment="CENTER"
+                                                                  style="-fx-padding: 15; -fx-background-color: white; -fx-background-radius: 8; -fx-border-color: #e0e0e0; -fx-border-radius: 8;" />
+
+                                                            <Separator />
+
+                                                            <!-- READ-ONLY Historique (no advance button) -->
+                                                            <Label text="📜 Suivi de ma demande:" style="-fx-font-weight: bold; -fx-text-fill: #666; -fx-font-size: 14;" />
+                                                            <VBox fx:id="historiqueContainer" spacing="8.0" />
+                                                        </children>
+                                                    </VBox>
+                                                </children>
+                                            </VBox>
+                                        </content>
+                                    </ScrollPane>
+                                </items>
+                            </SplitPane>
+                        </children>
+                    </VBox>
+                </Tab>
+            </tabs>
+        </TabPane>
+    </children>
+</AnchorPane>

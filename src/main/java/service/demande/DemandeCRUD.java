@@ -1,175 +1,147 @@
 package service.demande;
 
 import entities.demande.Demande;
-import service.InterfaceCRUD;
 import utils.MyDB;
 
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
-public class DemandeCRUD implements InterfaceCRUD<Demande> {
-    private final Connection conn;
+public class DemandeCRUD {
+
+    private Connection connection;
 
     public DemandeCRUD() {
-        conn = MyDB.getInstance().getConn();
+        connection = MyDB.getInstance().getConn();
     }
 
-    @Override
     public void ajouter(Demande demande) throws SQLException {
-        String req = "INSERT INTO demande (categorie, titre, description, priorite, status, date_creation, type_demande) VALUES (?, ?, ?, ?, ?, ?, ?)";
-        try (PreparedStatement pst = conn.prepareStatement(req, Statement.RETURN_GENERATED_KEYS)) {
-            setDemandeParameters(pst, demande);
-            pst.executeUpdate();
+        String sql = "INSERT INTO demande (id_employe, categorie, titre, "
+                + "description, priorite, status, date_creation, type_demande) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        PreparedStatement ps = connection.prepareStatement(sql,
+                Statement.RETURN_GENERATED_KEYS);
+        ps.setInt(1, demande.getIdEmploye());
+        ps.setString(2, demande.getCategorie());
+        ps.setString(3, demande.getTitre());
+        ps.setString(4, demande.getDescription());
+        ps.setString(5, demande.getPriorite());
+        ps.setString(6, demande.getStatus());
+        ps.setDate(7, new java.sql.Date(
+                demande.getDateCreation().getTime()));
+        ps.setString(8, demande.getTypeDemande());
+        ps.executeUpdate();
 
-            ResultSet rs = pst.getGeneratedKeys();
-            if (rs.next()) {
-                demande.setIdDemande(rs.getInt(1));
-            }
+        ResultSet rs = ps.getGeneratedKeys();
+        if (rs.next()) {
+            demande.setIdDemande(rs.getInt(1));
         }
     }
 
-    @Override
     public void modifier(Demande demande) throws SQLException {
-        String req = "UPDATE demande SET categorie=?, titre=?, description=?, priorite=?, status=?, date_creation=?, type_demande=? WHERE id_demande=?";
-        try (PreparedStatement pst = conn.prepareStatement(req)) {
-            setDemandeParameters(pst, demande);
-            pst.setInt(8, demande.getIdDemande());
-            pst.executeUpdate();
-        }
+        String sql = "UPDATE demande SET categorie=?, titre=?, "
+                + "description=?, priorite=?, status=?, "
+                + "date_creation=?, type_demande=? WHERE id_demande=?";
+        PreparedStatement ps = connection.prepareStatement(sql);
+        ps.setString(1, demande.getCategorie());
+        ps.setString(2, demande.getTitre());
+        ps.setString(3, demande.getDescription());
+        ps.setString(4, demande.getPriorite());
+        ps.setString(5, demande.getStatus());
+        ps.setDate(6, new java.sql.Date(
+                demande.getDateCreation().getTime()));
+        ps.setString(7, demande.getTypeDemande());
+        ps.setInt(8, demande.getIdDemande());
+        ps.executeUpdate();
     }
 
-    @Override
     public void supprimer(int idDemande) throws SQLException {
-        String req = "DELETE FROM demande WHERE id_demande=?";
-        try (PreparedStatement pst = conn.prepareStatement(req)) {
-            pst.setInt(1, idDemande);
-            pst.executeUpdate();
-        }
+        String sql = "DELETE FROM demande WHERE id_demande=?";
+        PreparedStatement ps = connection.prepareStatement(sql);
+        ps.setInt(1, idDemande);
+        ps.executeUpdate();
     }
 
-    @Override
     public List<Demande> afficher() throws SQLException {
-        List<Demande> demandes = new ArrayList<>();
-        String req = "SELECT * FROM demande";
-        try (Statement st = conn.createStatement(); ResultSet rs = st.executeQuery(req)) {
-            while (rs.next()) {
-                Demande d = new Demande();
-                d.setIdDemande(rs.getInt("id_demande"));
-                d.setCategorie(rs.getString("categorie"));
-                d.setTitre(rs.getString("titre"));
-                d.setDescription(rs.getString("description"));
-                d.setPriorite(rs.getString("priorite"));
-                d.setStatus(rs.getString("status"));
-                d.setDateCreation(rs.getDate("date_creation"));
-                d.setTypeDemande(rs.getString("type_demande"));
-                demandes.add(d);
-            }
+        List<Demande> list = new ArrayList<>();
+        String sql = "SELECT * FROM demande ORDER BY date_creation DESC";
+        Statement st = connection.createStatement();
+        ResultSet rs = st.executeQuery(sql);
+        while (rs.next()) {
+            list.add(extractDemande(rs));
         }
-        return demandes;
+        return list;
     }
 
-    private void setDemandeParameters(PreparedStatement pst, Demande demande) throws SQLException {
-        pst.setString(1, demande.getCategorie());
-        pst.setString(2, demande.getTitre());
-        pst.setString(3, demande.getDescription());
-        pst.setString(4, demande.getPriorite());
-        pst.setString(5, demande.getStatus());
-        pst.setDate(6, new java.sql.Date(demande.getDateCreation().getTime()));
-        pst.setString(7, demande.getTypeDemande());
+    public List<Demande> getByEmploye(int idEmploye) throws SQLException {
+        List<Demande> list = new ArrayList<>();
+        String sql = "SELECT * FROM demande WHERE id_employe=? "
+                + "ORDER BY date_creation DESC";
+        PreparedStatement ps = connection.prepareStatement(sql);
+        ps.setInt(1, idEmploye);
+        ResultSet rs = ps.executeQuery();
+        while (rs.next()) {
+            list.add(extractDemande(rs));
+        }
+        return list;
     }
-    // Add these methods at the end of your existing DemandeCRUD.java class
+
+    // ============ STATISTICS ============
 
     public int countAll() throws SQLException {
-        String req = "SELECT COUNT(*) FROM demande";
-        try (Statement st = conn.createStatement(); ResultSet rs = st.executeQuery(req)) {
-            if (rs.next()) return rs.getInt(1);
-        }
-        return 0;
+        String sql = "SELECT COUNT(*) FROM demande";
+        Statement st = connection.createStatement();
+        ResultSet rs = st.executeQuery(sql);
+        return rs.next() ? rs.getInt(1) : 0;
     }
 
     public int countByStatus(String status) throws SQLException {
-        String req = "SELECT COUNT(*) FROM demande WHERE status=?";
-        try (PreparedStatement pst = conn.prepareStatement(req)) {
-            pst.setString(1, status);
-            ResultSet rs = pst.executeQuery();
-            if (rs.next()) return rs.getInt(1);
-        }
-        return 0;
-    }
-
-    public int countByPriorite(String priorite) throws SQLException {
-        String req = "SELECT COUNT(*) FROM demande WHERE priorite=?";
-        try (PreparedStatement pst = conn.prepareStatement(req)) {
-            pst.setString(1, priorite);
-            ResultSet rs = pst.executeQuery();
-            if (rs.next()) return rs.getInt(1);
-        }
-        return 0;
-    }
-
-    public int countByType(String typeDemande) throws SQLException {
-        String req = "SELECT COUNT(*) FROM demande WHERE type_demande=?";
-        try (PreparedStatement pst = conn.prepareStatement(req)) {
-            pst.setString(1, typeDemande);
-            ResultSet rs = pst.executeQuery();
-            if (rs.next()) return rs.getInt(1);
-        }
-        return 0;
-    }
-
-    public int countByCategorie(String categorie) throws SQLException {
-        String req = "SELECT COUNT(*) FROM demande WHERE categorie=?";
-        try (PreparedStatement pst = conn.prepareStatement(req)) {
-            pst.setString(1, categorie);
-            ResultSet rs = pst.executeQuery();
-            if (rs.next()) return rs.getInt(1);
-        }
-        return 0;
+        String sql = "SELECT COUNT(*) FROM demande WHERE status=?";
+        PreparedStatement ps = connection.prepareStatement(sql);
+        ps.setString(1, status);
+        ResultSet rs = ps.executeQuery();
+        return rs.next() ? rs.getInt(1) : 0;
     }
 
     public Map<String, Integer> countGroupByStatus() throws SQLException {
-        Map<String, Integer> map = new LinkedHashMap<>();
-        String req = "SELECT status, COUNT(*) as total FROM demande GROUP BY status";
-        try (Statement st = conn.createStatement(); ResultSet rs = st.executeQuery(req)) {
-            while (rs.next()) {
-                map.put(rs.getString("status"), rs.getInt("total"));
-            }
-        }
-        return map;
+        return countGroupBy("status");
     }
 
     public Map<String, Integer> countGroupByPriorite() throws SQLException {
-        Map<String, Integer> map = new LinkedHashMap<>();
-        String req = "SELECT priorite, COUNT(*) as total FROM demande GROUP BY priorite";
-        try (Statement st = conn.createStatement(); ResultSet rs = st.executeQuery(req)) {
-            while (rs.next()) {
-                map.put(rs.getString("priorite"), rs.getInt("total"));
-            }
-        }
-        return map;
+        return countGroupBy("priorite");
     }
 
     public Map<String, Integer> countGroupByType() throws SQLException {
+        return countGroupBy("type_demande");
+    }
+
+    public Map<String, Integer> countGroupByCategorie() throws SQLException {
+        return countGroupBy("categorie");
+    }
+
+    private Map<String, Integer> countGroupBy(String column)
+            throws SQLException {
         Map<String, Integer> map = new LinkedHashMap<>();
-        String req = "SELECT type_demande, COUNT(*) as total FROM demande GROUP BY type_demande";
-        try (Statement st = conn.createStatement(); ResultSet rs = st.executeQuery(req)) {
-            while (rs.next()) {
-                map.put(rs.getString("type_demande"), rs.getInt("total"));
-            }
+        String sql = "SELECT " + column + ", COUNT(*) as cnt "
+                + "FROM demande GROUP BY " + column;
+        Statement st = connection.createStatement();
+        ResultSet rs = st.executeQuery(sql);
+        while (rs.next()) {
+            map.put(rs.getString(1), rs.getInt("cnt"));
         }
         return map;
     }
 
-    public Map<String, Integer> countGroupByCategorie() throws SQLException {
-        Map<String, Integer> map = new LinkedHashMap<>();
-        String req = "SELECT categorie, COUNT(*) as total FROM demande GROUP BY categorie";
-        try (Statement st = conn.createStatement(); ResultSet rs = st.executeQuery(req)) {
-            while (rs.next()) {
-                map.put(rs.getString("categorie"), rs.getInt("total"));
-            }
-        }
-        return map;
-    }}
+    private Demande extractDemande(ResultSet rs) throws SQLException {
+        Demande d = new Demande();
+        d.setIdDemande(rs.getInt("id_demande"));
+        d.setIdEmploye(rs.getInt("id_employe"));
+        d.setCategorie(rs.getString("categorie"));
+        d.setTitre(rs.getString("titre"));
+        d.setDescription(rs.getString("description"));
+        d.setPriorite(rs.getString("priorite"));
+        d.setStatus(rs.getString("status"));
+        d.setDateCreation(rs.getDate("date_creation"));
+        d.setTypeDemande(rs.getString("type_demande"));
+        return d;
+    }
+}

@@ -1,5 +1,6 @@
-package controller.demandes;
+package controller.employers.RHetAdminE;
 
+import controller.demandes.NavigationHelper;
 import entities.demande.Demande;
 import entities.demande.HistoriqueDemande;
 import service.demande.DemandeCRUD;
@@ -86,8 +87,13 @@ public class AvancerDemandeController implements Initializable {
             @Override
             protected void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
-                if (empty || item == null) { setText(null); setStyle(""); }
-                else { setText(item); setStyle(getStatusTextStyle(item)); }
+                if (empty || item == null) {
+                    setText(null);
+                    setStyle("");
+                } else {
+                    setText(item);
+                    setStyle(getStatusTextStyle(item));
+                }
             }
         });
 
@@ -95,8 +101,13 @@ public class AvancerDemandeController implements Initializable {
             @Override
             protected void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
-                if (empty || item == null) { setText(null); setStyle(""); }
-                else { setText(item); setStyle(getStatusTextStyle(item)); }
+                if (empty || item == null) {
+                    setText(null);
+                    setStyle("");
+                } else {
+                    setText(item);
+                    setStyle(getStatusTextStyle(item));
+                }
             }
         });
 
@@ -104,14 +115,23 @@ public class AvancerDemandeController implements Initializable {
             @Override
             protected void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
-                if (empty || item == null) { setText(null); setStyle(""); }
-                else {
+                if (empty || item == null) {
+                    setText(null);
+                    setStyle("");
+                } else {
                     setText(item);
                     switch (item) {
-                        case "RH": setStyle("-fx-text-fill: #8e44ad; -fx-font-weight: bold;"); break;
-                        case "ADMIN": setStyle("-fx-text-fill: #c0392b; -fx-font-weight: bold;"); break;
-                        case "RESPONSABLE": setStyle("-fx-text-fill: #2980b9; -fx-font-weight: bold;"); break;
-                        default: setStyle("");
+                        case "RH":
+                            setStyle("-fx-text-fill: #8e44ad; -fx-font-weight: bold;");
+                            break;
+                        case "ADMIN":
+                            setStyle("-fx-text-fill: #c0392b; -fx-font-weight: bold;");
+                            break;
+                        case "RESPONSABLE":
+                            setStyle("-fx-text-fill: #2980b9; -fx-font-weight: bold;");
+                            break;
+                        default:
+                            setStyle("");
                     }
                 }
             }
@@ -120,12 +140,18 @@ public class AvancerDemandeController implements Initializable {
 
     private String getStatusTextStyle(String status) {
         switch (status) {
-            case "Nouvelle": return "-fx-text-fill: #3498db; -fx-font-weight: bold;";
-            case "En cours": return "-fx-text-fill: #f39c12; -fx-font-weight: bold;";
-            case "En attente": return "-fx-text-fill: #e67e22; -fx-font-weight: bold;";
-            case "Résolue": return "-fx-text-fill: #27ae60; -fx-font-weight: bold;";
-            case "Fermée": return "-fx-text-fill: #95a5a6; -fx-font-weight: bold;";
-            default: return "";
+            case "Nouvelle":
+                return "-fx-text-fill: #3498db; -fx-font-weight: bold;";
+            case "En cours":
+                return "-fx-text-fill: #f39c12; -fx-font-weight: bold;";
+            case "En attente":
+                return "-fx-text-fill: #e67e22; -fx-font-weight: bold;";
+            case "Résolue":
+                return "-fx-text-fill: #27ae60; -fx-font-weight: bold;";
+            case "Fermée":
+                return "-fx-text-fill: #95a5a6; -fx-font-weight: bold;";
+            default:
+                return "";
         }
     }
 
@@ -135,9 +161,15 @@ public class AvancerDemandeController implements Initializable {
 
         infoPrioriteLabel.setText(demande.getPriorite());
         switch (demande.getPriorite()) {
-            case "HAUTE": infoPrioriteLabel.setStyle("-fx-text-fill: red; -fx-font-weight: bold;"); break;
-            case "NORMALE": infoPrioriteLabel.setStyle("-fx-text-fill: blue; -fx-font-weight: bold;"); break;
-            case "BASSE": infoPrioriteLabel.setStyle("-fx-text-fill: green; -fx-font-weight: bold;"); break;
+            case "HAUTE":
+                infoPrioriteLabel.setStyle("-fx-text-fill: red; -fx-font-weight: bold;");
+                break;
+            case "NORMALE":
+                infoPrioriteLabel.setStyle("-fx-text-fill: blue; -fx-font-weight: bold;");
+                break;
+            case "BASSE":
+                infoPrioriteLabel.setStyle("-fx-text-fill: green; -fx-font-weight: bold;");
+                break;
         }
 
         infoStatusLabel.setText(demande.getStatus());
@@ -218,13 +250,22 @@ public class AvancerDemandeController implements Initializable {
 
     private void setupRealtimeValidation() {
         nouveauStatutCombo.valueProperty().addListener((obs, o, n) -> {
-            if (n != null) { statutError.setText(""); nouveauStatutCombo.setStyle(""); }
+            if (n != null) {
+                statutError.setText("");
+                nouveauStatutCombo.setStyle("");
+            }
         });
         acteurCombo.valueProperty().addListener((obs, o, n) -> {
-            if (n != null) { acteurError.setText(""); acteurCombo.setStyle(""); }
+            if (n != null) {
+                acteurError.setText("");
+                acteurCombo.setStyle("");
+            }
         });
         commentaireArea.textProperty().addListener((obs, o, n) -> {
-            if (!n.trim().isEmpty()) { commentaireError.setText(""); commentaireArea.setStyle(""); }
+            if (!n.trim().isEmpty()) {
+                commentaireError.setText("");
+                commentaireArea.setStyle("");
+            }
         });
     }
 
@@ -291,8 +332,10 @@ public class AvancerDemandeController implements Initializable {
     @FXML
     private void retourListe() {
         try {
-            NavigationHelper.loadView(infoTitreLabel, "demandes.fxml");
+            NavigationHelper.loadView("/emp/RHetAdminE/demandes.fxml");
         } catch (IOException e) {
+            showAlert(Alert.AlertType.ERROR, "Erreur",
+                    "Impossible de retourner à la liste: " + e.getMessage());
             e.printStackTrace();
         }
     }

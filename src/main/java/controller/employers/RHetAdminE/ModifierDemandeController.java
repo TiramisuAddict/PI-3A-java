@@ -1,5 +1,7 @@
-package controller.demandes;
+package controller.employers.RHetAdminE;
 
+import controller.demandes.DemandeFormHelper;
+import controller.demandes.NavigationHelper;
 import entities.demande.Demande;
 import entities.demande.DemandeDetails;
 import service.demande.DemandeCRUD;
@@ -166,7 +168,8 @@ public class ModifierDemandeController implements Initializable {
     @FXML
     private void retourListe() {
         try {
-            NavigationHelper.loadView(titreField, "demandes.fxml");
+            // ADD the leading slash /
+            NavigationHelper.loadView("/emp/RHetAdminE/demandes.fxml");
         } catch (IOException e) {
             e.printStackTrace();
         }

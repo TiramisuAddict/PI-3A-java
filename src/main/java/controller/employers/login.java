@@ -1,6 +1,10 @@
 package controller.employers;
 
-import entities.employe.*;
+import entities.employe.administrateur_systeme;
+import entities.employe.compte;
+import entities.employe.employe;
+import entities.employe.role;
+import entities.employe.session;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;

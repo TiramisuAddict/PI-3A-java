@@ -9,6 +9,7 @@ import javafx.stage.Stage;
 
 import javafx.scene.image.Image;
 import java.io.IOException;
+import java.util.Objects;
 
 public class App extends Application {
 
@@ -21,7 +22,7 @@ public class App extends Application {
         try {
             Application.setUserAgentStylesheet(new PrimerLight().getUserAgentStylesheet());
 
-            Parent root = FXMLLoader.load(getClass().getResource("/main-view.fxml"));
+            Parent root = FXMLLoader.load(Objects.requireNonNull(getClass().getResource("/emp/login.fxml")));
 
             Scene scene = new Scene(root);
 
