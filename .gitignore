@@ -2,3 +2,7 @@ target/
 .idea/
 *.iml
 .mvn/
+./tokens/StoredCredential
+./tokens/StoredCredential.*
+credentials.json
+./src/main/resources/credentials.apps.googleusercontent.com.json

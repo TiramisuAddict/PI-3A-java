@@ -32,6 +32,7 @@ import service.TacheCRUD;
 import service.EmployeeCRUD;
 import service.Equipe_projet;
 import service.EmployeeCRUD.EmployeeInfo;
+import service.GoogleCalendarService;
 import Models.Projet;
 import Models.Tache;
 import Models.statut;
@@ -94,11 +95,21 @@ public class ProjetsController {
 
     @FXML private Label taskInfoLabel;
 
+    // User info bar
+    @FXML private Label currentUserLabel;
+    @FXML private Label currentRoleLabel;
+    @FXML private Button btnLogout;
+
+    // Google Calendar
+    @FXML private Button btnGoogleCalendar;
+    @FXML private Label calendarStatusLabel;
+
 
     private final ProjetCRUD projetCRUD = new ProjetCRUD();
     private final TacheCRUD tacheCRUD = new TacheCRUD();
     private final EmployeeCRUD employeeCRUD = new EmployeeCRUD();
     private final Equipe_projet equipeCRUD = new Equipe_projet();
+    private final GoogleCalendarService calendarService = GoogleCalendarService.getInstance();
 
     private final ObservableList<Projet> masterProjects = FXCollections.observableArrayList();
     private final ObservableList<Projet> filteredProjects = FXCollections.observableArrayList();
@@ -116,6 +127,20 @@ public class ProjetsController {
         // Simple login - prompt for employee ID if not logged in
         if (!UserSession.getInstance().isLoggedIn()) {
             showLoginPrompt();
+        }
+
+        // Setup user info display
+        updateUserInfoDisplay();
+
+        // Setup logout button
+        if (btnLogout != null) {
+            btnLogout.setOnAction(e -> handleLogout());
+        }
+
+        // Setup Google Calendar button
+        if (btnGoogleCalendar != null) {
+            btnGoogleCalendar.setOnAction(e -> handleGoogleCalendarConnection());
+            updateCalendarStatusDisplay();
         }
 
         // fill filter combos (optional)
@@ -199,12 +224,22 @@ public class ProjetsController {
         btnCreateTaskInline.setVisible(canManage);
         btnCreateTaskInline.setManaged(canManage);
 
-        // For employees, make team list read-only (hide add/remove)
-        if (!canManage) {
-            btnAddEmployee.setVisible(false);
-            btnAddEmployee.setManaged(false);
-            addEmployeeBox.setVisible(false);
-            addEmployeeBox.setManaged(false);
+        // Show/hide team management controls based on role
+        btnAddEmployee.setVisible(canManage);
+        btnAddEmployee.setManaged(canManage);
+        addEmployeeBox.setVisible(canManage);
+        addEmployeeBox.setManaged(canManage);
+
+        // Hide/show delete and save buttons for project management
+        btnDeleteProject.setVisible(canManage);
+        btnDeleteProject.setManaged(canManage);
+
+        // Re-setup team list view to apply correct role permissions for remove buttons
+        setupTeamListView();
+
+        // Re-setup the action column visibility
+        if (colActions != null) {
+            colActions.setVisible(canManage);
         }
     }
 
@@ -261,6 +296,71 @@ public class ProjetsController {
                 e.printStackTrace();
             }
         }
+    }
+
+    /**
+     * Update the user info display in the top bar
+     */
+    private void updateUserInfoDisplay() {
+        UserSession session = UserSession.getInstance();
+        if (currentUserLabel != null && session.isLoggedIn()) {
+            currentUserLabel.setText("👤 " + session.getFullName());
+            currentRoleLabel.setText(formatRole(session.getRole()));
+        }
+    }
+
+    /**
+     * Format role for display
+     */
+    private String formatRole(String role) {
+        if (role == null) return "Utilisateur";
+        return switch (role.toLowerCase()) {
+            case "rh" -> "🏢 Ressources Humaines";
+            case "responsable" -> "👔 Responsable";
+            case "employee" -> "👷 Employé";
+            default -> role;
+        };
+    }
+
+    /**
+     * Handle logout - clear session and show login prompt again
+     */
+    private void handleLogout() {
+        // Confirm logout
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        confirm.setTitle("Déconnexion");
+        confirm.setHeaderText("🚪 Voulez-vous vous déconnecter ?");
+        confirm.setContentText("Vous devrez vous reconnecter pour continuer.");
+
+        ButtonType btnYes = new ButtonType("Déconnexion", ButtonBar.ButtonData.OK_DONE);
+        ButtonType btnNo = new ButtonType("Annuler", ButtonBar.ButtonData.CANCEL_CLOSE);
+        confirm.getButtonTypes().setAll(btnYes, btnNo);
+
+        confirm.showAndWait().ifPresent(type -> {
+            if (type == btnYes) {
+                // Clear session
+                UserSession.getInstance().clearSession();
+
+                // Show login prompt
+                showLoginPrompt();
+
+                // Update UI
+                updateUserInfoDisplay();
+                applyRoleBasedRestrictions();
+
+                // Reload data with new permissions
+                loadProjectsFromDB();
+
+                // Reinitialize the tasks table for new role
+                setupTasksTable();
+
+                // Refresh team list to apply new role permissions
+                loadProjectTeam();
+
+                // Update calendar status
+                updateCalendarStatusDisplay();
+            }
+        });
     }
 
     private void loadAllEmployees() {
@@ -630,6 +730,7 @@ public class ProjetsController {
             private final Button btnRemove = new Button("✕");
             private final HBox container = new HBox(10);
             private final Label nameLabel = new Label();
+            private final Region spacer = new Region();
 
             {
                 btnRemove.setStyle("-fx-background-color: #FEE2E2; -fx-text-fill: #DC2626; -fx-background-radius: 50; -fx-min-width: 24; -fx-min-height: 24; -fx-cursor: hand;");
@@ -640,15 +741,7 @@ public class ProjetsController {
                     }
                 });
                 container.setAlignment(Pos.CENTER_LEFT);
-                Region spacer = new Region();
                 HBox.setHgrow(spacer, Priority.ALWAYS);
-
-                // Only show remove button for managers
-                if (UserSession.getInstance().canManageProjects()) {
-                    container.getChildren().addAll(nameLabel, spacer, btnRemove);
-                } else {
-                    container.getChildren().addAll(nameLabel, spacer);
-                }
             }
 
             @Override
@@ -659,6 +752,16 @@ public class ProjetsController {
                 } else {
                     nameLabel.setText("👤 " + emp.getFullName());
                     nameLabel.setStyle("-fx-font-weight: 600;");
+
+                    // Dynamically update container based on current role
+                    container.getChildren().clear();
+                    container.getChildren().addAll(nameLabel, spacer);
+
+                    // Only show remove button for managers - check role dynamically
+                    if (UserSession.getInstance().canManageProjects()) {
+                        container.getChildren().add(btnRemove);
+                    }
+
                     setGraphic(container);
                 }
             }
@@ -1165,6 +1268,231 @@ public class ProjetsController {
                 }
             }
         });
+    }
+
+    // ===================== GOOGLE CALENDAR INTEGRATION =====================
+
+    /**
+     * Handle Google Calendar connection/disconnection
+     */
+    private void handleGoogleCalendarConnection() {
+        if (calendarService.isConnected()) {
+            // Show options: disconnect or sync
+            showCalendarOptionsDialog();
+        } else {
+            // Connect to Google Calendar
+            connectToGoogleCalendar();
+        }
+    }
+
+    /**
+     * Connect to Google Calendar
+     */
+    private void connectToGoogleCalendar() {
+        Alert loadingAlert = new Alert(Alert.AlertType.INFORMATION);
+        loadingAlert.setTitle("Google Calendar");
+        loadingAlert.setHeaderText("🔄 Connexion en cours...");
+        loadingAlert.setContentText("Une fenêtre de navigateur va s'ouvrir pour l'authentification Google.");
+        loadingAlert.show();
+
+        // Run connection in background thread
+        new Thread(() -> {
+            try {
+                boolean connected = calendarService.connect();
+                Platform.runLater(() -> {
+                    loadingAlert.close();
+                    if (connected) {
+                        showInfo("Google Calendar", "✅ Connecté avec succès à Google Calendar!");
+                        updateCalendarStatusDisplay();
+                    } else {
+                        showError("Google Calendar", "❌ Échec de la connexion.\n\nAssurez-vous d'avoir placé le fichier credentials.json dans src/main/resources/");
+                    }
+                });
+            } catch (Exception e) {
+                e.printStackTrace();
+                Platform.runLater(() -> {
+                    loadingAlert.close();
+                    showError("Erreur Google Calendar", "Impossible de se connecter: " + e.getMessage());
+                });
+            }
+        }).start();
+    }
+
+    /**
+     * Show calendar options dialog
+     */
+    private void showCalendarOptionsDialog() {
+        Alert dialog = new Alert(Alert.AlertType.CONFIRMATION);
+        dialog.setTitle("Google Calendar");
+        dialog.setHeaderText("📅 Google Calendar connecté");
+        dialog.setContentText("Que souhaitez-vous faire ?");
+
+        ButtonType btnSyncProject = new ButtonType("📁 Sync Projet actuel");
+        ButtonType btnSyncAllTasks = new ButtonType("📋 Sync toutes les tâches");
+        ButtonType btnDisconnect = new ButtonType("🔌 Déconnecter");
+        ButtonType btnCancel = new ButtonType("Annuler", ButtonBar.ButtonData.CANCEL_CLOSE);
+
+        dialog.getButtonTypes().setAll(btnSyncProject, btnSyncAllTasks, btnDisconnect, btnCancel);
+
+        dialog.showAndWait().ifPresent(type -> {
+            if (type == btnSyncProject) {
+                syncCurrentProjectToCalendar();
+            } else if (type == btnSyncAllTasks) {
+                syncAllTasksToCalendar();
+            } else if (type == btnDisconnect) {
+                disconnectGoogleCalendar();
+            }
+        });
+    }
+
+    /**
+     * Sync current project and its tasks to Google Calendar
+     */
+    private void syncCurrentProjectToCalendar() {
+        if (selectedProject == null) {
+            showError("Sync impossible", "Veuillez d'abord sélectionner un projet.");
+            return;
+        }
+
+        try {
+            // Create project event
+            String projectEventId = calendarService.createProjectEvent(selectedProject);
+
+            // Create events for all tasks in the project
+            int tasksSynced = 0;
+            for (Tache task : masterTasks) {
+                try {
+                    calendarService.createTaskEvent(task, selectedProject.getNom());
+                    tasksSynced++;
+                } catch (Exception e) {
+                    System.err.println("Failed to sync task: " + task.getTitre() + " - " + e.getMessage());
+                }
+            }
+
+            showInfo("Synchronisation réussie",
+                    "✅ Projet synchronisé!\n\n" +
+                    "• Projet: " + selectedProject.getNom() + "\n" +
+                    "• Tâches synchronisées: " + tasksSynced + "/" + masterTasks.size());
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            showError("Erreur de synchronisation", "Impossible de synchroniser: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Sync all tasks from all projects to Google Calendar
+     */
+    private void syncAllTasksToCalendar() {
+        try {
+            List<Tache> allTasks = tacheCRUD.afficher();
+            int synced = 0;
+            int failed = 0;
+
+            for (Tache task : allTasks) {
+                try {
+                    // Find project name for the task
+                    String projectName = "Projet #" + task.getId_projet();
+                    for (Projet p : masterProjects) {
+                        if (p.getProjet_id() == task.getId_projet()) {
+                            projectName = p.getNom();
+                            break;
+                        }
+                    }
+
+                    calendarService.createTaskEvent(task, projectName);
+                    synced++;
+                } catch (Exception e) {
+                    failed++;
+                    System.err.println("Failed to sync task: " + task.getTitre() + " - " + e.getMessage());
+                }
+            }
+
+            showInfo("Synchronisation terminée",
+                    "📅 Synchronisation des tâches:\n\n" +
+                    "✅ Réussies: " + synced + "\n" +
+                    "❌ Échecs: " + failed);
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            showError("Erreur", "Impossible de charger les tâches: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Disconnect from Google Calendar
+     */
+    private void disconnectGoogleCalendar() {
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        confirm.setTitle("Déconnexion Google Calendar");
+        confirm.setHeaderText("🔌 Voulez-vous vous déconnecter de Google Calendar?");
+        confirm.setContentText("Vous devrez vous reconnecter pour synchroniser à nouveau.");
+
+        confirm.showAndWait().ifPresent(type -> {
+            if (type == ButtonType.OK) {
+                calendarService.disconnect();
+                updateCalendarStatusDisplay();
+                showInfo("Google Calendar", "Déconnecté de Google Calendar.");
+            }
+        });
+    }
+
+    /**
+     * Update the calendar status display
+     */
+    private void updateCalendarStatusDisplay() {
+        if (calendarStatusLabel != null) {
+            if (calendarService.isConnected()) {
+                calendarStatusLabel.setText("✅ Connecté");
+                calendarStatusLabel.setStyle("-fx-text-fill: #16A34A; -fx-font-weight: bold;");
+            } else {
+                calendarStatusLabel.setText("⚪ Non connecté");
+                calendarStatusLabel.setStyle("-fx-text-fill: #64748B;");
+            }
+        }
+
+        if (btnGoogleCalendar != null) {
+            if (calendarService.isConnected()) {
+                btnGoogleCalendar.setText("📅 Calendar");
+                btnGoogleCalendar.setStyle("-fx-background-color: #DCFCE7; -fx-text-fill: #166534; -fx-background-radius: 8; -fx-cursor: hand;");
+            } else {
+                btnGoogleCalendar.setText("📅 Connecter Calendar");
+                btnGoogleCalendar.setStyle("-fx-background-color: #DBEAFE; -fx-text-fill: #1D4ED8; -fx-background-radius: 8; -fx-cursor: hand;");
+            }
+        }
+    }
+
+    /**
+     * Sync a single task to Google Calendar (called when creating/updating a task)
+     */
+    public void syncTaskToCalendar(Tache task) {
+        if (!calendarService.isConnected()) {
+            return; // Silent fail if not connected
+        }
+
+        String projectName = selectedProject != null ? selectedProject.getNom() : "Projet #" + task.getId_projet();
+
+        new Thread(() -> {
+            try {
+                calendarService.createTaskEvent(task, projectName);
+                Platform.runLater(() -> {
+                    taskInfoLabel.setText("✅ Tâche synchronisée avec Google Calendar");
+                });
+            } catch (Exception e) {
+                System.err.println("Failed to sync task to calendar: " + e.getMessage());
+            }
+        }).start();
+    }
+
+    /**
+     * Show info dialog
+     */
+    private void showInfo(String title, String message) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle(title);
+        alert.setHeaderText(title);
+        alert.setContentText(message);
+        alert.showAndWait();
     }
 
 }
