@@ -4,6 +4,7 @@ import entities.employe;
 import entities.role;
 import entities.session;
 import javafx.animation.FadeTransition;
+import javafx.animation.TranslateTransition;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
@@ -11,41 +12,61 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.*;
-import javafx.scene.effect.DropShadow;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
-import javafx.scene.paint.Color;
+import javafx.scene.shape.Circle;
 import javafx.stage.FileChooser;
 import javafx.util.Duration;
 import service.employeCRUD;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.net.URL;
 import java.sql.SQLException;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Optional;
 import java.util.ResourceBundle;
+import java.util.stream.Collectors;
 
 public class EmployerController implements Initializable {
 
     @FXML private TabPane tabPane;
-    @FXML private Tab tabListe, tabDetails, tabAjouter;
+    @FXML private Tab tabListe, tabAjouter;
     @FXML private VBox employesContainer;
     @FXML private Label lblNombreEmployes;
-    @FXML private Button btnImportCSV;
-    @FXML private VBox formCardDetails;
-    @FXML private Label lblTitreDetails, lblError;
+    @FXML private Label lblTotalEmployes, lblTotalRH, lblTotalChefs, lblTotalSimple;
+    @FXML private TextField searchField;
+    @FXML private ComboBox<String> filterRole;
+
+    @FXML private VBox sidePanel;
+    @FXML private VBox panelAvatarBlock;
+    @FXML private Label lblPanelTitle;
+    @FXML private Label lblError;
     @FXML private TextField txtNom, txtPrenom, txtEmail, txtTelephone, txtPoste;
     @FXML private ComboBox<String> comboRole;
     @FXML private DatePicker dateEmbauche;
+    @FXML private Button btnSave, btnDelete, btnClosePanel;
+
     @FXML private VBox formCardAjout;
     @FXML private Label lblErrorAjout;
-    @FXML private TextField txtNomAjout, txtPrenomAjout, txtEmailAjout, txtTelephoneAjout, txtPosteAjout;
+    @FXML private TextField txtNomAjout, txtPrenomAjout, txtEmailAjout,
+            txtTelephoneAjout, txtPosteAjout;
     @FXML private ComboBox<String> comboRoleAjout;
     @FXML private DatePicker dateEmbaucheAjout;
+    @FXML private Button btnImportCSV;
+
     private employeCRUD employeCRUD;
     private employe employeSelectionne;
     private int idEntrepriseConnecte;
+    private List<employe> tousEmployes;
+    private VBox carteSelectionnee;
+
+    private static final DateTimeFormatter DATE_FORMAT =
+            DateTimeFormatter.ofPattern("dd MMM yyyy");
 
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
@@ -53,9 +74,8 @@ public class EmployerController implements Initializable {
             employeCRUD = new employeCRUD();
             initSession();
             initComboBoxRoles();
-            configurerDesign();
+            setupFilters();
             chargerEmployes();
-
         } catch (SQLException e) {
             afficherErreur("Erreur Init", e.getMessage());
         }
@@ -73,66 +93,273 @@ public class EmployerController implements Initializable {
         }
     }
 
-    private void configurerDesign() {
-        String cardStyle = "-fx-background-color: white; -fx-background-radius: 15; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5); -fx-padding: 30;";
-        if (formCardDetails != null) formCardDetails.setStyle(cardStyle);
-        if (formCardAjout != null) formCardAjout.setStyle(cardStyle);
-        stylerInputs(txtNom, txtPrenom, txtEmail, txtTelephone, txtPoste, comboRole, dateEmbauche);
-        stylerInputs(txtNomAjout, txtPrenomAjout, txtEmailAjout, txtTelephoneAjout, txtPosteAjout, comboRoleAjout, dateEmbaucheAjout);
-        comboRole.setPrefWidth(180);
-        comboRoleAjout.setPrefWidth(180);
-        if (btnImportCSV != null) {
-            btnImportCSV.setStyle("-fx-background-color: #10b981; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 8; -fx-cursor: hand; -fx-padding: 8 15;");
-            btnImportCSV.setOnMouseEntered(e -> btnImportCSV.setStyle("-fx-background-color: #059669; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 8; -fx-cursor: hand; -fx-padding: 8 15;"));
-            btnImportCSV.setOnMouseExited(e -> btnImportCSV.setStyle("-fx-background-color: #10b981; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 8; -fx-cursor: hand; -fx-padding: 8 15;"));
+    private void initComboBoxRoles() {
+        List<String> roles = List.of(role.RH.getLibelle(), role.EMPLOYE.getLibelle(), role.CHEF_PROJET.getLibelle());
+        comboRole.setItems(FXCollections.observableArrayList(roles));
+        comboRoleAjout.setItems(FXCollections.observableArrayList(roles));
+    }
+
+    private void setupFilters() {
+        filterRole.setItems(FXCollections.observableArrayList("Tous", "RH", "Chef de projet", "Employé", "Admin entreprise"));
+        filterRole.setValue("Tous");
+        filterRole.setOnAction(e -> appliquerFiltres());
+        searchField.textProperty().addListener((obs, o, n) -> appliquerFiltres());
+    }
+
+    private void chargerEmployes() {
+        try {
+            tousEmployes = employeCRUD.afficher(idEntrepriseConnecte);
+            mettreAJourStats(tousEmployes);
+            appliquerFiltres();
+        } catch (SQLException e) {
+            afficherErreur("Erreur de chargement", e.getMessage());
         }
     }
 
-    private void stylerInputs(Control... controls) {
-        String base = "-fx-background-color: #f8fafc; -fx-border-color: #e2e8f0; -fx-border-radius: 8; -fx-background-radius: 8; -fx-padding: 10; -fx-text-fill: #334155;";
-        String focus = "-fx-background-color: #ffffff; -fx-border-color: #4f46e5; -fx-border-radius: 8; -fx-background-radius: 8; -fx-padding: 10; -fx-text-fill: #4A5DEF; -fx-effect: dropshadow(three-pass-box, rgba(79, 70, 229, 0.2), 5, 0, 0, 0);";
-        String error = "-fx-background-color: #fef2f2; -fx-border-color: #ef4444; -fx-border-radius: 8; -fx-background-radius: 8; -fx-padding: 10;";
+    private void appliquerFiltres() {
+        if (tousEmployes == null) return;
+        String recherche = searchField.getText() != null ? searchField.getText().trim().toLowerCase() : "";
+        String filtreRole = filterRole.getValue();
+        List<employe> filtres = tousEmployes.stream().filter(e -> filtrerParRole(e, filtreRole)).filter(e -> filtrerParRecherche(e, recherche)).collect(Collectors.toList());
+        afficherEmployes(filtres);
+    }
 
-        for (Control c : controls) {
-            c.setStyle(base);
-            c.getProperties().put("base", base);
-            c.getProperties().put("error", error);
+    private boolean filtrerParRole(employe e, String filtre) {
+        if (filtre == null || "Tous".equals(filtre)) return true;
+        return switch (filtre) {
+            case "RH" -> e.getRole() == role.RH;
+            case "Chef de projet" -> e.getRole() == role.CHEF_PROJET;
+            case "Employé" -> e.getRole() == role.EMPLOYE;
+            case "Admin entreprise" -> e.getRole() == role.ADMINISTRATEUR_ENTREPRISE;
+            default -> true;
+        };
+    }
 
-            c.focusedProperty().addListener((obs, old, isFocused) -> {
-                if (isFocused) c.setStyle(focus);
-                else c.setStyle(base);
-            });
+    private boolean filtrerParRecherche(employe e, String r) {
+        if (r.isEmpty()) return true;
+        return e.getNom().toLowerCase().contains(r) || e.getPrenom().toLowerCase().contains(r) || e.getPoste().toLowerCase().contains(r) || e.getE_mail().toLowerCase().contains(r);
+    }
+
+    private void afficherEmployes(List<employe> employes) {
+        employesContainer.getChildren().clear();
+        lblNombreEmployes.setText(employes.size() + " employé" + (employes.size() > 1 ? "s" : ""));
+        if (employes.isEmpty()) {
+            employesContainer.getChildren().add(creerMessageVide());
+            return;
+        }
+        for (employe emp : employes) {
+            employesContainer.getChildren().add(creerCarteEmploye(emp));
         }
     }
 
-    private void animerTransition(Node node) {
-        FadeTransition ft = new FadeTransition(Duration.millis(300), node);
-        ft.setFromValue(0.0);
-        ft.setToValue(1.0);
+    private void mettreAJourStats(List<employe> employes) {
+        lblTotalEmployes.setText(String.valueOf(employes.size()));
+        lblTotalRH.setText(String.valueOf(
+                employes.stream().filter(e -> e.getRole() == role.RH).count()));
+        lblTotalChefs.setText(String.valueOf(
+                employes.stream().filter(e -> e.getRole() == role.CHEF_PROJET).count()));
+        lblTotalSimple.setText(String.valueOf(
+                employes.stream().filter(e -> e.getRole() == role.EMPLOYE).count()));
+    }
+    private VBox creerCarteEmploye(employe emp) {
+        VBox card = new VBox();
+        card.getStyleClass().add("card");
+        appliquerStyleCarte(card, false);
+        HBox row = new HBox(12);
+        row.setAlignment(Pos.CENTER_LEFT);
+        row.setPadding(new Insets(12, 18, 12, 18));
+        row.setStyle("-fx-cursor: hand;");
+        row.setOnMouseEntered(e -> {
+            if (card != carteSelectionnee) {
+                card.setStyle("-fx-background-color: -color-bg-subtle;-fx-background-radius: 5;-fx-border-color: -color-accent-muted;-fx-border-radius: 5;");
+            }
+        });
+        row.setOnMouseExited(e -> {
+            if (card != carteSelectionnee) {
+                appliquerStyleCarte(card, false);
+            }
+        });
+        row.setOnMouseClicked(e -> selectionnerEmploye(emp, card));
+        StackPane avatar = creerAvatar(emp, 38);
+        VBox info = new VBox(2);
+        HBox.setHgrow(info, Priority.ALWAYS);
+        Label lblNom = new Label(emp.getPrenom() + " " + emp.getNom());
+        lblNom.setStyle("-fx-font-weight: bold; -fx-font-size: 13px;");
+        HBox meta = new HBox(8);
+        meta.setAlignment(Pos.CENTER_LEFT);
+        meta.getChildren().addAll(creerIconLabel(emp.getPoste()), creerSeparateurVertical(), creerIconLabel( emp.getE_mail()));
+        info.getChildren().addAll(lblNom, meta);
+        Label badge = creerBadgeRole(emp.getRole());
+        row.getChildren().addAll(avatar, info, badge);
+        card.getChildren().add(row);
+        return card;
+    }
+
+    private void appliquerStyleCarte(VBox card, boolean selected) {
+        if (selected) {
+            card.setStyle("-fx-background-color: -color-bg-subtle;-fx-background-radius: 5;-fx-border-color: #4A5DEF;-fx-border-radius: 5;-fx-border-width: 1.5;");
+        } else {
+            card.setStyle("-fx-background-color: -color-bg-subtle;-fx-background-radius: 5;-fx-border-color: -color-border-muted;-fx-border-radius: 5;");
+        }
+    }
+    private void selectionnerEmploye(employe emp, VBox card) {
+        if (carteSelectionnee != null) {
+            appliquerStyleCarte(carteSelectionnee, false);
+        }
+        employeSelectionne = emp;
+        carteSelectionnee = card;
+        appliquerStyleCarte(card, true);
+        remplirPanel(emp);
+        if (!sidePanel.isVisible()) {
+            ouvrirPanel();
+        }
+    }
+
+    private void ouvrirPanel() {
+        sidePanel.setVisible(true);
+        sidePanel.setManaged(true);
+        TranslateTransition tt = new TranslateTransition(Duration.millis(250), sidePanel);
+        tt.setFromX(380);
+        tt.setToX(0);
+        tt.play();
+        FadeTransition ft = new FadeTransition(Duration.millis(250), sidePanel);
+        ft.setFromValue(0);
+        ft.setToValue(1);
         ft.play();
     }
 
     @FXML
-    private void ouvrirAjoutEmploye() {
-        resetFormulaireAjout();
-        tabAjouter.setDisable(false);
-        tabPane.getSelectionModel().select(tabAjouter);
-        if (formCardAjout != null) animerTransition(formCardAjout);
+    private void fermerPanel() {
+        if (carteSelectionnee != null) {
+            appliquerStyleCarte(carteSelectionnee, false);
+            carteSelectionnee = null;
+        }
+        employeSelectionne = null;
+        TranslateTransition tt = new TranslateTransition(Duration.millis(200), sidePanel);
+        tt.setFromX(0);
+        tt.setToX(380);
+        FadeTransition ft = new FadeTransition(Duration.millis(200), sidePanel);
+        ft.setFromValue(1);
+        ft.setToValue(0);
+        ft.setOnFinished(e -> {
+            sidePanel.setVisible(false);
+            sidePanel.setManaged(false);
+            sidePanel.setTranslateX(0);
+        });
+
+        tt.play();
+        ft.play();
+    }
+
+    private void remplirPanel(employe emp) {
+        panelAvatarBlock.getChildren().clear();
+        StackPane avatar = creerAvatar(emp, 60);
+        Label fullName = new Label(emp.getPrenom() + " " + emp.getNom());
+        fullName.setStyle("-fx-font-weight: bold; -fx-font-size: 16px;");
+
+        Label roleBadge = creerBadgeRole(emp.getRole());
+
+        panelAvatarBlock.getChildren().addAll(avatar, fullName, roleBadge);
+
+        txtNom.setText(emp.getNom());
+        txtPrenom.setText(emp.getPrenom());
+        txtEmail.setText(emp.getE_mail());
+        txtTelephone.setText(String.valueOf(emp.getTelephone()));
+        txtPoste.setText(emp.getPoste());
+        comboRole.setValue(emp.getRole().getLibelle());
+        dateEmbauche.setValue(emp.getDate_embauche());
+        lblError.setText("");
+
+        boolean isAdmin = emp.getRole() == role.ADMINISTRATEUR_ENTREPRISE;
+        verrouillerChamps(isAdmin);
+        lblPanelTitle.setText(isAdmin ? "Fiche Administrateur" : "Fiche Employé");
+    }
+
+    private void verrouillerChamps(boolean verrouiller) {
+        Control[] champs = {txtNom, txtPrenom, txtEmail, txtTelephone,
+                txtPoste, comboRole, dateEmbauche};
+
+        for (Control champ : champs) {
+            champ.setDisable(verrouiller);
+            if (verrouiller) {
+                champ.setStyle("-fx-opacity: 1.0;-fx-background-color: -color-bg-subtle;-fx-text-fill: -color-fg-muted;-fx-border-color: -color-border-muted;-fx-border-radius: 5;-fx-background-radius: 5;");
+            } else {
+                champ.setStyle("");
+            }
+        }
+
+        btnSave.setVisible(!verrouiller);
+        btnSave.setManaged(!verrouiller);
+        btnDelete.setVisible(!verrouiller);
+        btnDelete.setManaged(!verrouiller);
+
+        if (verrouiller) {
+            lblError.setText("🔒 Compte administrateur — modification non autorisée");
+            lblError.setStyle("-fx-text-fill: #F59E0B;-fx-font-size: 11px;-fx-font-style: italic;");
+        } else {
+            lblError.setText("");
+            lblError.setStyle("");
+        }
+    }
+    @FXML
+    private void sauvegarderModifications() {
+        if (employeSelectionne == null) return;
+        if (!validerFormulaire(txtNom, txtPrenom, txtEmail,txtTelephone, txtPoste, comboRole, lblError))
+            return;
+
+        try {
+            employeSelectionne.setNom(txtNom.getText().trim());
+            employeSelectionne.setPrenom(txtPrenom.getText().trim());
+            employeSelectionne.setE_mail(txtEmail.getText().trim());
+            employeSelectionne.setTelephone(Integer.parseInt(txtTelephone.getText().trim()));
+            employeSelectionne.setPoste(txtPoste.getText().trim());
+            employeSelectionne.setRole(role.fromString(comboRole.getValue()));
+            employeSelectionne.setDate_embauche(dateEmbauche.getValue());
+            employeCRUD.modifier(employeSelectionne);
+            lblError.setText("✓ Modifications enregistrées");
+            lblError.setStyle("-fx-text-fill: -color-success-fg;-fx-font-weight: bold;");
+            chargerEmployes();
+            remplirPanel(employeSelectionne);
+        } catch (SQLException e) {
+            lblError.setText("Erreur : " + e.getMessage());
+            lblError.setStyle("-fx-text-fill: -color-danger-fg;");
+        } catch (NumberFormatException e) {
+            lblError.setText("Téléphone invalide.");
+            lblError.setStyle("-fx-text-fill: -color-danger-fg;");
+        }
     }
 
     @FXML
-    private void ouvrirDetails(employe emp) {
-        employeSelectionne = emp;
-        remplirFormulaireDetails(emp);
-        tabDetails.setDisable(false);
-        tabPane.getSelectionModel().select(tabDetails);
-        if (formCardDetails != null) animerTransition(formCardDetails);
+    private void supprimerDepuisPanel() {
+        if (employeSelectionne == null) return;
+        if (confirmer("Suppression", "Supprimer " + employeSelectionne.getPrenom() + " " + employeSelectionne.getNom() + " ?")) {
+            try {
+                employeCRUD.supprimer(employeSelectionne.getId_employé());
+                fermerPanel();
+                chargerEmployes();
+            } catch (SQLException e) {
+                afficherErreur("Erreur", e.getMessage());
+            }
+        }
+    }
+    @FXML
+    private void ouvrirAjoutEmploye() {
+        fermerPanel();
+        resetFormulaireAjout();
+        tabAjouter.setDisable(false);
+        tabPane.getSelectionModel().select(tabAjouter);
+    }
+
+    @FXML
+    public void retourListe() {
+        tabAjouter.setDisable(true);
+        tabPane.getSelectionModel().select(tabListe);
+        chargerEmployes();
     }
 
     @FXML
     private void ajouterEmploye() {
         if (!validerFormulaire(txtNomAjout, txtPrenomAjout, txtEmailAjout, txtTelephoneAjout, txtPosteAjout, comboRoleAjout, lblErrorAjout)) return;
-
         try {
             employe nv = new employe();
             nv.setNom(txtNomAjout.getText().trim());
@@ -145,49 +372,14 @@ public class EmployerController implements Initializable {
             nv.setIdEntreprise(idEntrepriseConnecte);
 
             employeCRUD.add(nv);
-
             afficherSucces("Succès", "L'employé a été ajouté.");
             retourListe();
 
         } catch (SQLException e) {
-            lblErrorAjout.setText("Erreur technique : " + e.getMessage());
+            lblErrorAjout.setText("Erreur : " + e.getMessage());
         } catch (NumberFormatException e) {
-            marquerErreur(txtTelephoneAjout);
             lblErrorAjout.setText("Format téléphone invalide.");
         }
-    }
-
-    @FXML
-    private void sauvegarderModifications() {
-        if (!validerFormulaire(txtNom, txtPrenom, txtEmail, txtTelephone, txtPoste, comboRole, lblError)) return;
-
-        try {
-            employeSelectionne.setNom(txtNom.getText().trim());
-            employeSelectionne.setPrenom(txtPrenom.getText().trim());
-            employeSelectionne.setE_mail(txtEmail.getText().trim());
-            employeSelectionne.setTelephone(Integer.parseInt(txtTelephone.getText().trim()));
-            employeSelectionne.setPoste(txtPoste.getText().trim());
-            employeSelectionne.setRole(role.fromString(comboRole.getValue()));
-            employeSelectionne.setDate_embauche(dateEmbauche.getValue());
-
-            employeCRUD.modifier(employeSelectionne);
-
-            afficherSucces("Mise à jour", "Les modifications sont enregistrées.");
-            retourListe();
-
-        } catch (SQLException e) {
-            lblError.setText("Erreur : " + e.getMessage());
-        } catch (NumberFormatException e) {
-            marquerErreur(txtTelephone);
-            lblError.setText("Téléphone invalide.");
-        }
-    }
-
-    public void retourListe() {
-        tabDetails.setDisable(true);
-        tabAjouter.setDisable(true);
-        tabPane.getSelectionModel().select(tabListe);
-        chargerEmployes();
     }
 
     @FXML
@@ -196,9 +388,7 @@ public class EmployerController implements Initializable {
         fc.setTitle("Importer CSV Employés");
         fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("Fichiers CSV", "*.csv"));
         File file = fc.showOpenDialog(tabPane.getScene().getWindow());
-
         if (file == null) return;
-
         int ok = 0, err = 0;
         try (BufferedReader br = new BufferedReader(new FileReader(file))) {
             String line;
@@ -210,8 +400,11 @@ public class EmployerController implements Initializable {
 
                 try {
                     employe e = new employe();
-                    e.setNom(p[0].trim()); e.setPrenom(p[1].trim()); e.setE_mail(p[2].trim());
-                    e.setTelephone(Integer.parseInt(p[3].trim())); e.setPoste(p[4].trim());
+                    e.setNom(p[0].trim());
+                    e.setPrenom(p[1].trim());
+                    e.setE_mail(p[2].trim());
+                    e.setTelephone(Integer.parseInt(p[3].trim()));
+                    e.setPoste(p[4].trim());
                     e.setRole(parseRole(p[5].trim()));
                     e.setDate_embauche(p.length > 6 && !p[6].isEmpty() ? LocalDate.parse(p[6].trim()) : null);
                     e.setIdEntreprise(idEntrepriseConnecte);
@@ -220,207 +413,196 @@ public class EmployerController implements Initializable {
                 } catch (Exception ex) { err++; }
             }
             chargerEmployes();
-            afficherSucces("Import CSV", ok + " importés avec succès.");
+            afficherSucces("Import CSV", ok + " importé" + (ok > 1 ? "s" : "") + " avec succès." + (err > 0 ? "\n" + err + " erreur(s)." : ""));
         } catch (Exception e) {
             afficherErreur("Erreur CSV", e.getMessage());
         }
     }
-
     private boolean validerFormulaire(TextField nom, TextField prenom, TextField email, TextField tel, TextField poste, ComboBox<String> roleCB, Label errLbl) {
         boolean valid = true;
-        stylerInputs(nom, prenom, email, tel, poste, roleCB);
-        if (nom.getText().trim().isEmpty()) { marquerErreur(nom); valid = false; }
-        if (prenom.getText().trim().isEmpty()) { marquerErreur(prenom); valid = false; }
-        if (poste.getText().trim().isEmpty()) { marquerErreur(poste); valid = false; }
-        if (roleCB.getValue() == null) { marquerErreur(roleCB); valid = false; }
+        errLbl.setText("");
+        errLbl.setStyle("-fx-text-fill: -color-danger-fg;");
+        nom.setStyle("");
+        prenom.setStyle("");
+        email.setStyle("");
+        tel.setStyle("");
+        poste.setStyle("");
+        comboRole.setStyle("");
 
-        if (email.getText().trim().isEmpty() || !email.getText().matches("^[A-Za-z0-9+_.-]+@(.+)$")) {
-            marquerErreur(email); valid = false;
+        String errorStyle = "-fx-border-color: #DC2626; -fx-border-width: 1; -fx-border-radius: 3;";
+
+        if (nom.getText().trim().isEmpty()) {
+            nom.setStyle(errorStyle);
+            valid = false;
+        }
+        if (prenom.getText().trim().isEmpty()) {
+            prenom.setStyle(errorStyle);
+            valid = false;
+        }
+        if (poste.getText().trim().isEmpty()) {
+            poste.setStyle(errorStyle);
+            valid = false;
+        }
+        if (roleCB.getValue() == null) {
+            roleCB.setStyle(errorStyle);
+            valid = false;
+        }
+        if (email.getText().trim().isEmpty()
+                || !email.getText().matches("^[A-Za-z0-9+_.-]+@(.+)$")) {
+            email.setStyle(errorStyle);
+            valid = false;
         }
 
         try {
-            if(tel.getText().trim().isEmpty()) throw new NumberFormatException();
+            if (tel.getText().trim().isEmpty()) throw new NumberFormatException();
             Integer.parseInt(tel.getText().trim());
         } catch (NumberFormatException e) {
-            marquerErreur(tel); valid = false;
+            tel.setStyle(errorStyle);
+            valid = false;
         }
 
         if (!valid) {
             errLbl.setText("Veuillez corriger les champs en rouge.");
-            errLbl.setStyle("-fx-text-fill: #DC2626;");
         }
         return valid;
     }
 
-    private void marquerErreur(Control c) {
-        c.setStyle((String) c.getProperties().get("error"));
-    }
-    private void chargerEmployes() {
-        remplirListe(null);
-    }
-
-    private void rechercherEmployes(String query) {
-        remplirListe(query);
-    }
-
-    private void remplirListe(String query) {
-        try {
-            employesContainer.getChildren().clear();
-            employesContainer.setSpacing(15);
-            employesContainer.setPadding(new Insets(10));
-
-            List<employe> all = employeCRUD.afficher(idEntrepriseConnecte);
-            List<employe> list = (query == null || query.isEmpty()) ? all : all.stream()
-                    .filter(e -> e.getNom().toLowerCase().contains(query.toLowerCase()) ||
-                            e.getPrenom().toLowerCase().contains(query.toLowerCase()) ||
-                            e.getPoste().toLowerCase().contains(query.toLowerCase()))
-                    .toList();
-
-            lblNombreEmployes.setText(list.size() + " employés");
-
-            if (list.isEmpty()) {
-                Label l = new Label("Aucune donnée trouvée.");
-                l.setStyle("-fx-text-fill: #94a3b8; -fx-font-size: 14px;");
-                l.setAlignment(Pos.CENTER);
-                l.setMaxWidth(Double.MAX_VALUE);
-                employesContainer.getChildren().add(l);
-                return;
-            }
-
-            for (employe emp : list) {
-                employesContainer.getChildren().add(creerCarteEmploye(emp));
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-    }
-
-
-    private VBox creerCarteEmploye(employe emp) {
-        VBox card = new VBox();
-        card.setStyle("-fx-background-color: white; -fx-background-radius: 12; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 5, 0, 0, 3);");
-
-        HBox row = new HBox(15);
-        row.setAlignment(Pos.CENTER_LEFT);
-        row.setPadding(new Insets(15, 20, 15, 20));
-        row.setStyle("-fx-background-radius: 12; -fx-cursor: hand;");
-
-        row.setOnMouseEntered(e -> card.setStyle("-fx-background-color: #f8fafc; -fx-background-radius: 12; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 8, 0, 0, 5);"));
-        row.setOnMouseExited(e -> card.setStyle("-fx-background-color: white; -fx-background-radius: 12; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 5, 0, 0, 3);"));
-        row.setOnMouseClicked(e -> ouvrirDetails(emp));
-
-        Label lblNom = new Label(emp.getPrenom() + " " + emp.getNom());
-        lblNom.setStyle("-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #1e293b;");
-        lblNom.setPrefWidth(200);
-
-        Label lblPoste = new Label(emp.getPoste());
-        lblPoste.setStyle("-fx-text-fill: #64748b; -fx-font-size: 13px;");
-        lblPoste.setPrefWidth(150);
-
-        Label lblEmail = new Label(emp.getE_mail());
-        lblEmail.setStyle("-fx-text-fill: #94a3b8; -fx-font-size: 12px;");
-        lblEmail.setPrefWidth(220);
-
-        HBox badgeBox = new HBox(creerBadgeRole(emp.getRole()));
-        badgeBox.setPrefWidth(130);
-        badgeBox.setAlignment(Pos.CENTER_LEFT);
-
-        Region spacer = new Region();
-        HBox.setHgrow(spacer, Priority.ALWAYS);
-        Button btnDel = creerBoutonAvecTexte("Supprimer", "#DC2626");
-
-        if (emp.getRole() == role.ADMINISTRATEUR_ENTREPRISE) {
-            btnDel.setDisable(true);
-            btnDel.setStyle("-fx-background-color: transparent; -fx-text-fill: #cbd5e1; -fx-border-color: #e2e8f0; -fx-border-radius: 6;");
-        } else {
-            btnDel.setOnAction(e -> { e.consume(); confirmerSuppression(emp); });
-        }
-
-        row.getChildren().addAll(lblNom, lblPoste, lblEmail, badgeBox, spacer, btnDel);
-        card.getChildren().add(row);
-        return card;
-    }
-    private Button creerBoutonAvecTexte(String text, String colorHex) {
-        Button btn = new Button(text);
-        String styleBase = String.format(
-                "-fx-background-color: white; -fx-text-fill: %s; -fx-font-weight: bold; -fx-font-size: 12px; -fx-border-color: %s; -fx-border-width: 1.5;-fx-border-radius: 6; -fx-background-radius: 6; -fx-padding: 6 12; -fx-cursor: hand;",
-                colorHex, colorHex
-        );
-        btn.setStyle(styleBase);
-        btn.setOnMouseEntered(e -> {
-            if (!btn.isDisabled()) {
-                btn.setStyle(String.format("-fx-background-color: %s15; -fx-text-fill: %s;-fx-font-weight: bold; -fx-font-size: 12px; -fx-border-color: %s;-fx-border-width: 1.5; -fx-border-radius: 6; -fx-background-radius: 6;-fx-padding: 6 12; -fx-cursor: hand;", colorHex, colorHex, colorHex));
-                btn.setEffect(new DropShadow(5, Color.web(colorHex, 0.25)));
-            }
-        });
-        btn.setOnMouseExited(e -> {
-            if (!btn.isDisabled()) {
-                btn.setStyle(styleBase);
-                btn.setEffect(null);
-            }
-        });
-
-        return btn;
-    }
-
-    private Label creerBadgeRole(role r) {
-        Label l = new Label(r.getLibelle());
-        String s = "-fx-font-size: 10px; -fx-font-weight: bold; -fx-padding: 3 8; -fx-background-radius: 10;";
-        switch (r) {
-            case ADMINISTRATEUR_ENTREPRISE: l.setStyle(s + "-fx-background-color: #eff6ff; -fx-text-fill: #2563eb;"); break;
-            case RH: l.setStyle(s + "-fx-background-color: #fdf2f8; -fx-text-fill: #db2777;"); break;
-            case CHEF_PROJET: l.setStyle(s + "-fx-background-color: #f0fdf4; -fx-text-fill: #16A34A;"); break;
-            default: l.setStyle(s + "-fx-background-color: #f1f5f9; -fx-text-fill: #475569;"); break;
-        }
-        return l;
-    }
     private void resetFormulaireAjout() {
-        txtNomAjout.clear(); txtPrenomAjout.clear(); txtEmailAjout.clear();
-        txtTelephoneAjout.clear(); txtPosteAjout.clear();
+        txtNomAjout.clear();
+        txtPrenomAjout.clear();
+        txtEmailAjout.clear();
+        txtTelephoneAjout.clear();
+        txtPosteAjout.clear();
         comboRoleAjout.setValue(null);
         dateEmbaucheAjout.setValue(LocalDate.now());
         lblErrorAjout.setText("");
-        stylerInputs(txtNomAjout, txtPrenomAjout, txtEmailAjout, txtTelephoneAjout, txtPosteAjout, comboRoleAjout);
     }
-
-    private void remplirFormulaireDetails(employe emp) {
-        txtNom.setText(emp.getNom()); txtPrenom.setText(emp.getPrenom());
-        txtEmail.setText(emp.getE_mail()); txtTelephone.setText(String.valueOf(emp.getTelephone()));
-        txtPoste.setText(emp.getPoste()); comboRole.setValue(emp.getRole().getLibelle());
-        dateEmbauche.setValue(emp.getDate_embauche());
-        lblTitreDetails.setText(emp.getPrenom() + " " + emp.getNom());
-        lblError.setText("");
-        comboRole.setDisable(emp.getRole() == role.ADMINISTRATEUR_ENTREPRISE);
-        stylerInputs(txtNom, txtPrenom, txtEmail, txtTelephone, txtPoste, comboRole);
-    }
-
-    private void confirmerSuppression(employe emp) {
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle("Suppression"); alert.setHeaderText("Supprimer " + emp.getNom() + " ?");
-        if (alert.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
-            try { employeCRUD.supprimer(emp.getId_employé()); chargerEmployes(); }
-            catch (SQLException e) { afficherErreur("Erreur", e.getMessage()); }
+    private StackPane creerAvatar(employe emp, double size) {
+        StackPane avatar = new StackPane();
+        avatar.setPrefSize(size, size);
+        avatar.setMinSize(size, size);
+        avatar.setMaxSize(size, size);
+        Image image = null;
+        double loadSize = size * 2;
+        if (emp.hasCustomImage()) {
+            try {
+                File imgFile = new File(emp.getImageProfil());
+                if (imgFile.exists()) {
+                    image = new Image(imgFile.toURI().toString(), loadSize, loadSize, true, true);
+                }
+            } catch (Exception ignored) {}
         }
+        if (image == null) {
+            try {
+                URL resource = getClass().getResource(employe.DEFAULT_IMAGE);
+                if (resource != null) {image = new Image(resource.toExternalForm(), loadSize, loadSize, true, true);
+                }
+            } catch (Exception ignored) {}
+        }
+
+        if (image != null) {
+            ImageView iv = new ImageView(image);
+            iv.setFitWidth(size);
+            iv.setFitHeight(size);
+            iv.setSmooth(true);
+
+            double w = image.getWidth();
+            double h = image.getHeight();
+            double side = Math.min(w, h);
+            double x = (w - side) / 2;
+            double y = (h - side) / 2;
+            iv.setViewport(new javafx.geometry.Rectangle2D(x, y, side, side));
+            iv.setPreserveRatio(false);
+            double radius = size / 2;
+            Circle clip = new Circle(radius, radius, radius);
+            iv.setClip(clip);
+            avatar.getChildren().add(iv);
+            return avatar;
+        }
+
+        String initials = "";
+        if (emp.getPrenom() != null && !emp.getPrenom().isEmpty()) {
+            initials += emp.getPrenom().charAt(0);
+        }
+        if (emp.getNom() != null && !emp.getNom().isEmpty()) {
+            initials += emp.getNom().charAt(0);
+        }
+        initials = initials.toUpperCase();
+        Label initialsLabel = new Label(initials);
+        initialsLabel.setStyle("-fx-text-fill: white;-fx-font-weight: bold;-fx-font-size: " + (size * 0.35) + "px;");
+        avatar.setStyle("-fx-background-color: #4A5DEF;-fx-background-radius: " + (size / 2) + ";");
+        avatar.getChildren().add(initialsLabel);
+        return avatar;
+    }
+    private Label creerIconLabel( String text) {
+        Label label = new Label( text);
+        label.setStyle("-fx-text-fill: -color-fg-muted; -fx-font-size: 11px;");
+        return label;
     }
 
-    private void initComboBoxRoles() {
-        List<String> roles = List.of(role.RH.getLibelle(), role.EMPLOYE.getLibelle(), role.CHEF_PROJET.getLibelle());
-        comboRole.setItems(FXCollections.observableArrayList(roles));
-        comboRoleAjout.setItems(FXCollections.observableArrayList(roles));
+    private Region creerSeparateurVertical() {
+        Region sep = new Region();
+        sep.setPrefWidth(1);
+        sep.setPrefHeight(12);
+        sep.setStyle("-fx-background-color: -color-border-muted;");
+        return sep;
+    }
+
+    private Label creerBadgeRole(role r) {
+        Label badge = new Label(r.getLibelle());
+        String base = "-fx-font-size: 10px;-fx-font-weight: bold;-fx-padding: 3 10;-fx-background-radius: 12;";
+        switch (r) {
+            case ADMINISTRATEUR_ENTREPRISE -> badge.setStyle(base + "-fx-background-color: -color-accent-muted;-fx-text-fill: -color-accent-fg;");
+            case RH -> badge.setStyle(base + "-fx-background-color: -color-danger-muted;-fx-text-fill: -color-danger-fg;");
+            case CHEF_PROJET -> badge.setStyle(base + "-fx-background-color: -color-success-muted;-fx-text-fill: -color-success-fg;");
+            default -> badge.setStyle(base + "-fx-background-color: -color-bg-subtle;-fx-text-fill: -color-fg-muted;-fx-border-color: -color-border-muted;-fx-border-radius: 12;");
+        }
+        return badge;
+    }
+
+    private VBox creerMessageVide() {
+        VBox box = new VBox(10);
+        box.setAlignment(Pos.CENTER);
+        box.setPadding(new Insets(60));
+        Label icon = new Label("👥");
+        icon.setStyle("-fx-font-size: 36px;");
+        Label msg = new Label("Aucun employé trouvé");
+        msg.setStyle("-fx-text-fill: -color-fg-muted; -fx-font-size: 16px;");
+        Label sub = new Label("Modifiez vos filtres ou ajoutez un collaborateur");
+        sub.setStyle("-fx-text-fill: -color-fg-subtle; -fx-font-size: 13px;");
+        box.getChildren().addAll(icon, msg, sub);
+        return box;
+    }
+    private boolean confirmer(String titre, String message) {
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle(titre);
+        alert.setHeaderText(message);
+        Optional<ButtonType> result = alert.showAndWait();
+        return result.isPresent() && result.get() == ButtonType.OK;
     }
 
     private role parseRole(String t) {
-        if(t==null) return role.EMPLOYE; String v = t.trim().toLowerCase();
-        if(v.contains("rh")) return role.RH;
-        if(v.contains("chef")) return role.CHEF_PROJET;
-        if(v.contains("admin")) return role.ADMINISTRATEUR_ENTREPRISE;
+        if (t == null) return role.EMPLOYE;
+        String v = t.trim().toLowerCase();
+        if (v.contains("rh")) return role.RH;
+        if (v.contains("chef")) return role.CHEF_PROJET;
+        if (v.contains("admin")) return role.ADMINISTRATEUR_ENTREPRISE;
         return role.EMPLOYE;
     }
 
     private void afficherSucces(String t, String c) {
-        Alert a = new Alert(Alert.AlertType.INFORMATION); a.setTitle(t); a.setHeaderText(null); a.setContentText(c); a.showAndWait();
+        Alert a = new Alert(Alert.AlertType.INFORMATION);
+        a.setTitle(t);
+        a.setHeaderText(null);
+        a.setContentText(c);
+        a.showAndWait();
     }
+
     private void afficherErreur(String t, String c) {
-        Alert a = new Alert(Alert.AlertType.ERROR); a.setTitle(t); a.setHeaderText(null); a.setContentText(c); a.showAndWait();
+        Alert a = new Alert(Alert.AlertType.ERROR);
+        a.setTitle(t);
+        a.setHeaderText(null);
+        a.setContentText(c);
+        a.showAndWait();
     }
 }

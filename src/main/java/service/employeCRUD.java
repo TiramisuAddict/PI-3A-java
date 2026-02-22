@@ -20,7 +20,7 @@ public class employeCRUD {
         }
     }
     public int add(employe employe) throws SQLException {
-        String sql = "insert into employé(nom, prenom, e_mail, telephone, poste, role, date_embauche, id_entreprise) values(?, ?, ?, ?, ?, ?, ?, ?)";
+        String sql = "insert into employé(nom, prenom, e_mail, telephone, poste, role, date_embauche,image_profil, id_entreprise) values(?, ?, ?, ?, ?, ?, ?, ?,?)";
         PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
         ps.setString(1, employe.getNom());
         ps.setString(2, employe.getPrenom());
@@ -33,7 +33,8 @@ public class employeCRUD {
         } else {
             ps.setNull(7, Types.DATE);
         }
-        ps.setInt(8, employe.getIdEntreprise());
+        ps.setString(8, employe.DEFAULT_IMAGE);
+        ps.setInt(9, employe.getIdEntreprise());
         ps.executeUpdate();
         ResultSet rs = ps.getGeneratedKeys();
         rs.next();
@@ -66,7 +67,7 @@ public class employeCRUD {
         return employes;
     }
     public void modifier(employe employe) throws SQLException {
-        String sql = "update employé set nom=?, prenom=?,e_mail=?, telephone=?, poste=?, role=?, date_embauche=? where id_employe=?";
+        String sql = "update employé set nom=?, prenom=?,e_mail=?, telephone=?, poste=?, role=?, date_embauche=?,image_profil=? where id_employe=?";
         PreparedStatement ps = conn.prepareStatement(sql);
         ps.setString(1, employe.getNom());
         ps.setString(2, employe.getPrenom());
@@ -79,7 +80,12 @@ public class employeCRUD {
         } else {
             ps.setNull(7, Types.DATE);
         }
-        ps.setInt(8, employe.getId_employé());
+        if (employe.getImageProfil() != null && !employe.getImageProfil().isBlank()) {
+            ps.setString(8, employe.getImageProfil());
+        } else {
+            ps.setNull(8, Types.VARCHAR);
+        }
+        ps.setInt(9, employe.getId_employé());
         ps.executeUpdate();
     }
     public void supprimer(int id) throws SQLException {
@@ -112,7 +118,7 @@ public class employeCRUD {
         if (dateEmbauche != null) {
             e.setDate_embauche(dateEmbauche.toLocalDate());
         }
-
+        e.setImageProfil(rs.getString("image_profil"));
         e.setIdEntreprise(rs.getInt("id_entreprise"));
 
         return e;

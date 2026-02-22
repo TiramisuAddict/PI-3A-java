@@ -14,8 +14,10 @@ public class entreprise {
     private String e_mail;
     private LocalDate date_demande;
     private statut statut;
+    private String logo;
+    private String siteWeb;
     public  entreprise() {}
-    public entreprise(String nom_entreprise,String pays,String ville,String nom, String prenom, String matricule_fiscale,int telephone,String e_mail) {
+    public entreprise(String nom_entreprise,String pays,String ville,String nom, String prenom, String matricule_fiscale,int telephone,String e_mail, String siteWeb,String logo) {
         this.nom_entreprise = nom_entreprise;
         this.pays = pays;
         this.ville = ville;
@@ -26,6 +28,9 @@ public class entreprise {
         this.e_mail = e_mail;
         this.date_demande = LocalDate.now();
         this.statut = statut.enattende;
+        this.siteWeb = siteWeb;
+        this.logo = logo;
+
     }
 
     public String getE_mail() {
@@ -115,6 +120,18 @@ public class entreprise {
     public void setPrenom(String prenom) {
         this.prenom = prenom;
     }
+    public String getLogo() {
+        return logo;
+    }
+    public void setLogo(String logo) {
+        this.logo = logo;
+    }
+
+    public String getSiteWeb() {
+        return siteWeb;
+    }
+    public void setSiteWeb(String siteWeb) {
+        this.siteWeb = siteWeb; }
 
     @Override
     public String toString() {

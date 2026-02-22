@@ -21,7 +21,7 @@ public class entrepriseCRUD implements InterfaceCRUD<entreprise> {
 
     @Override
     public void ajouter(entreprise entreprise) throws SQLException {
-        String sql = "insert into entreprise(nom_entreprise, pays, ville, nom, prenom, matricule_fiscale, telephone, e_mail, statut, date_demande) values (?, ?, ?, ?, ?, ?, ?, ?,?,?)";
+        String sql = "insert into entreprise(nom_entreprise, pays, ville, nom, prenom, matricule_fiscale, telephone, e_mail, statut,site_web,logo, date_demande) values (?, ?, ?, ?, ?, ?, ?, ?,?,?,?,?)";
         PreparedStatement ps = conn.prepareStatement(sql);
         ps.setString(1, entreprise.getNom_entreprise());
         ps.setString(2, entreprise.getPays());
@@ -32,10 +32,22 @@ public class entrepriseCRUD implements InterfaceCRUD<entreprise> {
         ps.setString(7, String.valueOf(entreprise.getTelephone()));
         ps.setString(8, entreprise.getE_mail());
         ps.setString(9, entreprise.getStatut().getLibelle());
+        if (entreprise.getSiteWeb() != null && !entreprise.getSiteWeb().isBlank()) {
+            ps.setString(10, entreprise.getSiteWeb());
+        } else {
+            ps.setNull(10, Types.VARCHAR);
+        }
+        if (entreprise.getLogo() != null && !entreprise.getLogo().isBlank()) {
+            ps.setString(11, entreprise.getLogo());
+        } else {
+            ps.setNull(11, Types.VARCHAR);
+        }
+
+
         LocalDate dateDemande = entreprise.getDate_demande() != null
                 ? entreprise.getDate_demande()
                 : LocalDate.now();
-        ps.setDate(10, Date.valueOf(dateDemande));
+        ps.setDate(12, Date.valueOf(dateDemande));
         ps.executeUpdate();
     }
 
@@ -59,6 +71,8 @@ public class entrepriseCRUD implements InterfaceCRUD<entreprise> {
             String statutString = resultSet.getString("statut");
             e.setStatut(statut.fromString(statutString));
             e.setStatut(statut.fromString(statutString));
+            e.setSiteWeb(resultSet.getString("site_web"));
+            e.setLogo(resultSet.getString("logo"));
             e.setDate_demande(resultSet.getDate("date_demande").toLocalDate());
 
             entreprises.add(e);
@@ -68,7 +82,7 @@ public class entrepriseCRUD implements InterfaceCRUD<entreprise> {
 
     @Override
     public void modifier(entreprise entreprise) throws SQLException {
-    String sql="update entreprise set nom_entreprise=? ,pays=? ,ville=?,nom=?,prenom=?,matricule_fiscale=? ,telephone=?,e_mail=?,statut=? where id_entreprise=?";
+    String sql="update entreprise set nom_entreprise=? ,pays=? ,ville=?,nom=?,prenom=?,matricule_fiscale=? ,telephone=?,e_mail=?,statut=?, site_web=?, logo=? where id_entreprise=?";
     PreparedStatement statement=conn.prepareStatement(sql);
     statement.setString(1,entreprise.getNom());
     statement.setString(2,entreprise.getPays());
@@ -77,7 +91,19 @@ public class entrepriseCRUD implements InterfaceCRUD<entreprise> {
     statement.setInt(5,entreprise.getTelephone());
     statement.setString(6,entreprise.getE_mail());
     statement.setString(9, entreprise.getStatut().getLibelle());
-    statement.setInt(8,entreprise.getId());
+
+
+        if (entreprise.getSiteWeb() != null && !entreprise.getSiteWeb().isBlank()) {
+            statement.setString(10, entreprise.getSiteWeb());
+        } else {
+            statement.setNull(10, Types.VARCHAR);
+        }
+        if (entreprise.getLogo() != null && !entreprise.getLogo().isBlank()) {
+            statement.setString(11, entreprise.getLogo());
+        } else {
+            statement.setNull(11, Types.VARCHAR);
+        }
+    statement.setInt(12,entreprise.getId());
     statement.executeUpdate();
 
     }
@@ -124,7 +150,7 @@ public class entrepriseCRUD implements InterfaceCRUD<entreprise> {
     }
     public void accepterEntreprise(entreprise e) throws SQLException {
         String sqlStatut = "update entreprise set statut=? where id_entreprise=?";
-        String sqlEmploye = "insert into employé(nom, prenom, e_mail, telephone, poste, role, date_embauche, id_entreprise) values (?, ?, ?, ?, ?, ?, ?, ?)";
+        String sqlEmploye = "insert into employé(nom, prenom, e_mail, telephone, poste, role, date_embauche,image_profil, id_entreprise) values (?, ?, ?, ?, ?, ?, ?, ?,?)";
         try {
             conn.setAutoCommit(false);
             try (PreparedStatement ps1 = conn.prepareStatement(sqlStatut)) {
@@ -141,7 +167,8 @@ public class entrepriseCRUD implements InterfaceCRUD<entreprise> {
                 ps2.setString(5, "CEO");
                 ps2.setString(6, role.ADMINISTRATEUR_ENTREPRISE.getLibelle());
                 ps2.setNull(7, Types.DATE);
-                ps2.setInt(8, e.getId());
+                ps2.setString(8, entities.employe.DEFAULT_IMAGE);
+                ps2.setInt(9, e.getId());
                 ps2.executeUpdate();
                 try (ResultSet rs = ps2.getGeneratedKeys()) {
                     if (!rs.next()) {
@@ -169,6 +196,33 @@ public class entrepriseCRUD implements InterfaceCRUD<entreprise> {
         } finally {
             conn.setAutoCommit(true);
         }
+    }
+    public entreprise getById(int id) throws SQLException {
+        String sql = "SELECT * FROM entreprise WHERE id_entreprise = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, id);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    entreprise e = new entreprise();
+                    e.setId(rs.getInt("id_entreprise"));
+                    e.setNom_entreprise(rs.getString("nom_entreprise"));
+                    e.setPays(rs.getString("pays"));
+                    e.setVille(rs.getString("ville"));
+                    e.setNom(rs.getString("nom"));
+                    e.setPrenom(rs.getString("prenom"));
+                    e.setMatricule_fiscale(rs.getString("matricule_fiscale"));
+                    e.setTelephone(rs.getInt("telephone"));
+                    e.setE_mail(rs.getString("e_mail"));
+                    e.setStatut(statut.fromString(rs.getString("statut")));
+                    e.setSiteWeb(rs.getString("site_web"));
+                    e.setLogo(rs.getString("logo"));
+                    Date d = rs.getDate("date_demande");
+                    if (d != null) e.setDate_demande(d.toLocalDate());
+                    return e;
+                }
+            }
+        }
+        return null;
     }
     }
 

@@ -1,51 +1,132 @@
 package controller.employers.RHetAdminE;
 
-import javafx.fxml.FXML;
-import javafx.scene.layout.VBox;
-
-import javafx.event.ActionEvent;
-import javafx.fxml.FXMLLoader;
-import javafx.scene.Parent;
-import javafx.scene.control.Button;
-import javafx.scene.layout.StackPane;
-import java.io.IOException;
-
+import entities.employe;
+import entities.session;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
+import javafx.event.ActionEvent;
+import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
+import javafx.fxml.Initializable;
+import javafx.scene.Parent;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
+import javafx.scene.shape.Circle;
 import javafx.util.Duration;
 
-public class RHetAdminE {
+import java.io.File;
+import java.io.IOException;
+import java.net.URL;
+import java.util.ResourceBundle;
 
-    // Logique Sidebar Toggle
+public class RHetAdminE implements Initializable {
     @FXML private VBox sidebar;
+    @FXML private StackPane avatarSidebar;
+    @FXML private Label lblEmployeCourant;
+    @FXML private Button btnDeconnexion;
     private boolean isExpanded = false;
+    @FXML private StackPane contentArea;
+    @FXML private Button btnHome, btnFormation, btnDemande, btnEmployer, btnProjet, btnOffre;
+    @Override
+    public void initialize(URL url, ResourceBundle resourceBundle) {
+        chargerInfoUtilisateur();
+    }
 
+    private void chargerInfoUtilisateur() {
+        employe emp = session.getEmploye();
+        if (emp == null) return;
+        lblEmployeCourant.setText(emp.getPrenom() + " " + emp.getNom());
+        chargerAvatarSidebar(emp);
+    }
+    private void chargerAvatarSidebar(employe emp) {
+        if (avatarSidebar == null) return;
+        avatarSidebar.getChildren().clear();
+        double size = 30;
+        double loadSize = size * 2;
+        Image image = null;
+        if (emp.hasCustomImage()) {
+            try {
+                File imgFile = new File(emp.getImageProfil());
+                if (imgFile.exists()) {
+                    image = new Image(
+                            imgFile.toURI().toString(),
+                            loadSize, loadSize,
+                            true, true
+                    );
+                }
+            } catch (Exception ignored) {}
+        }
+        if (image == null) {
+            try {
+                URL resource = getClass().getResource(employe.DEFAULT_IMAGE);
+                if (resource != null) {
+                    image = new Image(
+                            resource.toExternalForm(),
+                            loadSize, loadSize,
+                            true, true
+                    );
+                }
+            } catch (Exception ignored) {}
+        }
+        if (image != null) {
+            ImageView iv = new ImageView(image);
+            iv.setFitWidth(size);
+            iv.setFitHeight(size);
+            iv.setSmooth(true);
+            double w = image.getWidth();
+            double h = image.getHeight();
+            double side = Math.min(w, h);
+            double x = (w - side) / 2;
+            double y = (h - side) / 2;
+            iv.setViewport(new javafx.geometry.Rectangle2D(x, y, side, side));
+            iv.setPreserveRatio(false);
+            Circle clip = new Circle(size / 2, size / 2, size / 2);
+            iv.setClip(clip);
+            avatarSidebar.setStyle("-fx-border-color: rgba(255,255,255,0.5);-fx-border-width: 2;-fx-border-radius: 20;-fx-background-radius: 20;");
+            avatarSidebar.getChildren().add(iv);
+            return;
+        }
+        String initials = "";
+        if (emp.getPrenom() != null && !emp.getPrenom().isEmpty()) {
+            initials += emp.getPrenom().charAt(0);
+        }
+        if (emp.getNom() != null && !emp.getNom().isEmpty()) {
+            initials += emp.getNom().charAt(0);
+        }
+        initials = initials.toUpperCase();
+        avatarSidebar.setStyle("-fx-background-color: rgba(255,255,255,0.25);-fx-background-radius: 20;");
+        Label lbl = new Label(initials);
+        lbl.setStyle("-fx-text-fill: white;-fx-font-weight: bold;-fx-font-size: 15px;");
+        avatarSidebar.getChildren().add(lbl);
+    }
+    @FXML private VBox userCard;
     @FXML
     private void handleToggleSidebar() {
         double endWidth = isExpanded ? 68 : 200;
 
         Timeline timeline = new Timeline();
-
         KeyValue widthValue = new KeyValue(sidebar.prefWidthProperty(), endWidth);
         KeyFrame widthFrame = new KeyFrame(Duration.millis(150), widthValue);
-
         timeline.getKeyFrames().add(widthFrame);
 
         if (!isExpanded) {
             sidebar.getStyleClass().add("expanded");
+            userCard.setVisible(true);
+            userCard.setManaged(true);
         } else {
             sidebar.getStyleClass().remove("expanded");
+            userCard.setVisible(false);
+            userCard.setManaged(false);
         }
 
         timeline.play();
         isExpanded = !isExpanded;
     }
-
-
-    @FXML private StackPane contentArea;
-    @FXML private Button btnHome, btnFormation, btnDemande, btnEmployer, btnProjet, btnOffre;
-
     private void loadView(String fxmlFileName) {
         try {
             Parent view = FXMLLoader.load(getClass().getResource("/" + fxmlFileName + ".fxml"));
@@ -72,28 +153,43 @@ public class RHetAdminE {
         updateActiveButton(btnHome);
     }
 
-    @FXML private void showFormation(ActionEvent event) {
+    @FXML
+    private void showFormation(ActionEvent event) {
         loadView("formations");
         updateActiveButton(btnFormation);
     }
 
-    @FXML private void showDemande(ActionEvent event) {
+    @FXML
+    private void showDemande(ActionEvent event) {
         loadView("demandes");
         updateActiveButton(btnDemande);
     }
 
-    @FXML private void showEmployer(ActionEvent event) {
+    @FXML
+    private void showEmployer(ActionEvent event) {
         loadView("emp/RHetAdminE/employers");
         updateActiveButton(btnEmployer);
     }
 
-    @FXML private void showProjet(ActionEvent event) {
+    @FXML
+    private void showProjet(ActionEvent event) {
         loadView("projets");
         updateActiveButton(btnProjet);
     }
 
-    @FXML private void showOffres(ActionEvent event) {
+    @FXML
+    private void showOffres(ActionEvent event) {
         loadView("offres");
         updateActiveButton(btnOffre);
+    }
+    @FXML
+    private void showProfil() {
+        loadView("emp/profil_employe");
+        btnHome.getStyleClass().remove("nav-active");
+        btnFormation.getStyleClass().remove("nav-active");
+        btnDemande.getStyleClass().remove("nav-active");
+        btnEmployer.getStyleClass().remove("nav-active");
+        btnProjet.getStyleClass().remove("nav-active");
+        btnOffre.getStyleClass().remove("nav-active");
     }
 }

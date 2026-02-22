@@ -9,10 +9,14 @@ import javafx.fxml.Initializable;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
+import javafx.scene.shape.Rectangle;
 import javafx.util.Duration;
 import service.entrepriseCRUD;
 
+import java.io.File;
 import java.net.URL;
 import java.sql.SQLException;
 import java.time.format.DateTimeFormatter;
@@ -90,7 +94,7 @@ public class demandes_entreprise implements Initializable {
 
     private boolean filtrerParRecherche(entreprise e, String recherche) {
         if (recherche.isEmpty()) return true;
-        return e.getNom_entreprise().toLowerCase().contains(recherche) || e.getE_mail().toLowerCase().contains(recherche) || (e.getPrenom() + " " + e.getNom()).toLowerCase().contains(recherche);
+        return e.getNom_entreprise().toLowerCase().contains(recherche) || (e.getPrenom() + " " + e.getNom()).toLowerCase().contains(recherche);
     }
 
     private void afficherEntreprises(List<entreprise> entreprises) {
@@ -114,6 +118,7 @@ public class demandes_entreprise implements Initializable {
     }
 
     private HBox creerLigneEntreprise(entreprise entreprise, VBox parentCard) {
+        StackPane miniLogo = creerLogoOuSigle(entreprise, 36, 10, 13);
         HBox row = new HBox(10);
         row.setAlignment(Pos.CENTER_LEFT);
         row.setPadding(new Insets(15, 25, 15, 25));
@@ -130,7 +135,7 @@ public class demandes_entreprise implements Initializable {
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
         HBox buttonsBox = creerBoutonsAction(entreprise);
-        row.getChildren().addAll(nomLabel, dateLabel, emailLabel, statutBox, spacer, buttonsBox);
+        row.getChildren().addAll(miniLogo, nomLabel, dateLabel, emailLabel, statutBox, spacer, buttonsBox);
         return row;
     }
 
@@ -224,19 +229,14 @@ public class demandes_entreprise implements Initializable {
         HBox header = creerDetailsHeader(ent);
         HBox infoGrid = creerInfoGrid(ent);
         HBox footer = creerDetailsFooter(ent);
-
         box.getChildren().addAll(header, new Separator(), infoGrid, footer);
-        ScaleTransition st = new ScaleTransition(Duration.millis(200), box);
-        st.setFromY(0);
-        st.setToY(1);
-        st.play();
         return box;
     }
 
     private HBox creerDetailsHeader(entreprise ent) {
         HBox header = new HBox(15);
         header.setAlignment(Pos.CENTER_LEFT);
-        StackPane avatar = creerSigle(ent.getNom_entreprise());
+        StackPane avatar = creerLogoOuSigle(ent, 50, 12, 18);
 
         VBox titleBlock = new VBox(3);
         titleBlock.setAlignment(Pos.CENTER_LEFT);
@@ -262,22 +262,54 @@ public class demandes_entreprise implements Initializable {
         return header;
     }
 
-    private StackPane creerSigle(String nom) {
-        StackPane sigle = new StackPane();
-        sigle.setPrefSize(50, 50);
-        sigle.setMinSize(50, 50);
-        sigle.setMaxSize(50, 50);
+    private StackPane creerLogoOuSigle(entreprise ent, double size, double radius, double fontSize) {
+        StackPane container = new StackPane();
+        container.setPrefSize(size, size);
+        container.setMinSize(size, size);
+        container.setMaxSize(size, size);
+        double loadSize = size * 2;
+        if (ent.getLogo() != null && !ent.getLogo().isBlank()) {
+            try {
+                File logoFile = new File(ent.getLogo());
+                if (logoFile.exists()) {
+                    Image image = new Image(
+                            logoFile.toURI().toString(),
+                            loadSize, loadSize,
+                            true, true
+                    );
 
-        String[] colors = {"#4A5DEF", "#16A34A", "#F59E0B", "#DC2626","#8B5CF6", "#06B6D4", "#EC4899", "#F97316"};
+                    ImageView logoView = new ImageView(image);
+                    logoView.setFitWidth(size);
+                    logoView.setFitHeight(size);
+                    logoView.setSmooth(true);
+                    double w = image.getWidth();
+                    double h = image.getHeight();
+                    double side = Math.min(w, h);
+                    double x = (w - side) / 2;
+                    double y = (h - side) / 2;
+                    logoView.setViewport(new javafx.geometry.Rectangle2D(x, y, side, side));
+                    logoView.setPreserveRatio(false);
+                    Rectangle clip = new Rectangle(size, size);
+                    clip.setArcWidth(radius * 2);
+                    clip.setArcHeight(radius * 2);
+                    logoView.setClip(clip);
+                    container.setStyle(String.format("-fx-background-color: white;-fx-background-radius: %.0f;-fx-border-color: -color-border-muted;-fx-border-radius: %.0f;-fx-border-width: 1;", radius, radius));
+                    container.getChildren().add(logoView);
+                    return container;
+                }
+            } catch (Exception ignored) {}
+        }
+        String nom = ent.getNom_entreprise();
+        String[] colors = {"#4A5DEF", "#16A34A", "#F59E0B", "#DC2626", "#8B5CF6", "#06B6D4", "#EC4899", "#F97316"
+        };
         int colorIndex = Math.abs(nom.hashCode()) % colors.length;
-        sigle.setStyle(String.format("-fx-background-color: %s;-fx-background-radius: 12;", colors[colorIndex]));
-
+        container.setStyle(String.format("-fx-background-color: %s;-fx-background-radius: %.0f;", colors[colorIndex], radius));
         String initials = nom.length() >= 2 ? nom.substring(0, 2).toUpperCase() : nom.substring(0, 1).toUpperCase();
 
         Label initialsLabel = new Label(initials);
-        initialsLabel.setStyle("-fx-text-fill: white; -fx-font-weight: bold;-fx-font-size: 18px;");
-        sigle.getChildren().add(initialsLabel);
-        return sigle;
+        initialsLabel.setStyle(String.format("-fx-text-fill: white;-fx-font-weight: bold;-fx-font-size: %.0fpx;", fontSize));
+        container.getChildren().add(initialsLabel);
+        return container;
     }
 
     private Label creerIconLabel( String text) {
@@ -456,7 +488,7 @@ public class demandes_entreprise implements Initializable {
         box.setPadding(new Insets(60));
         Label message = new Label("Aucune demande trouvée");
         message.setStyle("-fx-text-fill: -color-fg-muted; -fx-font-size: 16px;");
-        Label subMessage = new Label("Modifiez vos filtres ou attendez de nouvelles inscriptions");
+        Label subMessage = new Label("attendez de nouvelles inscriptions");
         subMessage.setStyle("-fx-text-fill: -color-fg-subtle; -fx-font-size: 13px;");
         box.getChildren().addAll(message, subMessage);
         return box;

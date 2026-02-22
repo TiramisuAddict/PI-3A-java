@@ -6,258 +6,215 @@
 <?import javafx.scene.control.DatePicker?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.Separator?>
 <?import javafx.scene.control.Tab?>
 <?import javafx.scene.control.TabPane?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.FlowPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.VBox?>
-<?import javafx.scene.text.Font?>
 
-<AnchorPane prefHeight="720.0" prefWidth="1080.0" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controller.employers.RHetAdminE.EmployerController">
+<AnchorPane xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="controller.employers.RHetAdminE.EmployerController">
 
     <children>
         <TabPane fx:id="tabPane" tabClosingPolicy="UNAVAILABLE" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
             <tabs>
                 <Tab fx:id="tabListe" text="Liste des employés">
                     <content>
-                        <VBox spacing="20.0" style="-fx-background-color: #f8fafc;">
-                            <padding>
-                                <Insets bottom="20.0" left="40.0" right="40.0" top="30.0" />
-                            </padding>
-                            <children>
+                        <HBox>
+                            <VBox spacing="25.0" HBox.hgrow="ALWAYS">
+                                <padding>
+                                    <Insets bottom="25.0" left="25.0" right="25.0" top="25.0" />
+                                </padding>
+                                <children>
+                                    <HBox alignment="CENTER_LEFT" spacing="15.0">
+                                        <VBox HBox.hgrow="ALWAYS">
+                                            <Label style="-fx-font-weight: bold; -fx-font-size: 24px;" text="Gestion des Employés" />
+                                            <Label fx:id="lblNombreEmployes" text="Chargement..." textFill="#6e6e6e" />
+                                        </VBox>
+                                        <Button fx:id="btnAjouter" onAction="#ouvrirAjoutEmploye" styleClass="accent" text="+ Ajouter employé" />
+                                    </HBox>
+                                    <FlowPane hgap="15.0" vgap="15.0">
+                                        <padding>
+                                            <Insets top="-10.0" />
+                                        </padding>
 
-                                <HBox alignment="CENTER_LEFT" spacing="20.0">
-                                    <children>
-                                        <VBox spacing="5.0">
-                                            <children>
-                                                <Label text="Gestion des Employés" textFill="#1e293b">
-                                                    <font>
-                                                        <Font name="System Bold" size="28.0" />
-                                                    </font>
-                                                </Label>
-                                                <Label fx:id="lblNombreEmployes" text="Chargement des données..." textFill="#64748b">
-                                                    <font>
-                                                        <Font size="14.0" />
-                                                    </font>
-                                                </Label>
-                                            </children>
+                                        <VBox prefWidth="150.0"
+                                              style="-fx-background-color: -color-bg-subtle;-fx-background-radius: 5;-fx-padding: 15;-fx-border-color: -color-border-muted;-fx-border-radius: 5;">
+                                            <Label text="Total" textFill="#868686" />
+                                            <Label fx:id="lblTotalEmployes" style="-fx-font-size: 22; -fx-font-weight: bold;" text="0" />
                                         </VBox>
 
+                                        <VBox prefWidth="150.0"
+                                              style="-fx-background-color: -color-bg-subtle;-fx-background-radius: 5;-fx-padding: 15;-fx-border-color: -color-border-muted;-fx-border-radius: 5;">
+                                            <Label text="RH" textFill="#868686" />
+                                            <Label fx:id="lblTotalRH" style="-fx-font-size: 22; -fx-font-weight: bold;" text="0" />
+                                        </VBox>
+
+                                        <VBox prefWidth="150.0"
+                                              style="-fx-background-color: -color-bg-subtle;-fx-background-radius: 5;-fx-padding: 15;-fx-border-color: -color-border-muted;-fx-border-radius: 5;">
+                                            <Label text="Chefs projet" textFill="#868686" />
+                                            <Label fx:id="lblTotalChefs" style="-fx-font-size: 22; -fx-font-weight: bold;" text="0" />
+                                        </VBox>
+
+                                        <VBox prefWidth="150.0"
+                                              style="-fx-background-color: -color-bg-subtle; -fx-background-radius: 5;-fx-padding: 15;-fx-border-color: -color-border-muted; -fx-border-radius: 5;">
+                                            <Label text="Employés" textFill="#868686" />
+                                            <Label fx:id="lblTotalSimple" style="-fx-font-size: 22; -fx-font-weight: bold;" text="0" />
+                                        </VBox>
+                                    </FlowPane>
+                                    <HBox alignment="CENTER_LEFT" spacing="10.0">
+                                        <TextField fx:id="searchField" prefHeight="35.0" prefWidth="300.0" promptText="Rechercher par nom, poste..." />
                                         <Region HBox.hgrow="ALWAYS" />
+                                        <ComboBox fx:id="filterRole" prefHeight="35.0" promptText="Filtrer par rôle" />
+                                    </HBox>
+                                    <ScrollPane fitToWidth="true" style="-fx-background-color: transparent;-fx-background: transparent;" VBox.vgrow="ALWAYS">
+                                        <content>
+                                            <VBox fx:id="employesContainer" spacing="10.0">
+                                                <padding>
+                                                    <Insets right="10.0" />
+                                                </padding>
+                                            </VBox>
+                                        </content>
+                                    </ScrollPane>
+                                </children>
+                            </VBox>
 
-                                        <Button fx:id="btnAjouter" onAction="#ouvrirAjoutEmploye" text="Ajouter employé" textFill="WHITE">
-                                            <font>
-                                                <Font name="System Bold" size="14.0" />
-                                            </font>
-                                            <style>
-                                                -fx-background-color: #4A5DEF; -fx-background-radius: 10; -fx-padding: 10 20; -fx-cursor: hand; -fx-effect: dropshadow(three-pass-box, rgba(74, 93, 239, 0.3), 10, 0, 0, 4);
-                                            </style>
-                                        </Button>
-                                    </children>
-                                </HBox>
+                            <VBox fx:id="sidePanel" prefWidth="380.0"
+                                  spacing="20.0" visible="false" managed="false"
+                                  style="-fx-background-color: -color-bg-default; -fx-border-color: -color-border-muted;-fx-border-width: 0 0 0 1;">
+                                <padding>
+                                    <Insets bottom="25.0" left="25.0"
+                                            right="25.0" top="25.0" />
+                                </padding>
+                                <children>
+                                    <HBox alignment="CENTER_LEFT" spacing="10.0">
+                                        <Label fx:id="lblPanelTitle" style="-fx-font-weight: bold; -fx-font-size: 18px;" text="Détails Employé" />
+                                        <Region HBox.hgrow="ALWAYS" />
+                                        <Button fx:id="btnClosePanel" onAction="#fermerPanel" styleClass="flat" text="✕" style="-fx-font-size: 16px;-fx-cursor: hand;" />
+                                    </HBox>
+                                    <VBox fx:id="panelAvatarBlock"
+                                          alignment="CENTER" spacing="8.0" />
 
-                                <ScrollPane fitToWidth="true" style="-fx-background-color: transparent; -fx-background: transparent; -fx-padding: 0;" VBox.vgrow="ALWAYS">
-                                    <content>
-                                        <VBox fx:id="employesContainer" spacing="15.0" style="-fx-padding: 5;">
-                                        </VBox>
-                                    </content>
-                                </ScrollPane>
-
-                            </children>
-                        </VBox>
-                    </content>
-                </Tab>
-                <Tab fx:id="tabDetails" disable="true" text="Fiche Employé">
-                    <content>
-                        <VBox alignment="TOP_CENTER" spacing="20.0" style="-fx-background-color: #f8fafc;">
-                            <padding>
-                                <Insets bottom="40.0" left="40.0" right="40.0" top="40.0" />
-                            </padding>
-                            <children>
-                                <VBox fx:id="formCardDetails" maxWidth="900.0" spacing="30.0" style="-fx-background-color: white; -fx-background-radius: 20; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.08), 20, 0, 0, 10); -fx-padding: 40;">
-                                    <children>
-
-                                        <HBox alignment="CENTER_LEFT">
-                                            <children>
-                                                <Label fx:id="lblTitreDetails" text="Modifier les informations" textFill="#1e293b">
-                                                    <font>
-                                                        <Font name="System Bold" size="22.0" />
-                                                    </font>
-                                                </Label>
-                                            </children>
-                                        </HBox>
-                                        <VBox spacing="20.0">
-                                            <HBox spacing="30.0">
-                                                <VBox spacing="8.0" HBox.hgrow="ALWAYS">
-                                                    <Label style="-fx-font-weight: bold; -fx-text-fill: #475569;" text="Nom" />
-                                                    <TextField fx:id="txtNom" promptText="Nom de famille" style="-fx-background-color: #f1f5f9; -fx-background-radius: 8; -fx-padding: 12;" />
+                                    <Separator />
+                                    <ScrollPane fitToWidth="true" style="-fx-background-color: transparent; -fx-background: transparent;" VBox.vgrow="ALWAYS">
+                                        <content>
+                                            <VBox spacing="15.0">
+                                                <VBox spacing="5.0">
+                                                    <Label text="Nom" style="-fx-font-weight: bold;" />
+                                                    <TextField fx:id="txtNom" promptText="Nom de famille" />
                                                 </VBox>
-                                                <VBox spacing="8.0" HBox.hgrow="ALWAYS">
-                                                    <Label style="-fx-font-weight: bold; -fx-text-fill: #475569;" text="Prénom" />
-                                                    <TextField fx:id="txtPrenom" promptText="Prénom" style="-fx-background-color: #f1f5f9; -fx-background-radius: 8; -fx-padding: 12;" />
+                                                <VBox spacing="5.0">
+                                                    <Label text="Prénom" style="-fx-font-weight: bold;" />
+                                                    <TextField fx:id="txtPrenom" promptText="Prénom" />
                                                 </VBox>
-                                            </HBox>
-                                            <HBox spacing="30.0">
-                                                <VBox spacing="8.0" HBox.hgrow="ALWAYS">
-                                                    <Label style="-fx-font-weight: bold; -fx-text-fill: #475569;" text="Email" />
-                                                    <TextField fx:id="txtEmail" promptText="email@entreprise.com" style="-fx-background-color: #f1f5f9; -fx-background-radius: 8; -fx-padding: 12;" />
+                                                <VBox spacing="5.0">
+                                                    <Label text="Email"
+                                                           style="-fx-font-weight: bold;" />
+                                                    <TextField fx:id="txtEmail" promptText="email@entreprise.com" />
                                                 </VBox>
-                                                <VBox spacing="8.0" HBox.hgrow="ALWAYS">
-                                                    <Label style="-fx-font-weight: bold; -fx-text-fill: #475569;" text="Téléphone" />
-                                                    <TextField fx:id="txtTelephone" promptText="Numéro de mobile" style="-fx-background-color: #f1f5f9; -fx-background-radius: 8; -fx-padding: 12;" />
+                                                <VBox spacing="5.0">
+                                                    <Label text="Téléphone" style="-fx-font-weight: bold;" />
+                                                    <TextField fx:id="txtTelephone" promptText="Numéro" />
                                                 </VBox>
-                                            </HBox>
-                                            <HBox spacing="30.0">
-                                                <VBox spacing="8.0" HBox.hgrow="ALWAYS">
-                                                    <Label style="-fx-font-weight: bold; -fx-text-fill: #475569;" text="Poste / Fonction" />
-                                                    <TextField fx:id="txtPoste" promptText="Intitulé du poste" style="-fx-background-color: #f1f5f9; -fx-background-radius: 8; -fx-padding: 12;" />
+                                                <VBox spacing="5.0">
+                                                    <Label text="Poste" style="-fx-font-weight: bold;" />
+                                                    <TextField fx:id="txtPoste" promptText="Intitulé du poste" />
                                                 </VBox>
-                                                <VBox spacing="8.0" HBox.hgrow="ALWAYS">
-                                                    <Label style="-fx-font-weight: bold; -fx-text-fill: #475569;" text="Rôle système" />
-                                                    <ComboBox fx:id="comboRole" maxWidth="Infinity" style="-fx-background-color: #f1f5f9; -fx-background-radius: 8; -fx-padding: 5;" />
+                                                <VBox spacing="5.0">
+                                                    <Label text="Rôle" style="-fx-font-weight: bold;" />
+                                                    <ComboBox fx:id="comboRole" maxWidth="Infinity" />
                                                 </VBox>
-                                            </HBox>
-                                            <HBox spacing="30.0">
-                                                <VBox maxWidth="300.0" spacing="8.0" HBox.hgrow="ALWAYS">
-                                                    <Label style="-fx-font-weight: bold; -fx-text-fill: #475569;" text="Date d'embauche" />
-                                                    <DatePicker fx:id="dateEmbauche" editable="false" maxWidth="Infinity" style="-fx-background-color: transparent;" />
+                                                <VBox spacing="5.0">
+                                                    <Label text="Date d'embauche" style="-fx-font-weight: bold;" />
+                                                    <DatePicker fx:id="dateEmbauche" editable="false" maxWidth="Infinity" />
                                                 </VBox>
-                                            </HBox>
-                                        </VBox>
-                                        <HBox alignment="CENTER_RIGHT" spacing="15.0">
-                                            <Label fx:id="lblError" alignment="CENTER" maxWidth="1.7976931348623157E308" prefHeight="18.0" textFill="#ef4444" />
-                                            <Region HBox.hgrow="ALWAYS" />
-                                            <Button onAction="#retourListe" text="Annuler" textFill="WHITE">
-                                                <font>
-                                                    <Font name="System Bold" size="14.0" />
-                                                </font>
-                                                <style>
-                                                    -fx-background-color: #DC2626; -fx-background-radius: 8; -fx-padding: 10 20; -fx-cursor: hand;
-                                                </style>
-                                            </Button>
-                                            <Button onAction="#sauvegarderModifications" text="Enregistrer" textFill="WHITE">
-                                                <font>
-                                                    <Font name="System Bold" size="14.0" />
-                                                </font>
-                                                <style>
-                                                    -fx-background-color: #4A5DEF; -fx-background-radius: 8; -fx-padding: 10 25; -fx-cursor: hand; -fx-effect: dropshadow(three-pass-box, rgba(74, 93, 239, 0.3), 10, 0, 0, 4);
-                                                </style>
-                                            </Button>
-                                        </HBox>
-
-                                    </children>
-                                </VBox>
-                            </children>
-                        </VBox>
+                                            </VBox>
+                                        </content>
+                                    </ScrollPane>
+                                    <Label fx:id="lblError" wrapText="true" />
+                                    <VBox spacing="10.0">
+                                        <Button fx:id="btnSave" onAction="#sauvegarderModifications" styleClass="accent" text="Enregistrer" maxWidth="Infinity" />
+                                        <Button fx:id="btnDelete" onAction="#supprimerDepuisPanel" styleClass="danger, outline" text="Supprimer cet employé" maxWidth="Infinity" />
+                                    </VBox>
+                                </children>
+                            </VBox>
+                        </HBox>
                     </content>
                 </Tab>
                 <Tab fx:id="tabAjouter" disable="true" text="Nouvel Employé">
                     <content>
-                        <VBox alignment="TOP_CENTER" spacing="20.0" style="-fx-background-color: #f8fafc;">
+                        <VBox alignment="TOP_CENTER" spacing="20.0">
                             <padding>
-                                <Insets bottom="40.0" left="40.0" right="40.0" top="40.0" />
+                                <Insets bottom="30.0" left="30.0"
+                                        right="30.0" top="30.0" />
                             </padding>
                             <children>
-
-                                <VBox fx:id="formCardAjout" maxWidth="900.0" spacing="30.0" style="-fx-background-color: white; -fx-background-radius: 20; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.08), 20, 0, 0, 10); -fx-padding: 40;">
+                                <VBox fx:id="formCardAjout" maxWidth="900.0" spacing="25.0" style="-fx-background-color: -color-bg-subtle;-fx-background-radius: 5;-fx-border-color: -color-border-muted;-fx-border-radius: 5;-fx-padding: 30;">
                                     <children>
 
-                                        <HBox alignment="CENTER_LEFT">
-                                            <children>
-                                                <VBox spacing="5.0">
-                                                    <children>
-                                                        <Label text="Ajouter un collaborateur" textFill="#1e293b">
-                                                            <font>
-                                                                <Font name="System Bold" size="22.0" />
-                                                            </font>
-                                                        </Label>
-                                                        <Label text="Saisissez les informations ou importez un fichier" textFill="#94a3b8">
-                                                            <font>
-                                                                <Font size="13.0" />
-                                                            </font>
-                                                        </Label>
-                                                    </children>
-                                                </VBox>
-
-                                                <Region HBox.hgrow="ALWAYS" />
-
-                                                <Button fx:id="btnImportCSV" onAction="#importerDepuisCSV" text="Importer CSV" textFill="#16A34A">
-                                                    <font>
-                                                        <Font name="System Bold" size="13.0" />
-                                                    </font>
-                                                    <style>
-                                                        -fx-background-color: #ecfdf5; -fx-background-radius: 8; -fx-border-color: #10b981; -fx-border-radius: 8; -fx-padding: 8 15; -fx-cursor: hand;
-                                                    </style>
-                                                </Button>
-                                            </children>
+                                        <HBox alignment="CENTER_LEFT" spacing="15.0">
+                                            <VBox HBox.hgrow="ALWAYS">
+                                                <Label style="-fx-font-weight: bold; -fx-font-size: 20px;" text="Ajouter un collaborateur" />
+                                                <Label text="Saisissez les informations ou importez un fichier" textFill="#6e6e6e" />
+                                            </VBox>
+                                            <Button fx:id="btnImportCSV" onAction="#importerDepuisCSV" styleClass="success, outline" text="Importer CSV" />
                                         </HBox>
-                                        <Region prefHeight="1.0" style="-fx-background-color: #f1f5f9;" />
-                                        <VBox spacing="20.0">
-                                            <HBox spacing="30.0">
-                                                <VBox spacing="8.0" HBox.hgrow="ALWAYS">
-                                                    <Label style="-fx-font-weight: bold; -fx-text-fill: #475569;" text="Nom *" />
-                                                    <TextField fx:id="txtNomAjout" promptText="Nom de famille" style="-fx-background-color: #f1f5f9; -fx-background-radius: 8; -fx-padding: 12;" />
-                                                </VBox>
-                                                <VBox spacing="8.0" HBox.hgrow="ALWAYS">
-                                                    <Label style="-fx-font-weight: bold; -fx-text-fill: #475569;" text="Prénom *" />
-                                                    <TextField fx:id="txtPrenomAjout" promptText="Prénom" style="-fx-background-color: #f1f5f9; -fx-background-radius: 8; -fx-padding: 12;" />
-                                                </VBox>
-                                            </HBox>
-                                            <HBox spacing="30.0">
-                                                <VBox spacing="8.0" HBox.hgrow="ALWAYS">
-                                                    <Label style="-fx-font-weight: bold; -fx-text-fill: #475569;" text="Email *" />
-                                                    <TextField fx:id="txtEmailAjout" promptText="email@entreprise.com" style="-fx-background-color: #f1f5f9; -fx-background-radius: 8; -fx-padding: 12;" />
-                                                </VBox>
-                                                <VBox spacing="8.0" HBox.hgrow="ALWAYS">
-                                                    <Label style="-fx-font-weight: bold; -fx-text-fill: #475569;" text="Téléphone *" />
-                                                    <TextField fx:id="txtTelephoneAjout" promptText="Numéro de mobile" style="-fx-background-color: #f1f5f9; -fx-background-radius: 8; -fx-padding: 12;" />
-                                                </VBox>
-                                            </HBox>
 
-                                            <HBox spacing="30.0">
-                                                <VBox spacing="8.0" HBox.hgrow="ALWAYS">
-                                                    <Label style="-fx-font-weight: bold; -fx-text-fill: #475569;" text="Poste *" />
-                                                    <TextField fx:id="txtPosteAjout" promptText="Intitulé du poste" style="-fx-background-color: #f1f5f9; -fx-background-radius: 8; -fx-padding: 12;" />
+                                        <Separator />
+
+                                        <VBox spacing="18.0">
+                                            <HBox spacing="25.0">
+                                                <VBox spacing="6.0" HBox.hgrow="ALWAYS">
+                                                    <Label text="Nom *" style="-fx-font-weight: bold;" />
+                                                    <TextField fx:id="txtNomAjout" promptText="Nom de famille" />
                                                 </VBox>
-                                                <VBox spacing="8.0" HBox.hgrow="ALWAYS">
-                                                    <Label style="-fx-font-weight: bold; -fx-text-fill: #475569;" text="Rôle *" />
-                                                    <ComboBox fx:id="comboRoleAjout" maxWidth="Infinity" style="-fx-background-color: #f1f5f9; -fx-background-radius: 8; -fx-padding: 5;" />
+                                                <VBox spacing="6.0" HBox.hgrow="ALWAYS">
+                                                    <Label text="Prénom *" style="-fx-font-weight: bold;" />
+                                                    <TextField fx:id="txtPrenomAjout" promptText="Prénom" />
                                                 </VBox>
                                             </HBox>
-                                            <HBox spacing="30.0">
-                                                <VBox maxWidth="300.0" spacing="8.0" HBox.hgrow="ALWAYS">
-                                                    <Label style="-fx-font-weight: bold; -fx-text-fill: #475569;" text="Date d'embauche" />
-
-                                                    <DatePicker fx:id="dateEmbaucheAjout" editable="false" maxWidth="Infinity" style="-fx-background-color: transparent;" />
+                                            <HBox spacing="25.0">
+                                                <VBox spacing="6.0" HBox.hgrow="ALWAYS">
+                                                    <Label text="Email *" style="-fx-font-weight: bold;" />
+                                                    <TextField fx:id="txtEmailAjout" promptText="email@entreprise.com" />
+                                                </VBox>
+                                                <VBox spacing="6.0" HBox.hgrow="ALWAYS">
+                                                    <Label text="Téléphone *" style="-fx-font-weight: bold;" />
+                                                    <TextField fx:id="txtTelephoneAjout" promptText="Numéro" />
+                                                </VBox>
+                                            </HBox>
+                                            <HBox spacing="25.0">
+                                                <VBox spacing="6.0" HBox.hgrow="ALWAYS">
+                                                    <Label text="Poste *" style="-fx-font-weight: bold;" />
+                                                    <TextField fx:id="txtPosteAjout" promptText="Intitulé du poste" />
+                                                </VBox>
+                                                <VBox spacing="6.0" HBox.hgrow="ALWAYS">
+                                                    <Label text="Rôle *" style="-fx-font-weight: bold;" />
+                                                    <ComboBox fx:id="comboRoleAjout" maxWidth="Infinity" />
+                                                </VBox>
+                                            </HBox>
+                                            <HBox spacing="25.0">
+                                                <VBox spacing="6.0" prefWidth="300.0">
+                                                    <Label text="Date d'embauche" style="-fx-font-weight: bold;" />
+                                                    <DatePicker fx:id="dateEmbaucheAjout" editable="false" maxWidth="Infinity" />
                                                 </VBox>
                                             </HBox>
                                         </VBox>
-                                        <HBox alignment="CENTER_RIGHT" spacing="15.0">
-                                            <Label fx:id="lblErrorAjout" alignment="CENTER" maxWidth="1.7976931348623157E308" prefHeight="18.0" textFill="#ef4444" />
-                                            <Region HBox.hgrow="ALWAYS" />
-                                            <Button onAction="#retourListe" text="Annuler" textFill="WHITE">
-                                                <font>
-                                                    <Font name="System Bold" size="14.0" />
-                                                </font>
-                                                <style>
-                                                    -fx-background-color: #DC2626; -fx-background-radius: 8; -fx-padding: 10 20; -fx-cursor: hand;
-                                                </style>
-                                            </Button>
-                                            <Button onAction="#ajouterEmploye" text="Confirmer l'ajout" textFill="WHITE">
-                                                <font>
-                                                    <Font name="System Bold" size="14.0" />
-                                                </font>
-                                                <style>
-                                                    -fx-background-color: #4A5DEF; -fx-background-radius: 8; -fx-padding: 10 25; -fx-cursor: hand; -fx-effect: dropshadow(three-pass-box, rgba(74, 93, 239, 0.3), 10, 0, 0, 4);
-                                                </style>
-                                            </Button>
-                                        </HBox>
 
+                                        <Separator />
+
+                                        <HBox alignment="CENTER_RIGHT" spacing="12.0">
+                                            <Label fx:id="lblErrorAjout" maxWidth="Infinity" HBox.hgrow="ALWAYS" />
+                                            <Button onAction="#retourListe" styleClass="danger, outline" text="Annuler" />
+                                            <Button onAction="#ajouterEmploye" styleClass="accent" text="Confirmer l'ajout" />
+                                        </HBox>
                                     </children>
                                 </VBox>
-
                             </children>
                         </VBox>
                     </content>

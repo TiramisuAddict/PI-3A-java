@@ -11,7 +11,9 @@ public class employe {
     private String poste;
     private role role;
     private LocalDate date_embauche;
+    private String imageProfil;
     public static int idEntreprise;
+    public static final String DEFAULT_IMAGE = "/icons/user.png";
     public employe(){}
     public employe(String nom, String prenom, String e_mail, int telephone, String poste, role role, LocalDate date_embauche) {
         this.nom=nom;
@@ -91,7 +93,24 @@ public class employe {
         return idEntreprise;
     }
 
+    public String getImageProfil() { return imageProfil; }
+
+    public void setImageProfil(String imageProfil) { this.imageProfil = imageProfil; }
+
     public static void setIdEntreprise(int idEntreprise) {
         employe.idEntreprise = idEntreprise;
     }
+
+    public boolean hasCustomImage() {
+        return imageProfil != null
+                && !imageProfil.isBlank()
+                && !imageProfil.equals(DEFAULT_IMAGE);
+    }
+    public String getImageEffective() {
+        if (imageProfil != null && !imageProfil.isBlank()) {
+            return imageProfil;
+        }
+        return DEFAULT_IMAGE;
+    }
+
 }
