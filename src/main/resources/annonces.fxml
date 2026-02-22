@@ -7,13 +7,15 @@
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.text.Font?>
+<?import javafx.scene.chart.*?>
 
-<BorderPane fx:id="rootPane" prefHeight="700.0" prefWidth="1100.0" stylesheets="@customTheme.css" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controller.annonces.AnnonceController">
-    <!-- LEFT SIDEBAR -->
+<BorderPane fx:id="rootPane" prefHeight="700.0" prefWidth="1100.0" stylesheets="@customTheme.css"
+            xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="controller.annonces.AnnonceController">
+
     <left>
         <VBox fx:id="sidebar" prefWidth="68.0" styleClass="sidebar" BorderPane.alignment="CENTER">
             <children>
-                <!-- Toggle Menu Button -->
                 <Button fx:id="btnToggle" maxWidth="Infinity" onAction="#handleToggleSidebar" styleClass="nav-button, logo-button">
                     <graphic>
                         <HBox alignment="CENTER_LEFT" spacing="20">
@@ -35,7 +37,6 @@
 
                 <VBox spacing="10.0">
                     <children>
-                        <!-- HOME (Shows ALL) -->
                         <Button fx:id="btnHome" maxWidth="Infinity" onAction="#showHome" styleClass="nav-button, nav-active">
                             <graphic>
                                 <HBox alignment="CENTER_LEFT" spacing="20">
@@ -53,7 +54,6 @@
                             </graphic>
                         </Button>
 
-                        <!-- FORMATIONS -->
                         <Button fx:id="btnFormation" maxWidth="Infinity" onAction="#showFormation" styleClass="nav-button">
                             <graphic>
                                 <HBox alignment="CENTER_LEFT" spacing="20">
@@ -71,7 +71,6 @@
                             </graphic>
                         </Button>
 
-                        <!-- DEMANDE -->
                         <Button fx:id="btnDemande" maxWidth="Infinity" onAction="#showDemande" styleClass="nav-button">
                             <graphic>
                                 <HBox alignment="CENTER_LEFT" spacing="20">
@@ -89,7 +88,6 @@
                             </graphic>
                         </Button>
 
-                        <!-- EMPLOYER -->
                         <Button fx:id="btnEmployer" maxWidth="Infinity" onAction="#showEmployer" styleClass="nav-button">
                             <graphic>
                                 <HBox alignment="CENTER_LEFT" spacing="20">
@@ -107,7 +105,6 @@
                             </graphic>
                         </Button>
 
-                        <!-- PROJECTS -->
                         <Button fx:id="btnProjet" maxWidth="Infinity" onAction="#showProjet" styleClass="nav-button">
                             <graphic>
                                 <HBox alignment="CENTER_LEFT" spacing="20">
@@ -125,7 +122,6 @@
                             </graphic>
                         </Button>
 
-                        <!-- Offres -->
                         <Button fx:id="btnOffre" maxWidth="Infinity" onAction="#showOffres" styleClass="nav-button">
                             <graphic>
                                 <HBox alignment="CENTER_LEFT" spacing="20">
@@ -148,195 +144,237 @@
         </VBox>
     </left>
 
-    <!-- CENTER CONTENT AREA -->
     <center>
-        <ScrollPane fitToWidth="true" fitToHeight="true" styleClass="main-scroll-pane" BorderPane.alignment="CENTER">
-            <VBox fx:id="mainContainer" spacing="25.0" styleClass="content-container">
-                <padding>
-                    <Insets bottom="35.0" left="35.0" right="35.0" top="35.0" />
-                </padding>
+        <VBox>
+            <HBox alignment="CENTER_LEFT" spacing="20" style="-fx-padding: 24 40; -fx-background-color: white; -fx-border-color: #eaeef3; -fx-border-width: 0 0 1 0;">
+                <Label text="Administration" style="-fx-font-size: 28px; -fx-font-weight: 700; -fx-text-fill: #1a1f36;"/>
+            </HBox>
 
-                <!-- Header Section -->
-                <HBox alignment="CENTER_LEFT" spacing="20.0">
-                    <VBox spacing="5.0" HBox.hgrow="ALWAYS">
-                        <Label styleClass="page-title" text="Gestion des Annonces">
-                            <font>
-                                <Font name="System Bold" size="32.0" />
-                            </font>
-                        </Label>
-                    </VBox>
+            <TabPane fx:id="mainTabPane" VBox.vgrow="ALWAYS" styleClass="custom-tab-pane" tabClosingPolicy="UNAVAILABLE">
 
-                    <Button fx:id="btnAjouter" onAction="#handleShowAddForm" styleClass="btn-primary" text="+ Ajouter une Annonce">
-                        <font>
-                            <Font name="System Bold" size="14.0" />
-                        </font>
-                        <padding>
-                            <Insets bottom="12.0" left="20.0" right="20.0" top="12.0" />
-                        </padding>
-                    </Button>
-                </HBox>
+                <!-- TAB 1: GESTION DES POSTS -->
+                <Tab text="Posts" closable="false">
+                    <ScrollPane fitToWidth="true" fitToHeight="true" styleClass="main-scroll-pane">
+                        <VBox spacing="24" style="-fx-padding: 32 40; -fx-background-color: #f5f7fa;">
 
-                <!-- Filter Buttons Row -->
-                <HBox spacing="12.0" alignment="CENTER_LEFT">
-                    <Label text="Afficher:" styleClass="filter-label">
-                        <font>
-                            <Font name="System Bold" size="14.0" />
-                        </font>
-                    </Label>
+                            <VBox spacing="20" style="-fx-background-color: white; -fx-padding: 24; -fx-background-radius: 12;">
+                                <HBox alignment="CENTER_LEFT" spacing="20">
+                                    <VBox spacing="4" HBox.hgrow="ALWAYS">
+                                        <Label text="Gestion des Annonces" style="-fx-font-size: 22px; -fx-font-weight: 700; -fx-text-fill: #1a1f36;"/>
+                                        <Label text="Créez et gérez les annonces et événements" style="-fx-font-size: 14px; -fx-text-fill: #697386;"/>
+                                    </VBox>
 
-                    <Button onAction="#showAll" styleClass="btn-filter" text="Tous">
-                        <padding>
-                            <Insets bottom="8.0" left="16.0" right="16.0" top="8.0" />
-                        </padding>
-                    </Button>
+                                    <Button fx:id="btnAjouter" onAction="#handleShowAddForm"
+                                            style="-fx-background-color: #3b82f6; -fx-text-fill: white; -fx-background-radius: 8; -fx-padding: 12 24; -fx-font-weight: 700; -fx-font-size: 14px; -fx-cursor: hand;">
+                                        <graphic>
+                                            <Label text="+ Ajouter" style="-fx-text-fill: white; -fx-font-weight: 700;"/>
+                                        </graphic>
+                                    </Button>
+                                </HBox>
 
-                    <Button onAction="#filterAnnonces" styleClass="btn-filter-annonce" text="📢 Annonces">
-                        <padding>
-                            <Insets bottom="8.0" left="16.0" right="16.0" top="8.0" />
-                        </padding>
-                    </Button>
+                                <HBox spacing="12" alignment="CENTER_LEFT">
+                                    <TextField fx:id="txtRecherchePost" promptText="Rechercher par titre ou contenu..."
+                                               prefWidth="350"
+                                               style="-fx-background-color: #f8fafc; -fx-background-radius: 8; -fx-padding: 10 16; -fx-border-color: #dfe3e8; -fx-border-radius: 8; -fx-border-width: 1.5;"/>
 
-                    <Button onAction="#filterEvents" styleClass="btn-filter-event" text="📅 Événements">
-                        <padding>
-                            <Insets bottom="8.0" left="16.0" right="16.0" top="8.0" />
-                        </padding>
-                    </Button>
-                </HBox>
+                                    <Button onAction="#rechercherPosts"
+                                            style="-fx-background-color: #1a1f36; -fx-text-fill: white; -fx-background-radius: 8; -fx-padding: 10 20; -fx-font-weight: 600; -fx-cursor: hand;">
+                                        <graphic>
+                                            <Label text="Rechercher" style="-fx-text-fill: white; -fx-font-weight: 600;"/>
+                                        </graphic>
+                                    </Button>
 
-                <!-- Add/Edit Form (Initially Hidden) -->
-                <VBox fx:id="formContainer" managed="false" visible="false" spacing="20.0" styleClass="form-card">
-                    <padding>
-                        <Insets bottom="25.0" left="25.0" right="25.0" top="25.0" />
-                    </padding>
+                                    <Region HBox.hgrow="ALWAYS"/>
 
-                    <Label fx:id="formTitle" text="Ajouter une Annonce" styleClass="form-title">
-                        <font>
-                            <Font name="System Bold" size="20.0" />
-                        </font>
-                    </Label>
+                                    <Label text="Filtrer:" style="-fx-font-weight: 600; -fx-text-fill: #525f7f;"/>
 
-                    <!-- Titre -->
-                    <VBox spacing="8.0">
-                        <Label text="Titre de l'annonce *" styleClass="form-label">
-                            <font>
-                                <Font name="System Bold" size="13.0" />
-                            </font>
-                        </Label>
-                        <TextField fx:id="txtTitre" promptText="Entrez le titre de l'annonce" styleClass="form-input" />
-                        <Label fx:id="lblTitreError" text="" styleClass="error-label" visible="false" managed="false" />
-                    </VBox>
+                                    <Button onAction="#showAll" styleClass="btn-filter-clean" text="Tous"/>
+                                    <Button onAction="#filterAnnonces" styleClass="btn-filter-clean" text="Annonces"/>
+                                    <Button onAction="#filterEvents" styleClass="btn-filter-clean" text="Événements"/>
+                                </HBox>
+                            </VBox>
 
-                    <!-- Contenu -->
-                    <VBox spacing="8.0">
-                        <Label text="Contenu *" styleClass="form-label">
-                            <font>
-                                <Font name="System Bold" size="13.0" />
-                            </font>
-                        </Label>
-                        <TextArea fx:id="txtContenu" prefRowCount="4" promptText="Entrez le contenu de l'annonce" styleClass="form-input" wrapText="true" />
-                        <Label fx:id="lblContenuError" text="" styleClass="error-label" visible="false" managed="false" />
-                    </VBox>
+                            <VBox fx:id="formContainer" managed="false" visible="false" spacing="20"
+                                  style="-fx-background-color: white; -fx-padding: 28; -fx-background-radius: 12;">
 
-                    <!-- Type Post -->
-                    <VBox spacing="8.0">
-                        <Label text="Type de post *" styleClass="form-label">
-                            <font>
-                                <Font name="System Bold" size="13.0" />
-                            </font>
-                        </Label>
-                        <ComboBox fx:id="comboTypePost" promptText="Sélectionnez le type" styleClass="form-input" prefWidth="300" />
-                        <Label fx:id="lblTypeError" text="" styleClass="error-label" visible="false" managed="false" />
-                    </VBox>
+                                <Label fx:id="formTitle" text="Ajouter une Annonce"
+                                       style="-fx-font-size: 20px; -fx-font-weight: 700; -fx-text-fill: #1a1f36;"/>
 
-                    <!-- Active Checkbox -->
-                    <VBox spacing="8.0">
-                        <CheckBox fx:id="chkActive" text="Annonce active" selected="true" styleClass="form-checkbox">
-                            <font>
-                                <Font name="System Bold" size="13.0" />
-                            </font>
-                        </CheckBox>
-                    </VBox>
+                                <VBox spacing="8">
+                                    <Label text="Titre *" style="-fx-font-weight: 600; -fx-text-fill: #1a1f36; -fx-font-size: 14px;"/>
+                                    <TextField fx:id="txtTitre" promptText="Entrez le titre de l'annonce" styleClass="form-input-pro"/>
+                                    <Label fx:id="lblTitreError" styleClass="error-label" visible="false" managed="false"/>
+                                </VBox>
 
-                    <!-- Event-specific fields -->
-                    <VBox fx:id="eventFieldsContainer" spacing="15.0" managed="false" visible="false">
-                        <Separator />
-                        <Label text="Informations Événement" styleClass="form-section-title">
-                            <font>
-                                <Font name="System Bold" size="15.0" />
-                            </font>
-                        </Label>
+                                <VBox spacing="8">
+                                    <Label text="Contenu *" style="-fx-font-weight: 600; -fx-text-fill: #1a1f36; -fx-font-size: 14px;"/>
+                                    <TextArea fx:id="txtContenu" prefRowCount="4" promptText="Entrez le contenu"
+                                              styleClass="form-input-pro" wrapText="true"/>
+                                    <Label fx:id="lblContenuError" styleClass="error-label" visible="false" managed="false"/>
+                                </VBox>
 
-                        <VBox spacing="8.0">
-                            <Label text="Date de l'événement" styleClass="form-label">
-                                <font>
-                                    <Font name="System Bold" size="13.0" />
-                                </font>
-                            </Label>
-                            <DatePicker fx:id="dateEvenement" promptText="Sélectionnez la date" styleClass="form-input" prefWidth="300" />
+                                <HBox spacing="20">
+                                    <VBox spacing="8" HBox.hgrow="ALWAYS">
+                                        <Label text="Type *" style="-fx-font-weight: 600; -fx-text-fill: #1a1f36; -fx-font-size: 14px;"/>
+                                        <ComboBox fx:id="comboTypePost" promptText="Sélectionnez le type"
+                                                  styleClass="form-input-pro" prefWidth="200"/>
+                                        <Label fx:id="lblTypeError" styleClass="error-label" visible="false" managed="false"/>
+                                    </VBox>
+
+                                    <VBox spacing="8" alignment="CENTER_LEFT">
+                                        <Label text=" " style="-fx-font-size: 14px;"/>
+                                        <CheckBox fx:id="chkActive" text="Annonce active" selected="true"
+                                                  style="-fx-font-weight: 600; -fx-text-fill: #1a1f36;"/>
+                                    </VBox>
+                                </HBox>
+
+                                <VBox fx:id="eventFieldsContainer" spacing="16" managed="false" visible="false">
+                                    <Separator style="-fx-background-color: #eaeef3;"/>
+                                    <Label text="Informations Événement"
+                                           style="-fx-font-size: 16px; -fx-font-weight: 700; -fx-text-fill: #1a1f36;"/>
+
+                                    <HBox spacing="16">
+                                        <VBox spacing="8" HBox.hgrow="ALWAYS">
+                                            <Label text="Date début" style="-fx-font-weight: 600; -fx-text-fill: #1a1f36; -fx-font-size: 14px;"/>
+                                            <DatePicker fx:id="dateEvenement" promptText="Date" styleClass="form-input-pro"/>
+                                        </VBox>
+
+                                        <VBox spacing="8" HBox.hgrow="ALWAYS">
+                                            <Label text="Date fin" style="-fx-font-weight: 600; -fx-text-fill: #1a1f36; -fx-font-size: 14px;"/>
+                                            <DatePicker fx:id="dateFinEvenement" promptText="Date fin" styleClass="form-input-pro"/>
+                                        </VBox>
+                                    </HBox>
+
+                                    <HBox spacing="16">
+                                        <VBox spacing="8" HBox.hgrow="ALWAYS">
+                                            <Label text="Lieu" style="-fx-font-weight: 600; -fx-text-fill: #1a1f36; -fx-font-size: 14px;"/>
+                                            <TextField fx:id="txtLieu" promptText="Lieu de l'événement" styleClass="form-input-pro"/>
+                                        </VBox>
+
+                                        <VBox spacing="8">
+                                            <Label text="Capacité max" style="-fx-font-weight: 600; -fx-text-fill: #1a1f36; -fx-font-size: 14px;"/>
+                                            <TextField fx:id="txtCapaciteMax" promptText="Ex: 50"
+                                                       styleClass="form-input-pro" prefWidth="150"/>
+                                            <Label fx:id="lblCapaciteError" styleClass="error-label" visible="false" managed="false"/>
+                                        </VBox>
+                                    </HBox>
+                                </VBox>
+
+                                <HBox spacing="12" alignment="CENTER_RIGHT">
+                                    <Button fx:id="btnSave" onAction="#handleSave" text="Enregistrer"
+                                            style="-fx-background-color: #3b82f6; -fx-text-fill: white; -fx-background-radius: 8; -fx-padding: 12 28; -fx-font-weight: 700; -fx-cursor: hand;"/>
+                                    <Button fx:id="btnUpdate" onAction="#handleUpdate" text="Modifier" visible="false" managed="false"
+                                            style="-fx-background-color: #3b82f6; -fx-text-fill: white; -fx-background-radius: 8; -fx-padding: 12 28; -fx-font-weight: 700; -fx-cursor: hand;"/>
+                                    <Button onAction="#handleCancelForm" text="Annuler"
+                                            style="-fx-background-color: #f8fafc; -fx-text-fill: #525f7f; -fx-background-radius: 8; -fx-padding: 12 28; -fx-font-weight: 600; -fx-border-color: #dfe3e8; -fx-border-width: 1.5; -fx-border-radius: 8; -fx-cursor: hand;"/>
+                                </HBox>
+                            </VBox>
+
+                            <VBox fx:id="postsContainer" spacing="16"/>
                         </VBox>
+                    </ScrollPane>
+                </Tab>
 
-                        <VBox spacing="8.0">
-                            <Label text="Date de fin de l'événement" styleClass="form-label">
-                                <font>
-                                    <Font name="System Bold" size="13.0" />
-                                </font>
-                            </Label>
-                            <DatePicker fx:id="dateFinEvenement" promptText="Sélectionnez la date de fin" styleClass="form-input" prefWidth="300" />
+                <!-- TAB 2: COMMENTAIRES PAR POST -->
+                <Tab text="Commentaires" closable="false">
+                    <ScrollPane fitToWidth="true" fitToHeight="true" styleClass="main-scroll-pane">
+                        <VBox spacing="24" style="-fx-padding: 32 40; -fx-background-color: #f5f7fa;">
+
+                            <VBox spacing="16" style="-fx-background-color: white; -fx-padding: 24; -fx-background-radius: 12;">
+                                <Label text="Commentaires par Post"
+                                       style="-fx-font-size: 22px; -fx-font-weight: 700; -fx-text-fill: #1a1f36;"/>
+                                <Label text="Gérez les commentaires organisés par publication"
+                                       style="-fx-font-size: 14px; -fx-text-fill: #697386;"/>
+                            </VBox>
+
+                            <VBox fx:id="commentsContainer" spacing="16"/>
                         </VBox>
+                    </ScrollPane>
+                </Tab>
 
-                        <VBox spacing="8.0">
-                            <Label text="Lieu" styleClass="form-label">
-                                <font>
-                                    <Font name="System Bold" size="13.0" />
-                                </font>
-                            </Label>
-                            <TextField fx:id="txtLieu" promptText="Entrez le lieu de l'événement" styleClass="form-input" />
+                <!-- TAB 3: STATISTIQUES PRO -->
+                <Tab text="Statistiques" closable="false">
+                    <ScrollPane fitToWidth="true" fitToHeight="true" styleClass="main-scroll-pane">
+                        <VBox spacing="24" style="-fx-padding: 32 40; -fx-background-color: #f5f7fa;">
+
+                            <VBox spacing="16" style="-fx-background-color: white; -fx-padding: 24; -fx-background-radius: 12;">
+                                <Label text="Tableau de Bord"
+                                       style="-fx-font-size: 22px; -fx-font-weight: 700; -fx-text-fill: #1a1f36;"/>
+                                <Label text="Vue d'ensemble des performances"
+                                       style="-fx-font-size: 14px; -fx-text-fill: #697386;"/>
+                            </VBox>
+
+                            <GridPane hgap="16" vgap="16">
+                                <VBox spacing="12" style="-fx-background-color: white; -fx-padding: 24; -fx-background-radius: 12;"
+                                      GridPane.columnIndex="0" GridPane.rowIndex="0">
+                                    <Label text="Total Posts" style="-fx-font-size: 13px; -fx-font-weight: 600; -fx-text-fill: #697386;"/>
+                                    <Label fx:id="lblTotalPosts" text="0"
+                                           style="-fx-font-size: 36px; -fx-font-weight: 700; -fx-text-fill: #1a1f36;"/>
+                                    <Label fx:id="lblPostsChange" text="+12% ce mois"
+                                           style="-fx-font-size: 12px; -fx-text-fill: #10b981; -fx-font-weight: 600;"/>
+                                </VBox>
+
+                                <VBox spacing="12" style="-fx-background-color: white; -fx-padding: 24; -fx-background-radius: 12;"
+                                      GridPane.columnIndex="1" GridPane.rowIndex="0">
+                                    <Label text="Total Likes" style="-fx-font-size: 13px; -fx-font-weight: 600; -fx-text-fill: #697386;"/>
+                                    <Label fx:id="lblTotalLikes" text="0"
+                                           style="-fx-font-size: 36px; -fx-font-weight: 700; -fx-text-fill: #ef4444;"/>
+                                    <Label fx:id="lblLikesChange" text="+23% ce mois"
+                                           style="-fx-font-size: 12px; -fx-text-fill: #10b981; -fx-font-weight: 600;"/>
+                                </VBox>
+
+                                <VBox spacing="12" style="-fx-background-color: white; -fx-padding: 24; -fx-background-radius: 12;"
+                                      GridPane.columnIndex="2" GridPane.rowIndex="0">
+                                    <Label text="Total Commentaires" style="-fx-font-size: 13px; -fx-font-weight: 600; -fx-text-fill: #697386;"/>
+                                    <Label fx:id="lblTotalComments" text="0"
+                                           style="-fx-font-size: 36px; -fx-font-weight: 700; -fx-text-fill: #3b82f6;"/>
+                                    <Label fx:id="lblCommentsChange" text="+8% ce mois"
+                                           style="-fx-font-size: 12px; -fx-text-fill: #10b981; -fx-font-weight: 600;"/>
+                                </VBox>
+                            </GridPane>
+
+                            <HBox spacing="16">
+                                <VBox spacing="16" style="-fx-background-color: white; -fx-padding: 24; -fx-background-radius: 12;"
+                                      HBox.hgrow="ALWAYS">
+                                    <Label text="Répartition des Posts"
+                                           style="-fx-font-size: 16px; -fx-font-weight: 700; -fx-text-fill: #1a1f36;"/>
+                                    <PieChart fx:id="chartPostTypes" prefHeight="250" legendVisible="true"/>
+                                </VBox>
+
+                                <VBox spacing="16" style="-fx-background-color: white; -fx-padding: 24; -fx-background-radius: 12;"
+                                      HBox.hgrow="ALWAYS">
+                                    <Label text="Engagement par Post"
+                                           style="-fx-font-size: 16px; -fx-font-weight: 700; -fx-text-fill: #1a1f36;"/>
+                                    <BarChart fx:id="chartEngagement" prefHeight="250" legendVisible="false">
+                                        <xAxis>
+                                            <CategoryAxis label="Posts" side="BOTTOM"/>
+                                        </xAxis>
+                                        <yAxis>
+                                            <NumberAxis label="Interactions" side="LEFT"/>
+                                        </yAxis>
+                                    </BarChart>
+                                </VBox>
+                            </HBox>
+
+                            <VBox spacing="16" style="-fx-background-color: white; -fx-padding: 24; -fx-background-radius: 12;">
+                                <Label text="Activité Mensuelle"
+                                       style="-fx-font-size: 16px; -fx-font-weight: 700; -fx-text-fill: #1a1f36;"/>
+                                <LineChart fx:id="chartActivity" prefHeight="300" legendVisible="true">
+                                    <xAxis>
+                                        <CategoryAxis label="Mois" side="BOTTOM"/>
+                                    </xAxis>
+                                    <yAxis>
+                                        <NumberAxis label="Nombre" side="LEFT"/>
+                                    </yAxis>
+                                </LineChart>
+                            </VBox>
+
+                            <VBox fx:id="detailedStatsContainer" spacing="16"/>
                         </VBox>
+                    </ScrollPane>
+                </Tab>
 
-                        <VBox spacing="8.0">
-                            <Label text="Capacité maximale" styleClass="form-label">
-                                <font>
-                                    <Font name="System Bold" size="13.0" />
-                                </font>
-                            </Label>
-                            <TextField fx:id="txtCapaciteMax" promptText="Nombre de participants maximum" styleClass="form-input" prefWidth="200" />
-                            <Label fx:id="lblCapaciteError" text="" styleClass="error-label" visible="false" managed="false" />
-                        </VBox>
-                    </VBox>
-
-                    <!-- Form Buttons -->
-                    <HBox spacing="12.0" alignment="CENTER_RIGHT">
-                        <Button fx:id="btnSave" onAction="#handleSave" styleClass="btn-primary" text="Enregistrer">
-                            <font>
-                                <Font name="System Bold" size="13.0" />
-                            </font>
-                            <padding>
-                                <Insets bottom="10.0" left="18.0" right="18.0" top="10.0" />
-                            </padding>
-                        </Button>
-                        <Button fx:id="btnUpdate" onAction="#handleUpdate" styleClass="btn-primary" text="Modifier" visible="false" managed="false">
-                            <font>
-                                <Font name="System Bold" size="13.0" />
-                            </font>
-                            <padding>
-                                <Insets bottom="10.0" left="18.0" right="18.0" top="10.0" />
-                            </padding>
-                        </Button>
-                        <Button onAction="#handleCancelForm" styleClass="btn-secondary" text="Annuler">
-                            <padding>
-                                <Insets bottom="10.0" left="18.0" right="18.0" top="10.0" />
-                            </padding>
-                        </Button>
-                    </HBox>
-                </VBox>
-
-                <!-- Annonces List -->
-                <VBox fx:id="postsContainer" spacing="18.0">
-                    <padding>
-                        <Insets bottom="10.0" top="10.0" />
-                    </padding>
-                </VBox>
-            </VBox>
-        </ScrollPane>
+            </TabPane>
+        </VBox>
     </center>
 </BorderPane>

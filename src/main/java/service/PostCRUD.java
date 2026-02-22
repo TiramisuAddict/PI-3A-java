@@ -116,4 +116,181 @@ public class PostCRUD implements InterfaceCRUD<Post> {
 
         return posts;
     }
+    // ========== MÉTHODES ADMIN ==========
+
+    /**
+     * Récupérer un post par ID
+     */
+    public Post getById(int id) throws SQLException {
+        String req = "SELECT * FROM post WHERE id_post = ?";
+        PreparedStatement pst = conn.prepareStatement(req);
+        pst.setInt(1, id);
+
+        ResultSet rs = pst.executeQuery();
+
+        if (rs.next()) {
+            Post p = new Post();
+            p.setIdPost(rs.getInt("id_post"));
+            p.setTitre(rs.getString("titre"));
+            p.setContenu(rs.getString("contenu"));
+            p.setTypePost(rs.getInt("type_post"));
+            p.setDateCreation(rs.getTimestamp("date_creation").toLocalDateTime());
+            p.setUtilisateurId(rs.getInt("utilisateur_id"));
+            p.setActive(rs.getBoolean("active"));
+
+            Date d = rs.getDate("date_evenement");
+            if (d != null) p.setDateEvenement(d.toLocalDate());
+
+            Date df = rs.getDate("date_fin_evenement");
+            if (df != null) p.setDateFinEvenement(df.toLocalDate());
+
+            p.setLieu(rs.getString("lieu"));
+            p.setCapaciteMax((Integer) rs.getObject("capacite_max"));
+
+            return p;
+        }
+
+        return null;
+    }
+
+    /**
+     * Recherche des posts par mot-clé dans le titre ou le contenu
+     */
+    public List<Post> searchByKeyword(String keyword) throws SQLException {
+        List<Post> posts = new ArrayList<>();
+        String query = "SELECT * FROM post WHERE titre LIKE ? OR contenu LIKE ? ORDER BY date_creation DESC";
+
+        try (PreparedStatement stmt = conn.prepareStatement(query)) {
+            String searchPattern = "%" + keyword + "%";
+            stmt.setString(1, searchPattern);
+            stmt.setString(2, searchPattern);
+
+            ResultSet rs = stmt.executeQuery();
+
+            while (rs.next()) {
+                Post post = new Post();
+                post.setIdPost(rs.getInt("id_post"));
+                post.setUtilisateurId(rs.getInt("utilisateur_id"));
+                post.setTitre(rs.getString("titre"));
+                post.setContenu(rs.getString("contenu"));
+                post.setDateCreation(rs.getTimestamp("date_creation").toLocalDateTime());
+                post.setTypePost(rs.getInt("type_post"));
+                post.setActive(rs.getBoolean("active"));
+
+                // Event fields (nullable)
+                if (rs.getDate("date_evenement") != null) {
+                    post.setDateEvenement(rs.getDate("date_evenement").toLocalDate());
+                }
+                if (rs.getDate("date_fin_evenement") != null) {
+                    post.setDateFinEvenement(rs.getDate("date_fin_evenement").toLocalDate());
+                }
+                post.setLieu(rs.getString("lieu"));
+
+                Integer capacite = (Integer) rs.getObject("capacite_max");
+                post.setCapaciteMax(capacite);
+
+                posts.add(post);
+            }
+        }
+
+        return posts;
+    }
+
+    /**
+     * Classe pour les statistiques globales
+     */
+    public static class StatistiquesGlobales {
+        public int totalPosts;
+        public int totalAnnonces;
+        public int totalEvenements;
+        public int totalLikes;
+        public int totalCommentaires;
+        public int postsActifs;
+        public int postsInactifs;
+        public int totalParticipations;
+    }
+
+    /**
+     * Récupère toutes les statistiques globales
+     */
+    public StatistiquesGlobales getStatistiquesGlobales() throws SQLException {
+        StatistiquesGlobales stats = new StatistiquesGlobales();
+
+        // Total posts
+        String queryTotalPosts = "SELECT COUNT(*) FROM post";
+        try (PreparedStatement stmt = conn.prepareStatement(queryTotalPosts)) {
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                stats.totalPosts = rs.getInt(1);
+            }
+        }
+
+        // Total annonces (type_post = 1)
+        String queryAnnonces = "SELECT COUNT(*) FROM post WHERE type_post = 1";
+        try (PreparedStatement stmt = conn.prepareStatement(queryAnnonces)) {
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                stats.totalAnnonces = rs.getInt(1);
+            }
+        }
+
+        // Total événements (type_post = 2)
+        String queryEvenements = "SELECT COUNT(*) FROM post WHERE type_post = 2";
+        try (PreparedStatement stmt = conn.prepareStatement(queryEvenements)) {
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                stats.totalEvenements = rs.getInt(1);
+            }
+        }
+
+        // Posts actifs
+        String queryActifs = "SELECT COUNT(*) FROM post WHERE active = true";
+        try (PreparedStatement stmt = conn.prepareStatement(queryActifs)) {
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                stats.postsActifs = rs.getInt(1);
+            }
+        }
+
+        // Posts inactifs
+        String queryInactifs = "SELECT COUNT(*) FROM post WHERE active = false";
+        try (PreparedStatement stmt = conn.prepareStatement(queryInactifs)) {
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                stats.postsInactifs = rs.getInt(1);
+            }
+        }
+
+        // Total likes
+        String queryLikes = "SELECT COUNT(*) FROM like_post";
+        try (PreparedStatement stmt = conn.prepareStatement(queryLikes)) {
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                stats.totalLikes = rs.getInt(1);
+            }
+        }
+
+        // Total commentaires
+        String queryComments = "SELECT COUNT(*) FROM commentaire";
+        try (PreparedStatement stmt = conn.prepareStatement(queryComments)) {
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                stats.totalCommentaires = rs.getInt(1);
+            }
+        }
+
+        // Total participations (si table existe)
+        String queryParticipations = "SELECT COUNT(*) FROM participation";
+        try (PreparedStatement stmt = conn.prepareStatement(queryParticipations)) {
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                stats.totalParticipations = rs.getInt(1);
+            }
+        } catch (SQLException e) {
+            // Table participation n'existe peut-être pas
+            stats.totalParticipations = 0;
+        }
+
+        return stats;
+    }
 }

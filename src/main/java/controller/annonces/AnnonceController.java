@@ -1,85 +1,77 @@
 package controller.annonces;
 
+import entity.Commentaire;
+import entity.Like;
 import entity.Post;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Parent;
+import javafx.scene.chart.*;
 import javafx.scene.control.*;
-import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.Priority;
-import javafx.scene.layout.VBox;
+import javafx.scene.layout.*;
+import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.util.Duration;
+import service.CommentaireCRUD;
+import service.LikeCRUD;
 import service.PostCRUD;
 
 import java.io.IOException;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class AnnonceController {
 
-    // Sidebar elements
     @FXML private VBox sidebar;
-    @FXML private Button btnHome;
-    @FXML private Button btnFormation;
-    @FXML private Button btnDemande;
-    @FXML private Button btnEmployer;
-    @FXML private Button btnProjet;
-    @FXML private Button btnOffre;
+    @FXML private Button btnHome, btnFormation, btnDemande, btnEmployer, btnProjet, btnOffre;
     @FXML private BorderPane rootPane;
+    @FXML private TabPane mainTabPane;
 
-    private boolean isExpanded = false;
-
-    // Form fields
+    @FXML private TextField txtRecherchePost;
     @FXML private TextField txtTitre;
     @FXML private TextArea txtContenu;
     @FXML private ComboBox<String> comboTypePost;
     @FXML private CheckBox chkActive;
-    @FXML private DatePicker dateEvenement;
-    @FXML private DatePicker dateFinEvenement;
-    @FXML private TextField txtLieu;
-    @FXML private TextField txtCapaciteMax;
+    @FXML private DatePicker dateEvenement, dateFinEvenement;
+    @FXML private TextField txtLieu, txtCapaciteMax;
 
-    // Error labels
-    @FXML private Label lblTitreError;
-    @FXML private Label lblContenuError;
-    @FXML private Label lblTypeError;
-    @FXML private Label lblCapaciteError;
-
-    // Containers
-    @FXML private VBox postsContainer;
-    @FXML private VBox formContainer;
-    @FXML private VBox eventFieldsContainer;
-
-    // Buttons
-    @FXML private Button btnSave;
-    @FXML private Button btnUpdate;
-    @FXML private Button btnAjouter;
+    @FXML private Label lblTitreError, lblContenuError, lblTypeError, lblCapaciteError;
+    @FXML private VBox postsContainer, formContainer, eventFieldsContainer;
+    @FXML private Button btnSave, btnUpdate, btnAjouter;
     @FXML private Label formTitle;
 
-    private PostCRUD postCRUD = new PostCRUD();
-    private Post selectedPost = null;
+    @FXML private VBox commentsContainer;
 
-    // Filter state: "ALL", "ANNONCE", "EVENT"
+    @FXML private Label lblTotalPosts, lblTotalLikes, lblTotalComments;
+    @FXML private Label lblPostsChange, lblLikesChange, lblCommentsChange;
+    @FXML private PieChart chartPostTypes;
+    @FXML private BarChart<String, Number> chartEngagement;
+    @FXML private LineChart<String, Number> chartActivity;
+    @FXML private VBox detailedStatsContainer;
+
+    private boolean isExpanded = false;
+    private PostCRUD postCRUD = new PostCRUD();
+    private CommentaireCRUD commentaireCRUD = new CommentaireCRUD();
+    private LikeCRUD likeCRUD = new LikeCRUD();
+    private Post selectedPost = null;
     private String currentFilter = "ALL";
 
     @FXML
     public void initialize() {
-        // Initialize ComboBox with post types
         comboTypePost.getItems().addAll("Annonce", "Événement");
 
-        // Add listener to show/hide event fields based on type
         comboTypePost.valueProperty().addListener((obs, oldVal, newVal) -> {
             if ("Événement".equals(newVal)) {
                 eventFieldsContainer.setVisible(true);
@@ -90,21 +82,18 @@ public class AnnonceController {
             }
         });
 
-        // Add input validation listeners
         addValidationListeners();
-
         refreshPosts();
+        loadCommentsByPost();
+        loadStatistiques();
     }
-
-    // ========== SIDEBAR NAVIGATION ==========
 
     @FXML
     private void handleToggleSidebar() {
         double endWidth = isExpanded ? 68 : 200;
-        Timeline timeline = new Timeline();
-        KeyValue widthValue = new KeyValue(sidebar.prefWidthProperty(), endWidth);
-        KeyFrame widthFrame = new KeyFrame(Duration.millis(150), widthValue);
-        timeline.getKeyFrames().add(widthFrame);
+        Timeline timeline = new Timeline(
+                new KeyFrame(Duration.millis(150), new KeyValue(sidebar.prefWidthProperty(), endWidth))
+        );
 
         if (!isExpanded) {
             sidebar.getStyleClass().add("expanded");
@@ -118,7 +107,6 @@ public class AnnonceController {
 
     @FXML
     private void showHome(ActionEvent event) {
-        // Show ALL posts (Annonces + Events)
         currentFilter = "ALL";
         refreshPosts();
         updateActiveButton(btnHome);
@@ -159,7 +147,6 @@ public class AnnonceController {
             Parent view = FXMLLoader.load(getClass().getResource("/" + fxmlFileName + ".fxml"));
             rootPane.setCenter(view);
         } catch (IOException e) {
-            e.printStackTrace();
             showError("Erreur", "Impossible de charger la page: " + fxmlFileName);
         }
     }
@@ -171,55 +158,69 @@ public class AnnonceController {
         btnEmployer.getStyleClass().remove("nav-active");
         btnProjet.getStyleClass().remove("nav-active");
         btnOffre.getStyleClass().remove("nav-active");
-
         activeBtn.getStyleClass().add("nav-active");
     }
 
-    // ========== FILTER METHODS (PUBLIC) ==========
+    @FXML
+    public void rechercherPosts() {
+        String keyword = txtRecherchePost.getText().trim();
+        postsContainer.getChildren().clear();
 
-    /**
-     * Show only Annonces
-     */
+        try {
+            List<Post> posts = keyword.isEmpty() ?
+                    postCRUD.afficher() :
+                    postCRUD.searchByKeyword(keyword);
+
+            for (Post post : posts) {
+                if (shouldDisplayPost(post)) {
+                    addPostCard(post);
+                }
+            }
+
+            if (postsContainer.getChildren().isEmpty()) {
+                Label emptyLabel = new Label("Aucun résultat trouvé");
+                emptyLabel.setStyle("-fx-text-fill: #697386; -fx-font-size: 14px;");
+                postsContainer.getChildren().add(emptyLabel);
+            }
+        } catch (SQLException e) {
+            showError("Erreur", "Erreur de recherche: " + e.getMessage());
+        }
+    }
+
     public void filterAnnonces() {
         currentFilter = "ANNONCE";
         refreshPosts();
     }
 
-    /**
-     * Show only Events
-     */
     public void filterEvents() {
         currentFilter = "EVENT";
         refreshPosts();
     }
 
-    /**
-     * Show all posts
-     */
     public void showAll() {
         currentFilter = "ALL";
         refreshPosts();
     }
 
-    // ========== VALIDATION ==========
+    private boolean shouldDisplayPost(Post post) {
+        switch (currentFilter) {
+            case "ANNONCE": return post.getTypePost() == 1;
+            case "EVENT": return post.getTypePost() == 2;
+            default: return true;
+        }
+    }
 
     private void addValidationListeners() {
         txtTitre.textProperty().addListener((obs, oldVal, newVal) -> {
-            if (!newVal.trim().isEmpty()) {
-                hideError(lblTitreError);
-            }
+            if (!newVal.trim().isEmpty()) hideError(lblTitreError);
         });
 
         txtContenu.textProperty().addListener((obs, oldVal, newVal) -> {
-            if (!newVal.trim().isEmpty()) {
-                hideError(lblContenuError);
-            }
+            if (!newVal.trim().isEmpty()) hideError(lblContenuError);
         });
 
         comboTypePost.valueProperty().addListener((obs, oldVal, newVal) -> {
-            if (newVal != null) {
-                hideError(lblTypeError);
-            }
+            if (newVal != null) hideError(lblTypeError);
         });
 
         txtCapaciteMax.textProperty().addListener((obs, oldVal, newVal) -> {
@@ -230,8 +231,6 @@ public class AnnonceController {
         });
     }
 
-    // ========== POSTS MANAGEMENT ==========
-
     private void refreshPosts() {
         postsContainer.getChildren().clear();
 
@@ -239,172 +238,102 @@ public class AnnonceController {
             List<Post> posts = postCRUD.afficher();
 
             for (Post post : posts) {
-                // Apply filter based on currentFilter
-                boolean shouldDisplay = false;
-
-                switch (currentFilter) {
-                    case "ANNONCE":
-                        shouldDisplay = (post.getTypePost() == 1);
-                        break;
-                    case "EVENT":
-                        shouldDisplay = (post.getTypePost() == 2);
-                        break;
-                    case "ALL":
-                    default:
-                        shouldDisplay = true; // Show both annonces and events
-                        break;
-                }
-
-                if (shouldDisplay) {
+                if (shouldDisplayPost(post)) {
                     addPostCard(post);
                 }
             }
 
             if (postsContainer.getChildren().isEmpty()) {
-                Label emptyLabel = new Label("Aucune annonce disponible. Cliquez sur '+ Ajouter une Annonce' pour créer une annonce.");
-                emptyLabel.setStyle("-fx-text-fill: #888888; -fx-font-size: 14px;");
-                emptyLabel.setWrapText(true);
+                Label emptyLabel = new Label("Aucune annonce disponible");
+                emptyLabel.setStyle("-fx-text-fill: #697386; -fx-font-size: 14px;");
                 postsContainer.getChildren().add(emptyLabel);
             }
         } catch (SQLException e) {
             showError("Erreur", "Impossible de charger les annonces: " + e.getMessage());
-            e.printStackTrace();
         }
     }
 
     private void addPostCard(Post post) {
-        VBox card = new VBox();
+        VBox card = new VBox(16);
+        card.setStyle("-fx-background-color: white; -fx-padding: 24; -fx-background-radius: 12; " +
+                "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.05), 8, 0, 0, 2);");
 
-        // Add different style class based on type
-        if (post.getTypePost() == 1) {
-            card.getStyleClass().add("annonce-card");
-        } else {
-            card.getStyleClass().add("event-card"); // Different style for events
-        }
-
-        card.setSpacing(15);
-        card.setPadding(new Insets(20));
-        card.setMaxWidth(Double.MAX_VALUE);
-
-        HBox header = new HBox();
-        header.setSpacing(15);
+        HBox header = new HBox(16);
         header.setAlignment(Pos.CENTER_LEFT);
 
-        VBox imagePlaceholder = new VBox();
-        imagePlaceholder.getStyleClass().add("image-placeholder");
-        imagePlaceholder.setPrefSize(60, 60);
-        imagePlaceholder.setMinSize(60, 60);
-        imagePlaceholder.setMaxSize(60, 60);
-
-        // Different color for event placeholder
-        if (post.getTypePost() == 1) {
-            imagePlaceholder.setStyle("-fx-background-color: #E8E8E8; -fx-background-radius: 8;");
-        } else {
-            imagePlaceholder.setStyle("-fx-background-color: #E3F2FD; -fx-background-radius: 8;"); // Blue tint for events
-        }
-
-        VBox textContainer = new VBox();
-        textContainer.setSpacing(8);
-        HBox.setHgrow(textContainer, Priority.ALWAYS);
+        VBox textInfo = new VBox(8);
+        HBox.setHgrow(textInfo, Priority.ALWAYS);
 
         Label titleLabel = new Label(post.getTitre());
-        titleLabel.setFont(Font.font("System", FontWeight.BOLD, 16));
-        titleLabel.setStyle("-fx-text-fill: #1a1a1a;");
+        titleLabel.setStyle("-fx-font-size: 18px; -fx-font-weight: 700; -fx-text-fill: #1a1f36;");
         titleLabel.setWrapText(true);
 
         String contentPreview = post.getContenu();
-        if (contentPreview.length() > 100) {
-            contentPreview = contentPreview.substring(0, 100) + "...";
+        if (contentPreview.length() > 150) {
+            contentPreview = contentPreview.substring(0, 150) + "...";
         }
         Label contentLabel = new Label(contentPreview);
-        contentLabel.setFont(Font.font("System", 13));
-        contentLabel.setStyle("-fx-text-fill: #666666;");
+        contentLabel.setStyle("-fx-font-size: 14px; -fx-text-fill: #525f7f;");
         contentLabel.setWrapText(true);
 
-        // Badge row
-        HBox badgeRow = new HBox();
-        badgeRow.setSpacing(8);
-        badgeRow.setAlignment(Pos.CENTER_LEFT);
-
+        HBox badges = new HBox(8);
         Label statusBadge = new Label(post.isActive() ? "Actif" : "Inactif");
-        statusBadge.getStyleClass().add(post.isActive() ? "badge-active" : "badge-inactive");
-        statusBadge.setFont(Font.font("System", FontWeight.BOLD, 11));
+        statusBadge.setStyle(post.isActive() ?
+                "-fx-background-color: #d1fae5; -fx-text-fill: #10b981; -fx-padding: 4 12; -fx-background-radius: 12; -fx-font-weight: 600; -fx-font-size: 12px;" :
+                "-fx-background-color: #fee2e2; -fx-text-fill: #ef4444; -fx-padding: 4 12; -fx-background-radius: 12; -fx-font-weight: 600; -fx-font-size: 12px;");
 
-        // Type badge with different colors
         Label typeBadge = new Label(post.getTypePost() == 1 ? "Annonce" : "Événement");
-        if (post.getTypePost() == 1) {
-            typeBadge.getStyleClass().add("badge-type-annonce");
-        } else {
-            typeBadge.getStyleClass().add("badge-type-event");
-        }
-        typeBadge.setFont(Font.font("System", FontWeight.BOLD, 11));
+        typeBadge.setStyle(post.getTypePost() == 1 ?
+                "-fx-background-color: #e0e7ff; -fx-text-fill: #6366f1; -fx-padding: 4 12; -fx-background-radius: 12; -fx-font-weight: 600; -fx-font-size: 12px;" :
+                "-fx-background-color: #fed7aa; -fx-text-fill: #ea580c; -fx-padding: 4 12; -fx-background-radius: 12; -fx-font-weight: 600; -fx-font-size: 12px;");
 
-        badgeRow.getChildren().addAll(statusBadge, typeBadge);
+        badges.getChildren().addAll(statusBadge, typeBadge);
+        textInfo.getChildren().addAll(titleLabel, contentLabel, badges);
 
-        textContainer.getChildren().addAll(titleLabel, contentLabel, badgeRow);
-        header.getChildren().addAll(imagePlaceholder, textContainer);
+        HBox actions = new HBox(8);
 
-        // Add event info if it's an event
-        VBox cardContent = new VBox();
-        cardContent.setSpacing(12);
-        cardContent.getChildren().add(header);
+        Button btnEdit = new Button("Modifier");
+        btnEdit.setStyle("-fx-background-color: #f8fafc; -fx-text-fill: #1a1f36; -fx-padding: 8 16; -fx-background-radius: 6; -fx-font-weight: 600; -fx-cursor: hand; -fx-border-color: #dfe3e8; -fx-border-width: 1.5; -fx-border-radius: 6;");
+        btnEdit.setOnMouseEntered(e -> btnEdit.setStyle("-fx-background-color: #1a1f36; -fx-text-fill: white; -fx-padding: 8 16; -fx-background-radius: 6; -fx-font-weight: 600; -fx-cursor: hand; -fx-border-color: #1a1f36; -fx-border-width: 1.5; -fx-border-radius: 6;"));
+        btnEdit.setOnMouseExited(e -> btnEdit.setStyle("-fx-background-color: #f8fafc; -fx-text-fill: #1a1f36; -fx-padding: 8 16; -fx-background-radius: 6; -fx-font-weight: 600; -fx-cursor: hand; -fx-border-color: #dfe3e8; -fx-border-width: 1.5; -fx-border-radius: 6;"));
+        btnEdit.setOnAction(e -> handleEditPost(post));
 
-        if (post.getTypePost() == 2) {
-            // Event-specific information
-            VBox eventInfo = new VBox();
-            eventInfo.setSpacing(6);
-            eventInfo.setStyle("-fx-background-color: #F0F8FF; -fx-padding: 12; -fx-background-radius: 6; -fx-border-color: #90CAF9; -fx-border-width: 1; -fx-border-radius: 6;");
+        Button btnDelete = new Button("Supprimer");
+        btnDelete.setStyle("-fx-background-color: #fef2f2; -fx-text-fill: #ef4444; -fx-padding: 8 16; -fx-background-radius: 6; -fx-font-weight: 600; -fx-cursor: hand; -fx-border-color: #fecaca; -fx-border-width: 1.5; -fx-border-radius: 6;");
+        btnDelete.setOnMouseEntered(e -> btnDelete.setStyle("-fx-background-color: #ef4444; -fx-text-fill: white; -fx-padding: 8 16; -fx-background-radius: 6; -fx-font-weight: 600; -fx-cursor: hand; -fx-border-color: #ef4444; -fx-border-width: 1.5; -fx-border-radius: 6;"));
+        btnDelete.setOnMouseExited(e -> btnDelete.setStyle("-fx-background-color: #fef2f2; -fx-text-fill: #ef4444; -fx-padding: 8 16; -fx-background-radius: 6; -fx-font-weight: 600; -fx-cursor: hand; -fx-border-color: #fecaca; -fx-border-width: 1.5; -fx-border-radius: 6;"));
+        btnDelete.setOnAction(e -> handleDeletePost(post));
+
+        actions.getChildren().addAll(btnEdit, btnDelete);
+        header.getChildren().addAll(textInfo, actions);
+
+        card.getChildren().add(header);
+
+        if (post.getTypePost() == 2 && (post.getDateEvenement() != null || post.getLieu() != null || post.getCapaciteMax() != null)) {
+            VBox eventInfo = new VBox(8);
+            eventInfo.setStyle("-fx-background-color: #f8fafc; -fx-padding: 16; -fx-background-radius: 8;");
 
             if (post.getDateEvenement() != null) {
-                Label dateLabel = new Label("📅 Date: " + post.getDateEvenement().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
-                dateLabel.setFont(Font.font("System", 12));
-                dateLabel.setStyle("-fx-text-fill: #1565C0;");
+                Label dateLabel = new Label("Date: " + post.getDateEvenement().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
+                dateLabel.setStyle("-fx-font-size: 13px; -fx-text-fill: #525f7f; -fx-font-weight: 600;");
                 eventInfo.getChildren().add(dateLabel);
             }
 
-            if (post.getDateFinEvenement() != null) {
-                Label dateEndLabel = new Label("📅 Fin: " + post.getDateFinEvenement().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
-                dateEndLabel.setFont(Font.font("System", 12));
-                dateEndLabel.setStyle("-fx-text-fill: #1565C0;");
-                eventInfo.getChildren().add(dateEndLabel);
-            }
-
             if (post.getLieu() != null && !post.getLieu().isEmpty()) {
-                Label lieuLabel = new Label("📍 " + post.getLieu());
-                lieuLabel.setFont(Font.font("System", 12));
-                lieuLabel.setStyle("-fx-text-fill: #1565C0;");
+                Label lieuLabel = new Label("Lieu: " + post.getLieu());
+                lieuLabel.setStyle("-fx-font-size: 13px; -fx-text-fill: #525f7f; -fx-font-weight: 600;");
                 eventInfo.getChildren().add(lieuLabel);
             }
 
             if (post.getCapaciteMax() != null) {
-                Label capaciteLabel = new Label("👥 Capacité: " + post.getCapaciteMax() + " personnes");
-                capaciteLabel.setFont(Font.font("System", 12));
-                capaciteLabel.setStyle("-fx-text-fill: #1565C0;");
+                Label capaciteLabel = new Label("Capacité: " + post.getCapaciteMax() + " personnes");
+                capaciteLabel.setStyle("-fx-font-size: 13px; -fx-text-fill: #525f7f; -fx-font-weight: 600;");
                 eventInfo.getChildren().add(capaciteLabel);
             }
 
-            if (eventInfo.getChildren().size() > 0) {
-                cardContent.getChildren().add(eventInfo);
-            }
+            card.getChildren().add(eventInfo);
         }
 
-        // Action buttons
-        HBox actionsBox = new HBox();
-        actionsBox.setSpacing(10);
-        actionsBox.setAlignment(Pos.CENTER_RIGHT);
-
-        Button btnModifier = new Button("Modifier");
-        btnModifier.getStyleClass().add("btn-card-modifier");
-        btnModifier.setOnAction(e -> handleEditPost(post));
-
-        Button btnSupprimer = new Button("Supprimer");
-        btnSupprimer.getStyleClass().add("btn-card-supprimer");
-        btnSupprimer.setOnAction(e -> handleDeletePost(post));
-
-        actionsBox.getChildren().addAll(btnModifier, btnSupprimer);
-        cardContent.getChildren().add(actionsBox);
-
-        card.getChildren().add(cardContent);
         postsContainer.getChildren().add(card);
     }
 
@@ -434,18 +363,10 @@ public class AnnonceController {
         chkActive.setSelected(post.isActive());
 
         if (post.getTypePost() == 2) {
-            if (post.getDateEvenement() != null) {
-                dateEvenement.setValue(post.getDateEvenement());
-            }
-            if (post.getDateFinEvenement() != null) {
-                dateFinEvenement.setValue(post.getDateFinEvenement());
-            }
-            if (post.getLieu() != null) {
-                txtLieu.setText(post.getLieu());
-            }
-            if (post.getCapaciteMax() != null) {
-                txtCapaciteMax.setText(String.valueOf(post.getCapaciteMax()));
-            }
+            if (post.getDateEvenement() != null) dateEvenement.setValue(post.getDateEvenement());
+            if (post.getDateFinEvenement() != null) dateFinEvenement.setValue(post.getDateFinEvenement());
+            if (post.getLieu() != null) txtLieu.setText(post.getLieu());
+            if (post.getCapaciteMax() != null) txtCapaciteMax.setText(String.valueOf(post.getCapaciteMax()));
         }
 
         formTitle.setText("Modifier l'Annonce");
@@ -455,14 +376,11 @@ public class AnnonceController {
         btnUpdate.setManaged(true);
         formContainer.setVisible(true);
         formContainer.setManaged(true);
-        formContainer.requestFocus();
     }
 
     @FXML
     private void handleSave() {
-        if (!validateForm()) {
-            return;
-        }
+        if (!validateForm()) return;
 
         Post post = new Post();
         populatePostFromForm(post);
@@ -474,22 +392,15 @@ public class AnnonceController {
             showSuccess("Succès", "Annonce ajoutée avec succès!");
             handleCancelForm();
             refreshPosts();
+            loadStatistiques();
         } catch (SQLException e) {
             showError("Erreur", "Impossible d'ajouter l'annonce: " + e.getMessage());
-            e.printStackTrace();
         }
     }
 
     @FXML
     private void handleUpdate() {
-        if (selectedPost == null) {
-            showError("Erreur", "Aucune annonce sélectionnée");
-            return;
-        }
-
-        if (!validateForm()) {
-            return;
-        }
+        if (selectedPost == null || !validateForm()) return;
 
         populatePostFromForm(selectedPost);
 
@@ -498,9 +409,9 @@ public class AnnonceController {
             showSuccess("Succès", "Annonce modifiée avec succès!");
             handleCancelForm();
             refreshPosts();
+            loadStatistiques();
         } catch (SQLException e) {
             showError("Erreur", "Impossible de modifier l'annonce: " + e.getMessage());
-            e.printStackTrace();
         }
     }
 
@@ -514,12 +425,7 @@ public class AnnonceController {
             post.setDateEvenement(dateEvenement.getValue());
             post.setDateFinEvenement(dateFinEvenement.getValue());
             post.setLieu(txtLieu.getText().trim().isEmpty() ? null : txtLieu.getText().trim());
-
-            if (!txtCapaciteMax.getText().trim().isEmpty()) {
-                post.setCapaciteMax(Integer.parseInt(txtCapaciteMax.getText().trim()));
-            } else {
-                post.setCapaciteMax(null);
-            }
+            post.setCapaciteMax(txtCapaciteMax.getText().trim().isEmpty() ? null : Integer.parseInt(txtCapaciteMax.getText().trim()));
         } else {
             post.setDateEvenement(null);
             post.setDateFinEvenement(null);
@@ -532,20 +438,20 @@ public class AnnonceController {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.setTitle("Confirmation");
         alert.setHeaderText("Supprimer l'annonce");
-        alert.setContentText("Êtes-vous sûr de vouloir supprimer cette annonce?\n\n" +
-                "Titre: " + post.getTitre());
+        alert.setContentText("Êtes-vous sûr de vouloir supprimer: " + post.getTitre() + " ?");
 
-        Optional<ButtonType> result = alert.showAndWait();
-        if (result.isPresent() && result.get() == ButtonType.OK) {
-            try {
-                postCRUD.supprimer(post.getIdPost());
-                showSuccess("Succès", "Annonce supprimée avec succès!");
-                refreshPosts();
-            } catch (SQLException e) {
-                showError("Erreur", "Impossible de supprimer l'annonce: " + e.getMessage());
-                e.printStackTrace();
+        alert.showAndWait().ifPresent(response -> {
+            if (response == ButtonType.OK) {
+                try {
+                    postCRUD.supprimer(post.getIdPost());
+                    showSuccess("Succès", "Annonce supprimée!");
+                    refreshPosts();
+                    loadStatistiques();
+                } catch (SQLException e) {
+                    showError("Erreur", "Impossible de supprimer: " + e.getMessage());
+                }
             }
-        }
+        });
     }
 
     @FXML
@@ -582,47 +488,16 @@ public class AnnonceController {
         if (txtTitre.getText() == null || txtTitre.getText().trim().isEmpty()) {
             showFieldError(lblTitreError, "Le titre est obligatoire");
             isValid = false;
-        } else if (txtTitre.getText().trim().length() < 3) {
-            showFieldError(lblTitreError, "Le titre doit contenir au moins 3 caractères");
-            isValid = false;
-        } else if (txtTitre.getText().trim().length() > 255) {
-            showFieldError(lblTitreError, "Le titre ne peut pas dépasser 255 caractères");
-            isValid = false;
         }
 
         if (txtContenu.getText() == null || txtContenu.getText().trim().isEmpty()) {
             showFieldError(lblContenuError, "Le contenu est obligatoire");
             isValid = false;
-        } else if (txtContenu.getText().trim().length() < 10) {
-            showFieldError(lblContenuError, "Le contenu doit contenir au moins 10 caractères");
-            isValid = false;
         }
 
         if (comboTypePost.getValue() == null) {
-            showFieldError(lblTypeError, "Veuillez sélectionner un type de post");
+            showFieldError(lblTypeError, "Sélectionnez un type");
             isValid = false;
-        }
-
-        if ("Événement".equals(comboTypePost.getValue())) {
-            if (dateEvenement.getValue() != null && dateFinEvenement.getValue() != null) {
-                if (dateFinEvenement.getValue().isBefore(dateEvenement.getValue())) {
-                    showError("Validation", "La date de fin doit être après la date de début");
-                    isValid = false;
-                }
-            }
-
-            if (!txtCapaciteMax.getText().trim().isEmpty()) {
-                try {
-                    int capacite = Integer.parseInt(txtCapaciteMax.getText().trim());
-                    if (capacite <= 0) {
-                        showFieldError(lblCapaciteError, "La capacité doit être supérieure à 0");
-                        isValid = false;
-                    }
-                } catch (NumberFormatException e) {
-                    showFieldError(lblCapaciteError, "La capacité doit être un nombre valide");
-                    isValid = false;
-                }
-            }
         }
 
         return isValid;
@@ -640,10 +515,185 @@ public class AnnonceController {
         errorLabel.setManaged(false);
     }
 
+    private void loadCommentsByPost() {
+        if (commentsContainer == null) return;
+        commentsContainer.getChildren().clear();
+
+        try {
+            List<Post> posts = postCRUD.afficher();
+
+            for (Post post : posts) {
+                List<Commentaire> comments = commentaireCRUD.getByPost(post.getIdPost());
+
+                if (!comments.isEmpty()) {
+                    VBox postCard = createPostCommentsCard(post, comments);
+                    commentsContainer.getChildren().add(postCard);
+                }
+            }
+
+            if (commentsContainer.getChildren().isEmpty()) {
+                Label empty = new Label("Aucun commentaire pour le moment");
+                empty.setStyle("-fx-text-fill: #697386; -fx-font-size: 14px;");
+                commentsContainer.getChildren().add(empty);
+            }
+        } catch (SQLException e) {
+            showError("Erreur", "Erreur chargement commentaires: " + e.getMessage());
+        }
+    }
+
+    private VBox createPostCommentsCard(Post post, List<Commentaire> comments) {
+        VBox card = new VBox(16);
+        card.setStyle("-fx-background-color: white; -fx-padding: 24; -fx-background-radius: 12;");
+
+        HBox header = new HBox(12);
+        header.setAlignment(Pos.CENTER_LEFT);
+
+        VBox postInfo = new VBox(4);
+        HBox.setHgrow(postInfo, Priority.ALWAYS);
+
+        Label postTitle = new Label(post.getTitre());
+        postTitle.setStyle("-fx-font-size: 16px; -fx-font-weight: 700; -fx-text-fill: #1a1f36;");
+
+        Label commentCount = new Label(comments.size() + " commentaire" + (comments.size() > 1 ? "s" : ""));
+        commentCount.setStyle("-fx-font-size: 13px; -fx-text-fill: #697386;");
+
+        postInfo.getChildren().addAll(postTitle, commentCount);
+        header.getChildren().add(postInfo);
+
+        VBox commentsList = new VBox(12);
+        for (Commentaire c : comments) {
+            HBox commentBox = new HBox(12);
+            commentBox.setStyle("-fx-background-color: #f8fafc; -fx-padding: 12; -fx-background-radius: 8;");
+            commentBox.setAlignment(Pos.TOP_LEFT);
+
+            VBox commentContent = new VBox(6);
+            HBox.setHgrow(commentContent, Priority.ALWAYS);
+
+            HBox commentHeader = new HBox(8);
+            commentHeader.setAlignment(Pos.CENTER_LEFT);
+
+            Label userName = new Label("Utilisateur #" + c.getUtilisateurId());
+            userName.setStyle("-fx-font-weight: 600; -fx-text-fill: #1a1f36; -fx-font-size: 13px;");
+
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+            Label date = new Label(c.getDateCommentaire().format(formatter));
+            date.setStyle("-fx-text-fill: #8898aa; -fx-font-size: 12px;");
+
+            commentHeader.getChildren().addAll(userName, date);
+
+            Label text = new Label(c.getContenu());
+            text.setStyle("-fx-text-fill: #525f7f; -fx-font-size: 14px;");
+            text.setWrapText(true);
+
+            commentContent.getChildren().addAll(commentHeader, text);
+
+            Button btnDelete = new Button("Supprimer");
+            btnDelete.setStyle("-fx-background-color: transparent; -fx-text-fill: #ef4444; -fx-font-weight: 600; -fx-cursor: hand; -fx-font-size: 12px;");
+            btnDelete.setOnMouseEntered(e -> btnDelete.setStyle("-fx-background-color: #fef2f2; -fx-text-fill: #ef4444; -fx-font-weight: 600; -fx-cursor: hand; -fx-font-size: 12px; -fx-padding: 4 8; -fx-background-radius: 4;"));
+            btnDelete.setOnMouseExited(e -> btnDelete.setStyle("-fx-background-color: transparent; -fx-text-fill: #ef4444; -fx-font-weight: 600; -fx-cursor: hand; -fx-font-size: 12px;"));
+            btnDelete.setOnAction(e -> deleteComment(c.getIdCommentaire()));
+
+            commentBox.getChildren().addAll(commentContent, btnDelete);
+            commentsList.getChildren().add(commentBox);
+        }
+
+        card.getChildren().addAll(header, commentsList);
+        return card;
+    }
+
+    private void deleteComment(int commentId) {
+        try {
+            commentaireCRUD.supprimer(commentId);
+            loadCommentsByPost();
+            loadStatistiques();
+        } catch (SQLException e) {
+            showError("Erreur", "Erreur suppression: " + e.getMessage());
+        }
+    }
+
+    private void loadStatistiques() {
+        try {
+            PostCRUD.StatistiquesGlobales stats = postCRUD.getStatistiquesGlobales();
+
+            if (lblTotalPosts != null) lblTotalPosts.setText(String.valueOf(stats.totalPosts));
+            if (lblTotalComments != null) lblTotalComments.setText(String.valueOf(stats.totalCommentaires));
+            if (lblTotalLikes != null) lblTotalLikes.setText(String.valueOf(stats.totalLikes));
+
+            loadPieChart(stats);
+            loadBarChart();
+            loadLineChart();
+        } catch (SQLException e) {
+            showError("Erreur", "Erreur statistiques: " + e.getMessage());
+        }
+    }
+
+    private void loadPieChart(PostCRUD.StatistiquesGlobales stats) {
+        if (chartPostTypes == null) return;
+
+        ObservableList<PieChart.Data> pieData = FXCollections.observableArrayList(
+                new PieChart.Data("Annonces", stats.totalAnnonces),
+                new PieChart.Data("Événements", stats.totalEvenements)
+        );
+
+        chartPostTypes.setData(pieData);
+        chartPostTypes.setLabelsVisible(true);
+    }
+
+    private void loadBarChart() {
+        if (chartEngagement == null) return;
+
+        try {
+            List<Post> posts = postCRUD.afficher();
+            XYChart.Series<String, Number> series = new XYChart.Series<>();
+            series.setName("Engagement");
+
+            for (int i = 0; i < Math.min(5, posts.size()); i++) {
+                Post p = posts.get(i);
+                int likes = likeCRUD.countByPost(p.getIdPost());
+                int comments = commentaireCRUD.countByPost(p.getIdPost());
+                int total = likes + comments;
+
+                String shortTitle = p.getTitre().length() > 15 ?
+                        p.getTitre().substring(0, 15) + "..." : p.getTitre();
+
+                series.getData().add(new XYChart.Data<>(shortTitle, total));
+            }
+
+            chartEngagement.getData().clear();
+            chartEngagement.getData().add(series);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void loadLineChart() {
+        if (chartActivity == null) return;
+
+        XYChart.Series<String, Number> postsSeries = new XYChart.Series<>();
+        postsSeries.setName("Posts");
+
+        XYChart.Series<String, Number> likesSeries = new XYChart.Series<>();
+        likesSeries.setName("Likes");
+
+        XYChart.Series<String, Number> commentsSeries = new XYChart.Series<>();
+        commentsSeries.setName("Commentaires");
+
+        String[] months = {"Jan", "Fév", "Mar", "Avr", "Mai", "Juin"};
+        Random rand = new Random();
+
+        for (String month : months) {
+            postsSeries.getData().add(new XYChart.Data<>(month, rand.nextInt(20) + 5));
+            likesSeries.getData().add(new XYChart.Data<>(month, rand.nextInt(50) + 10));
+            commentsSeries.getData().add(new XYChart.Data<>(month, rand.nextInt(30) + 5));
+        }
+
+        chartActivity.getData().clear();
+        chartActivity.getData().addAll(postsSeries, likesSeries, commentsSeries);
+    }
+
     private void showError(String title, String message) {
         Alert alert = new Alert(Alert.AlertType.ERROR);
         alert.setTitle(title);
-        alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();
     }
@@ -651,7 +701,6 @@ public class AnnonceController {
     private void showSuccess(String title, String message) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle(title);
-        alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();
     }

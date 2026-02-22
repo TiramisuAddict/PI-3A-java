@@ -432,3 +432,149 @@
 .btn-filter-event:hover {
     -fx-background-color: #BFDBFE;
 }
+
+/* Professional Admin Styles - Add to your customTheme.css */
+
+/* Clean Filter Buttons */
+.btn-filter-clean {
+    -fx-background-color: #f8fafc;
+    -fx-text-fill: #525f7f;
+    -fx-padding: 8 16;
+    -fx-background-radius: 6;
+    -fx-font-weight: 600;
+    -fx-font-size: 13px;
+    -fx-border-color: #dfe3e8;
+    -fx-border-width: 1.5;
+    -fx-border-radius: 6;
+    -fx-cursor: hand;
+}
+
+.btn-filter-clean:hover {
+    -fx-background-color: #1a1f36;
+    -fx-text-fill: white;
+    -fx-border-color: #1a1f36;
+}
+
+.btn-filter-clean:pressed {
+    -fx-background-color: #0f1419;
+}
+
+/* Professional Form Inputs */
+.form-input-pro {
+    -fx-background-color: white;
+    -fx-background-radius: 8;
+    -fx-padding: 12 16;
+    -fx-font-size: 14px;
+    -fx-border-color: #dfe3e8;
+    -fx-border-width: 1.5;
+    -fx-border-radius: 8;
+    -fx-text-fill: #1a1f36;
+}
+
+.form-input-pro:focused {
+    -fx-border-color: #3b82f6;
+    -fx-border-width: 2;
+    -fx-background-color: white;
+}
+
+/* Clean Tab Pane */
+.custom-tab-pane .tab {
+    -fx-background-color: transparent;
+    -fx-padding: 12 24;
+}
+
+.custom-tab-pane .tab-label {
+    -fx-text-fill: #697386;
+    -fx-font-weight: 600;
+    -fx-font-size: 14px;
+}
+
+.custom-tab-pane .tab:selected .tab-label {
+    -fx-text-fill: #1a1f36;
+}
+
+.custom-tab-pane .tab:hover .tab-label {
+    -fx-text-fill: #1a1f36;
+}
+
+.custom-tab-pane .tab-header-background {
+    -fx-background-color: white;
+    -fx-border-color: #eaeef3;
+    -fx-border-width: 0 0 1 0;
+}
+
+.custom-tab-pane .tab:selected {
+    -fx-background-color: white;
+    -fx-border-color: #1a1f36;
+    -fx-border-width: 0 0 2 0;
+}
+
+/* Hover Effects for Action Buttons */
+.btn-primary {
+    -fx-background-color: #3b82f6;
+    -fx-text-fill: white;
+    -fx-background-radius: 8;
+    -fx-padding: 12 24;
+    -fx-font-weight: 700;
+    -fx-cursor: hand;
+}
+
+.btn-primary:hover {
+    -fx-background-color: #2563eb;
+}
+
+.btn-primary:pressed {
+    -fx-background-color: #1d4ed8;
+}
+
+.btn-secondary {
+    -fx-background-color: #f8fafc;
+    -fx-text-fill: #525f7f;
+    -fx-background-radius: 8;
+    -fx-padding: 12 24;
+    -fx-font-weight: 600;
+    -fx-border-color: #dfe3e8;
+    -fx-border-width: 1.5;
+    -fx-border-radius: 8;
+    -fx-cursor: hand;
+}
+
+.btn-secondary:hover {
+    -fx-background-color: #1a1f36;
+    -fx-text-fill: white;
+    -fx-border-color: #1a1f36;
+}
+
+/* Error Labels */
+.error-label {
+    -fx-text-fill: #ef4444;
+    -fx-font-size: 12px;
+    -fx-font-weight: 600;
+}
+
+/* Chart Styling */
+.chart {
+    -fx-background-color: transparent;
+}
+
+.chart-plot-background {
+    -fx-background-color: #fafbfc;
+}
+
+.chart-legend {
+    -fx-background-color: transparent;
+    -fx-padding: 8;
+}
+
+.default-color0.chart-pie { -fx-pie-color: #3b82f6; }
+.default-color1.chart-pie { -fx-pie-color: #f59e0b; }
+
+.default-color0.chart-bar { -fx-bar-fill: #3b82f6; }
+.default-color0.chart-line-symbol { -fx-background-color: #3b82f6; }
+.default-color0.chart-series-line { -fx-stroke: #3b82f6; -fx-stroke-width: 3px; }
+
+.default-color1.chart-line-symbol { -fx-background-color: #ef4444; }
+.default-color1.chart-series-line { -fx-stroke: #ef4444; -fx-stroke-width: 3px; }
+
+.default-color2.chart-line-symbol { -fx-background-color: #10b981; }
+.default-color2.chart-series-line { -fx-stroke: #10b981; -fx-stroke-width: 3px; }
