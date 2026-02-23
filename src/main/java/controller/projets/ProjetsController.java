@@ -1327,18 +1327,15 @@ public class ProjetsController {
         dialog.setHeaderText("📅 Google Calendar connecté");
         dialog.setContentText("Que souhaitez-vous faire ?");
 
-        ButtonType btnSyncProject = new ButtonType("📁 Sync Projet actuel");
-        ButtonType btnSyncAllTasks = new ButtonType("📋 Sync toutes les tâches");
+        ButtonType btnSyncMyTasks = new ButtonType("📋 Sync mes tâches");
         ButtonType btnDisconnect = new ButtonType("🔌 Déconnecter");
         ButtonType btnCancel = new ButtonType("Annuler", ButtonBar.ButtonData.CANCEL_CLOSE);
 
-        dialog.getButtonTypes().setAll(btnSyncProject, btnSyncAllTasks, btnDisconnect, btnCancel);
+        dialog.getButtonTypes().setAll(btnSyncMyTasks, btnDisconnect, btnCancel);
 
         dialog.showAndWait().ifPresent(type -> {
-            if (type == btnSyncProject) {
-                syncCurrentProjectToCalendar();
-            } else if (type == btnSyncAllTasks) {
-                syncAllTasksToCalendar();
+            if (type == btnSyncMyTasks) {
+                showProjectSelectionForSync();
             } else if (type == btnDisconnect) {
                 disconnectGoogleCalendar();
             }
@@ -1346,72 +1343,184 @@ public class ProjetsController {
     }
 
     /**
-     * Sync current project and its tasks to Google Calendar
+     * Show a dialog to select a project from the user's projects, then sync their tasks
      */
-    private void syncCurrentProjectToCalendar() {
-        if (selectedProject == null) {
-            showError("Sync impossible", "Veuillez d'abord sélectionner un projet.");
-            return;
-        }
+    private void showProjectSelectionForSync() {
+        UserSession session = UserSession.getInstance();
 
         try {
-            // Create project event
-            String projectEventId = calendarService.createProjectEvent(selectedProject);
+            // Get projects the user is part of
+            List<Projet> userProjects;
 
-            // Create events for all tasks in the project
-            int tasksSynced = 0;
-            for (Tache task : masterTasks) {
-                try {
-                    calendarService.createTaskEvent(task, selectedProject.getNom());
-                    tasksSynced++;
-                } catch (Exception e) {
-                    System.err.println("Failed to sync task: " + task.getTitre() + " - " + e.getMessage());
-                }
+            if (session.canManageProjects()) {
+                // Managers can see all projects
+                userProjects = projetCRUD.afficher();
+            } else {
+                // Employees only see projects they belong to
+                List<Integer> myProjectIds = equipeCRUD.getProjectIdsForEmployee(session.getUserId());
+                userProjects = projetCRUD.afficher().stream()
+                        .filter(p -> myProjectIds.contains(p.getProjet_id()))
+                        .collect(Collectors.toList());
             }
 
-            showInfo("Synchronisation réussie",
-                    "✅ Projet synchronisé!\n\n" +
-                    "• Projet: " + selectedProject.getNom() + "\n" +
-                    "• Tâches synchronisées: " + tasksSynced + "/" + masterTasks.size());
+            if (userProjects.isEmpty()) {
+                showError("Aucun projet", "Vous n'êtes assigné à aucun projet.");
+                return;
+            }
 
-        } catch (Exception e) {
+            // Create dialog with project selection
+            Dialog<Projet> projectDialog = new Dialog<>();
+            projectDialog.setTitle("Synchroniser avec Google Calendar");
+            projectDialog.setHeaderText("📅 Sélectionnez un projet à synchroniser");
+
+            // Create content
+            VBox content = new VBox(15);
+            content.setPadding(new Insets(20));
+            content.setStyle("-fx-background-color: #F8FAFC;");
+
+            Label instructionLabel = new Label("Choisissez un projet pour synchroniser vos tâches assignées:");
+            instructionLabel.setStyle("-fx-font-size: 13px; -fx-text-fill: #475569;");
+
+            ComboBox<Projet> projectCombo = new ComboBox<>();
+            projectCombo.getItems().addAll(userProjects);
+            projectCombo.setPromptText("Sélectionner un projet...");
+            projectCombo.setPrefWidth(300);
+            projectCombo.setStyle("-fx-background-radius: 8; -fx-border-radius: 8;");
+
+            // Custom cell factory to show project name nicely
+            projectCombo.setCellFactory(lv -> new ListCell<>() {
+                @Override
+                protected void updateItem(Projet item, boolean empty) {
+                    super.updateItem(item, empty);
+                    if (empty || item == null) {
+                        setText(null);
+                    } else {
+                        setText("📁 " + item.getNom() + " (" + prettyEnum(item.getStatut()) + ")");
+                    }
+                }
+            });
+            projectCombo.setButtonCell(new ListCell<>() {
+                @Override
+                protected void updateItem(Projet item, boolean empty) {
+                    super.updateItem(item, empty);
+                    if (empty || item == null) {
+                        setText("Sélectionner un projet...");
+                    } else {
+                        setText("📁 " + item.getNom());
+                    }
+                }
+            });
+
+            // Info label to show task count
+            Label taskInfoLbl = new Label("");
+            taskInfoLbl.setStyle("-fx-font-size: 12px; -fx-text-fill: #64748B;");
+
+            projectCombo.valueProperty().addListener((obs, oldVal, newVal) -> {
+                if (newVal != null) {
+                    try {
+                        int taskCount = countUserTasksInProject(newVal.getProjet_id(), session.getUserId(), session.canManageProjects());
+                        taskInfoLbl.setText("📋 " + taskCount + " tâche(s) à synchroniser");
+                    } catch (SQLException e) {
+                        taskInfoLbl.setText("");
+                    }
+                }
+            });
+
+            content.getChildren().addAll(instructionLabel, projectCombo, taskInfoLbl);
+
+            projectDialog.getDialogPane().setContent(content);
+            projectDialog.getDialogPane().getButtonTypes().addAll(
+                    new ButtonType("🔄 Synchroniser", ButtonBar.ButtonData.OK_DONE),
+                    new ButtonType("Annuler", ButtonBar.ButtonData.CANCEL_CLOSE)
+            );
+
+            // Disable sync button until project is selected
+            projectDialog.getDialogPane().lookupButton(projectDialog.getDialogPane().getButtonTypes().get(0))
+                    .disableProperty().bind(projectCombo.valueProperty().isNull());
+
+            projectDialog.setResultConverter(buttonType -> {
+                if (buttonType.getButtonData() == ButtonBar.ButtonData.OK_DONE) {
+                    return projectCombo.getValue();
+                }
+                return null;
+            });
+
+            Optional<Projet> result = projectDialog.showAndWait();
+            result.ifPresent(this::syncUserTasksForProject);
+
+        } catch (SQLException e) {
             e.printStackTrace();
-            showError("Erreur de synchronisation", "Impossible de synchroniser: " + e.getMessage());
+            showError("Erreur", "Impossible de charger les projets: " + e.getMessage());
         }
     }
 
     /**
-     * Sync all tasks from all projects to Google Calendar
+     * Count tasks assigned to the user in a specific project
      */
-    private void syncAllTasksToCalendar() {
+    private int countUserTasksInProject(int projectId, int userId, boolean isManager) throws SQLException {
+        List<Tache> allTasks = tacheCRUD.afficher();
+        return (int) allTasks.stream()
+                .filter(t -> t.getId_projet() == projectId)
+                .filter(t -> isManager || t.getId_employe() == userId)
+                .count();
+    }
+
+    /**
+     * Sync the user's tasks for a specific project to Google Calendar
+     */
+    private void syncUserTasksForProject(Projet project) {
+        UserSession session = UserSession.getInstance();
+
         try {
+            // Get all tasks for the project
             List<Tache> allTasks = tacheCRUD.afficher();
-            int synced = 0;
-            int failed = 0;
 
-            for (Tache task : allTasks) {
-                try {
-                    // Find project name for the task
-                    String projectName = "Projet #" + task.getId_projet();
-                    for (Projet p : masterProjects) {
-                        if (p.getProjet_id() == task.getId_projet()) {
-                            projectName = p.getNom();
-                            break;
-                        }
-                    }
+            // Filter tasks: for managers show all project tasks, for employees only their tasks
+            List<Tache> tasksToSync = allTasks.stream()
+                    .filter(t -> t.getId_projet() == project.getProjet_id())
+                    .filter(t -> session.canManageProjects() || t.getId_employe() == session.getUserId())
+                    .collect(Collectors.toList());
 
-                    calendarService.createTaskEvent(task, projectName);
-                    synced++;
-                } catch (Exception e) {
-                    failed++;
-                    System.err.println("Failed to sync task: " + task.getTitre() + " - " + e.getMessage());
-                }
+            if (tasksToSync.isEmpty()) {
+                showInfo("Aucune tâche", "Vous n'avez aucune tâche assignée dans ce projet.");
+                return;
             }
 
-            showInfo("Synchronisation terminée",
-                    "📅 Synchronisation des tâches:\n\n" +
-                    "✅ Réussies: " + synced + "\n" +
-                    "❌ Échecs: " + failed);
+            // Show progress dialog
+            Alert progressAlert = new Alert(Alert.AlertType.INFORMATION);
+            progressAlert.setTitle("Synchronisation");
+            progressAlert.setHeaderText("🔄 Synchronisation en cours...");
+            progressAlert.setContentText("Veuillez patienter...");
+            progressAlert.show();
+
+            // Sync in background thread
+            new Thread(() -> {
+                int synced = 0;
+                int failed = 0;
+
+                for (Tache task : tasksToSync) {
+                    try {
+                        calendarService.createTaskEvent(task, project.getNom());
+                        synced++;
+                    } catch (Exception e) {
+                        failed++;
+                        System.err.println("Failed to sync task: " + task.getTitre() + " - " + e.getMessage());
+                    }
+                }
+
+                final int finalSynced = synced;
+                final int finalFailed = failed;
+
+                Platform.runLater(() -> {
+                    progressAlert.close();
+                    showInfo("Synchronisation terminée",
+                            "📅 Synchronisation avec Google Calendar:\n\n" +
+                            "📁 Projet: " + project.getNom() + "\n" +
+                            "👤 Utilisateur: " + session.getFullName() + "\n\n" +
+                            "✅ Tâches synchronisées: " + finalSynced + "\n" +
+                            (finalFailed > 0 ? "❌ Échecs: " + finalFailed : ""));
+                });
+            }).start();
 
         } catch (SQLException e) {
             e.printStackTrace();
