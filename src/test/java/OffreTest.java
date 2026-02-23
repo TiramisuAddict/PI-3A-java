@@ -23,7 +23,7 @@ public class OffreTest {
     @Test
     @Order(1)
     void testAjouterOffre() throws SQLException {
-        Offre offre = new Offre("OFFRE123", 1, "Développeur Java", entity.TypeContrat.CDI, java.sql.Date.valueOf("2024-12-31"), EtatOffre.OUVERT);
+        Offre offre = new Offre(1, "Développeur Java", entity.TypeContrat.CDI, java.sql.Date.valueOf("2024-12-31"), EtatOffre.OUVERT, "Description test pour ajout");
         oCRUD.ajouter(offre);
         idOffreTest = oCRUD.getIdByCodeOffre("OFFRE123");
         offre.setId(idOffreTest);
@@ -39,7 +39,7 @@ public class OffreTest {
     @Test
     @Order(2)
     void testModifierOffre() throws SQLException {
-        Offre offre = new Offre("OFFRE321", 1, "Développeur Java Senior", entity.TypeContrat.CDI, java.sql.Date.valueOf("2024-12-31"), EtatOffre.OUVERT);
+        Offre offre = new Offre(1, "Développeur Java Senior", entity.TypeContrat.CDI, java.sql.Date.valueOf("2024-12-31"), EtatOffre.OUVERT, "Description test pour modification");
         offre.setId(idOffreTest);
         oCRUD.modifier(offre);
 

@@ -116,6 +116,13 @@
 }
 .stat-accepted .label { -fx-text-fill: -color-success-fg; }
 
+
+/* ------------------------------------------------------------------- */
+
+.job-card {
+    -fx-transition: all 0.3s ease-in-out;
+}
+
 /* Fixed Side Panel */
 .side-inspector {
     -fx-background-color: -color-bg-subtle;
@@ -123,4 +130,93 @@
     -fx-border-width: 0 0 0 1;
     -fx-min-width: 350;
     -fx-pref-width: 350;
+}
+/* Remove the blue focus ring from the HTMLEditor */
+
+/* If the border still appears, force a neutral color or hide it */
+.html-editor {
+    -fx-border-color: -color-border-default; /* Use the standard gray border */
+    -fx-border-width: 1px; /* Keep it thin */
+}
+
+.html-editor .web-view {
+    -fx-focus-traversable: false;
+}
+
+
+/* Base style for all badges */
+.badge {
+    -fx-padding: 2 10;
+    -fx-background-radius: 12;
+    -fx-font-size: 10;
+    -fx-font-weight: bold;
+}
+
+/* Color variations using theme variables */
+.badge-accent {
+    -fx-background-color: -color-accent-subtle;
+    -fx-text-fill: -color-accent-fg;
+}
+
+.badge-success {
+    -fx-background-color: -color-success-subtle;
+    -fx-text-fill: -color-success-fg;
+}
+
+.badge-danger {
+    -fx-background-color: -color-danger-subtle;
+    -fx-text-fill: -color-danger-fg;
+}
+
+.badge-info {
+    -fx-background-color: -color-info-subtle;
+    -fx-text-fill: -color-info-fg;
+}
+
+.badge-neutral {
+    -fx-background-color: -color-base-2;
+    -fx-text-fill: -color-fg-muted;
+}
+
+/* Ensure the root knows these variables exist */
+.root {
+    /* If the theme lookups fail, these act as fallbacks */
+    -color-info-fg: -color-accent-fg; /* Fallback to accent if info is missing */
+    -color-info-subtle: -color-accent-subtle;
+}
+
+/* Base style for all badges */
+.badge {
+    -fx-padding: 2 10;
+    -fx-background-radius: 12;
+    -fx-font-size: 10;
+    -fx-font-weight: bold;
+}
+
+/* Color variations */
+.badge-accent {
+    -fx-background-color: -color-accent-subtle;
+    -fx-text-fill: -color-accent-fg;
+}
+
+.badge-success {
+    -fx-background-color: -color-success-subtle;
+    -fx-text-fill: -color-success-fg;
+}
+
+.badge-danger {
+    -fx-background-color: -color-danger-subtle;
+    -fx-text-fill: -color-danger-fg;
+}
+
+/* Use direct theme colors (-color-info-5 is a standard AtlantaFX color)
+   to avoid the 'derived lookup' error */
+.badge-info {
+    -fx-background-color: #ddf4ff; /* Hardcoded light blue for safety */
+    -fx-text-fill: #0969da;        /* Hardcoded dark blue for safety */
+}
+
+.badge-neutral {
+    -fx-background-color: -color-base-2;
+    -fx-text-fill: -color-fg-muted;
 }

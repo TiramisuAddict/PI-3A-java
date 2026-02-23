@@ -9,38 +9,38 @@ public class BadgeFactory {
 
         Label badge = new Label(status.toUpperCase());
 
-        String baseStyle = "-fx-padding: 2 10; -fx-background-radius: 12; -fx-font-size: 10; -fx-font-weight: bold;";
-        String colorStyle = "";
+        // Add the base style class
+        badge.getStyleClass().add("badge");
 
+        // Add the specific color class based on status
         switch (status.toLowerCase()) {
-            // Recrutement (Candidat)
             case "présélectionné":
             case "ouvert":
-                colorStyle = "-fx-background-color: -color-accent-subtle; -fx-text-fill: -color-accent-fg;";
+                badge.getStyleClass().add("badge-accent");
                 break;
 
             case "accepté":
             case "publiée":
-                colorStyle = "-fx-background-color: -color-success-subtle; -fx-text-fill: -color-success-fg;";
+                badge.getStyleClass().add("badge-success");
                 break;
 
             case "refusé":
             case "fermé":
-                colorStyle = "-fx-background-color: -color-danger-subtle; -fx-text-fill: -color-danger-fg;";
+            case "annulée":
+                badge.getStyleClass().add("badge-danger");
                 break;
 
             case "entretien":
-                colorStyle = "-fx-background-color: -color-info-subtle; -fx-text-fill: -color-info-fg;";
+                badge.getStyleClass().add("badge-info");
                 break;
 
             case "en attente":
             case "en cours":
             default:
-                colorStyle = "-fx-background-color: -color-base-2; -fx-text-fill: -color-fg-muted;";
+                badge.getStyleClass().add("badge-neutral");
                 break;
         }
 
-        badge.setStyle(baseStyle + colorStyle);
         return badge;
     }
 }

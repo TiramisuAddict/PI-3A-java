@@ -22,46 +22,44 @@ import java.util.stream.Collectors;
 
 public class CandidatController {
 
-    //construction
+    //Side panel labels and inputs
     @FXML private Label lblFullname, lblEmail, lblPhone;
-
     @FXML private ComboBox<String> comboUpdatePhase;
-
     @FXML private TextArea txtNotes;
+
+    //Table selection
+    @FXML private TableView<Candidat> tableCandidats;
+
+    @FXML private TableColumn<Candidat, String> colIdentite;
+    @FXML private TableColumn<Candidat, String> colEmail;
+    @FXML private TableColumn<Candidat, String> colEtat;
+    @FXML private TableColumn<Candidat, Date> colDate;
 
     private Candidat selectedCandidat;
 
     //comboFilterOffre
     @FXML private ComboBox<String> comboFilterOffre;
 
-    @FXML private TableView<Candidat> tableCandidats;
-    @FXML private TableColumn<Candidat, String> colIdentite;
-    @FXML private TableColumn<Candidat, String> colEmail;
-    @FXML private TableColumn<Candidat, String> colEtat;
-    @FXML private TableColumn<Candidat, Date> colDate;
+    //Stats labels
+    @FXML private Label lblEnAttente, lblPreselectionne, lblEntretien, lblAccepte;
 
     @FXML
     public void initialize() {
-        // 1. Setup Phase ComboBox options
-        comboUpdatePhase.setItems(FXCollections.observableArrayList(
-                "En attente", "Présélectionné", "Entretien", "Accepté", "Refusé"
-        ));
+        comboUpdatePhase.setItems(FXCollections.observableArrayList("En attente", "Présélectionné", "Entretien", "Accepté", "Refusé"));
 
-        setupTable();
-        loadOffresIntoCombo();
-        loadCandidatData();
-
-        // 2. AUTO-FILL LOGIC: Listen for table selection
+        // Fill table on selection change
         tableCandidats.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
             if (newSelection != null) {
                 this.selectedCandidat = newSelection;
                 fillSidePanel(newSelection);
             }
         });
+
+        setupTable();
+        loadCandidatData();
     }
 
-    //TAHA : fill comboFilterOffre with the list of offers from the database (OffreCRUD)
-    private void loadOffresIntoCombo() {
+    public void loadOffresIntoCombo() {
         try {
             OffreCRUD offreCRUD = new OffreCRUD();
             List<Offre> offres = offreCRUD.afficher();
@@ -69,69 +67,26 @@ public class CandidatController {
                     .map(Offre::getTitrePoste)
                     .collect(Collectors.toCollection(FXCollections::observableArrayList)
             );
+
             comboFilterOffre.setItems(offreNames);
         }catch (SQLException e) {
             e.printStackTrace();
         }
-    }
+    } // LOAD OFFER NAMES IN COMBOBOX
 
-    private void fillSidePanel(Candidat candidat) {
-        lblFullname.setText(candidat.getPrenom() + " " + candidat.getNom());
-        lblEmail.setText(candidat.getEmail());
-        lblPhone.setText("📞 " + candidat.getNumTel());
-
-        // Auto-fill the inputs
-        txtNotes.setText(candidat.getNote());
-        comboUpdatePhase.setValue(candidat.getEtat());
-    }
-
-    // 3. SAVE LOGIC: Update Database and UI
     @FXML
-    private void handleSaveUpdate() {
-        if (selectedCandidat == null) {
-            System.out.println("Aucun candidat sélectionné");
-            return;
-        }
-
-        try {
-            // Update the object in memory
-            selectedCandidat.setEtat(comboUpdatePhase.getValue());
-            selectedCandidat.setNote(txtNotes.getText());
-
-            // Update the Database
-            service.CandidatCRUD crud = new service.CandidatCRUD();
-            crud.modifier(selectedCandidat); // Make sure you have a modifier method
-
-            // Visual feedback: Refresh the table row
-            tableCandidats.refresh();
-
-            // Refresh statistics (since the phase changed)
-            //updateStatistics(tableCandidats.getItems());
-
-            System.out.println("Candidat mis à jour avec succès !");
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    //TAHA : LOAD CNDIDAT DATA
-    @FXML // MUST have this so FXML can see the method
     private void loadCandidatData() {
-        // 1. Get the selected offer title
         String selectedOffre = comboFilterOffre.getSelectionModel().getSelectedItem();
         if (selectedOffre == null) return;
 
         OffreCRUD offreCRUD = new OffreCRUD();
         try {
-            // 2. Find the ID of the offer
             int idOffre = offreCRUD.afficher().stream()
                     .filter(o -> o.getTitrePoste().equals(selectedOffre))
                     .map(Offre::getId)
                     .findFirst()
                     .orElseThrow(() -> new SQLException("Offre not found"));
 
-            // 3. Get the list of candidates for this specific ID
             List<Candidat> filteredList = new service.CandidatCRUD().afficher().stream()
                     .filter(c -> c.getIdOffre() == idOffre)
                     .toList();
@@ -139,26 +94,21 @@ public class CandidatController {
             ObservableList<Candidat> observableCandidats = FXCollections.observableArrayList(filteredList);
             tableCandidats.setItems(observableCandidats);
 
-            // 5. Update your statistics too! (Optional but recommended)
-            //updateStatistics(filteredList);
+            updateStatistics(filteredList);
 
         } catch (SQLException e) {
             e.printStackTrace();
         }
-    }
+    } //LOAD CANDIDATS BASED ON SELECTED OFFER IN COMBOBOX
 
     private void setupTable() {
-        // 1. Map Identity (Combine First Name + Last Name)
         colIdentite.setCellValueFactory(cellData ->
                 new SimpleStringProperty(cellData.getValue().getPrenom() + " " + cellData.getValue().getNom()));
 
-        // 2. Map Email
         colEmail.setCellValueFactory(new PropertyValueFactory<>("email"));
 
-        // 3. Map Date
         colDate.setCellValueFactory(new PropertyValueFactory<>("dateCandidature"));
 
-        // 4. Map Etat with a Custom Badge (Recruitment Phase)
         colEtat.setCellValueFactory(new PropertyValueFactory<>("etat"));
         colEtat.setCellFactory(column -> new TableCell<>() {
             @Override
@@ -171,28 +121,51 @@ public class CandidatController {
                 }
             }
         });
-    }
+    } // MAP DATA TO TABLE COLUMNS
 
-    private void showCandidatDetails(Candidat candidat) {
+    private void updateStatistics(List<Candidat> list) {
+        long pending = list.stream().filter(c -> c.getEtat().equalsIgnoreCase("En attente")).count();
+        long preselected = list.stream().filter(c -> c.getEtat().equalsIgnoreCase("Présélectionné")).count();
+        long interview = list.stream().filter(c -> c.getEtat().equalsIgnoreCase("Entretien")).count();
+        long accepted = list.stream().filter(c -> c.getEtat().equalsIgnoreCase("Accepté")).count();
+
+        lblEnAttente.setText(String.valueOf(pending));
+        lblPreselectionne.setText(String.valueOf(preselected));
+        lblEntretien.setText(String.valueOf(interview));
+        lblAccepte.setText(String.valueOf(accepted));
+    } //SET STATS FROM DATABASE
+
+    private void fillSidePanel(Candidat candidat) {
         lblFullname.setText(candidat.getPrenom() + " " + candidat.getNom());
         lblEmail.setText(candidat.getEmail());
-        lblPhone.setText("📞 " + candidat.getNumTel()); // Show Phone
+        lblPhone.setText("📞 " + candidat.getNumTel());
+
         txtNotes.setText(candidat.getNote());
-    }
+        comboUpdatePhase.setValue(candidat.getEtat());
+    } //FILL SIDE PANEL ON TABLE ROW SELECTION
 
     @FXML
-    private void handleDownloadCV() {
-        saveFile(selectedCandidat.getCvData(), selectedCandidat.getCvNom());
-    }
+    private void updateCandidatStatus() {
+        if (selectedCandidat == null) {
+            System.out.println("Aucun candidat sélectionné");
+            return;
+        }
 
-    @FXML
-    private void handleDownloadLettre() {
-        saveFile(selectedCandidat.getLettreMotivationData(), selectedCandidat.getLettreMotivationNom());
-    }
+        try {
+            selectedCandidat.setEtat(comboUpdatePhase.getValue());
+            selectedCandidat.setNote(txtNotes.getText());
 
-    /**
-     * Logic to save byte[] from DB to a physical file on the computer
-     */
+            service.CandidatCRUD crud = new service.CandidatCRUD();
+            crud.modifier(selectedCandidat);
+
+            tableCandidats.refresh();
+
+            updateStatistics(tableCandidats.getItems());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    } // UPDATE CANDIDAT STATUS AND NOTES IN DB
+
     private void saveFile(byte[] data, String defaultName) {
         if (data == null || data.length == 0) {
             System.out.println("Aucun fichier disponible.");
@@ -215,4 +188,15 @@ public class CandidatController {
             }
         }
     }
+
+    @FXML
+    private void handleDownloadCV() {
+        saveFile(selectedCandidat.getCvData(),
+                selectedCandidat.getCvNom());
+    } // DOWNLOAD CV FILE OF SELECTED CANDIDAT
+
+    @FXML
+    private void handleDownloadLettre() {
+        saveFile(selectedCandidat.getLettreMotivationData(), selectedCandidat.getLettreMotivationNom());
+    } // DOWNLOAD COVER LETTER FILE OF SELECTED CANDIDAT
 }

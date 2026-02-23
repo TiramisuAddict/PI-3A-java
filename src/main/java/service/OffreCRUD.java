@@ -13,34 +13,22 @@ import utils.MyDB;
 public class OffreCRUD implements InterfaceCRUD <Offre>{
 
     Connection conn;
+
     public OffreCRUD() { conn = MyDB.getInstance().getConn(); }
-
-    public int getIdByCodeOffre(String code) throws SQLException {
-        String req = "SELECT id FROM offre WHERE code_offre=?";
-
-        PreparedStatement ps = conn.prepareStatement(req);
-        ps.setString(1, code);
-        ResultSet rs = ps.executeQuery();
-
-        if (rs.next()) {
-            return rs.getInt("id");
-        }
-        throw new SQLException("Offre with code '" + code + "' not found");
-    }
 
     @Override
     public void ajouter(Offre o) throws SQLException {
-        String req = "INSERT INTO offre (code_offre, id_employer, titre_poste, type_contrat, date_limite, etat) " +
+        String req = "INSERT INTO offre (id_employer, titre_poste, type_contrat, date_limite, etat, description) " +
                 "VALUES (?, ?, ?, ?, ?, ?)";
 
         PreparedStatement ps = conn.prepareStatement(req);
 
-        ps.setString(1, o.getCodeOffre());
-        ps.setInt(2, o.getIdEmployer());
-        ps.setString(3, o.getTitrePoste());
-        ps.setString(4, o.getTypeContrat().getDisplayName());
-        ps.setDate(5, o.getDateLimite());
-        ps.setString(6, o.getEtat().getDisplayName());
+        ps.setInt(1, o.getIdEmployer());
+        ps.setString(2, o.getTitrePoste());
+        ps.setString(3, o.getTypeContrat().getDisplayName());
+        ps.setDate(4, o.getDateLimite());
+        ps.setString(5, o.getEtat().getDisplayName());
+        ps.setString(6, o.getDescription());
 
         ps.executeUpdate();
         System.out.println("Offre ajoutée !");
@@ -48,15 +36,15 @@ public class OffreCRUD implements InterfaceCRUD <Offre>{
 
     @Override
     public void modifier(Offre o) throws SQLException {
-        String req="UPDATE offre SET code_offre=?,titre_poste=?,type_contrat=?,date_limite=?,etat=? WHERE id=?";
+        String req="UPDATE offre SET titre_poste=?,type_contrat=?,date_limite=?,etat=?,description=? WHERE id=?";
 
         PreparedStatement ps = conn.prepareStatement(req);
 
-        ps.setString(1, o.getCodeOffre());
-        ps.setString(2, o.getTitrePoste());
-        ps.setString(3, o.getTypeContrat().getDisplayName());
-        ps.setDate(4, o.getDateLimite());
-        ps.setString(5, o.getEtat().getDisplayName());
+        ps.setString(1, o.getTitrePoste());
+        ps.setString(2, o.getTypeContrat().getDisplayName());
+        ps.setDate(3, o.getDateLimite());
+        ps.setString(4, o.getEtat().getDisplayName());
+        ps.setString(5, o.getDescription());
 
         ps.setInt(6, o.getId());
 
@@ -89,12 +77,12 @@ public class OffreCRUD implements InterfaceCRUD <Offre>{
             Offre o = new Offre();
 
             o.setId(rs.getInt("id"));
-            o.setCodeOffre(rs.getString("code_offre"));
             o.setIdEmployer(rs.getInt("id_employer"));
             o.setTitrePoste(rs.getString("titre_poste"));
             o.setTypeContrat(TypeContrat.fromDisplayName(rs.getString("type_contrat")));
             o.setDateLimite(rs.getDate("date_limite"));
             o.setEtat(EtatOffre.fromDisplayName(rs.getString("etat")));
+            o.setDescription(rs.getString("description"));
 
             listeOffres.add(o);
         }
@@ -102,7 +90,7 @@ public class OffreCRUD implements InterfaceCRUD <Offre>{
         return listeOffres;
     }
 
-    public Offre getById(int idOffre) {
+    public Offre getById(int idOffre) throws SQLException {
         String req = "SELECT * FROM offre WHERE id=?";
 
         try {
@@ -114,17 +102,17 @@ public class OffreCRUD implements InterfaceCRUD <Offre>{
                 Offre o = new Offre();
 
                 o.setId(rs.getInt("id"));
-                o.setCodeOffre(rs.getString("code_offre"));
                 o.setIdEmployer(rs.getInt("id_employer"));
                 o.setTitrePoste(rs.getString("titre_poste"));
                 o.setTypeContrat(TypeContrat.fromDisplayName(rs.getString("type_contrat")));
                 o.setDateLimite(rs.getDate("date_limite"));
                 o.setEtat(EtatOffre.fromDisplayName(rs.getString("etat")));
+                o.setDescription(rs.getString("description"));
 
                 return o;
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw e;
         }
 
         return null;

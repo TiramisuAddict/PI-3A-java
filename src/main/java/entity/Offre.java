@@ -4,40 +4,36 @@ import java.sql.Date;
 
 public class Offre {
     private Integer id;
-    private String codeOffre;
     private Integer idEmployer;
     private String titrePoste;
     private TypeContrat typeContrat;
     private Date dateLimite;
     private EtatOffre etat;
+    private String description;
 
     public Offre() {}
 
-    public Offre (Integer id , String codeOffre, Integer idEmployer, String titrePoste, TypeContrat typeContrat, Date dateLimite, EtatOffre etat) {
+    public Offre (Integer id, Integer idEmployer, String titrePoste, TypeContrat typeContrat, Date dateLimite, EtatOffre etat, String description) {
         this.id = id;
-        this.codeOffre = codeOffre;
         this.idEmployer = idEmployer;
         this.titrePoste = titrePoste;
         this.typeContrat = typeContrat;
         this.dateLimite = dateLimite;
         this.etat = etat;
+        this.description = description;
     }
 
-    public Offre (String codeOffre, Integer idEmployer, String titrePoste, TypeContrat typeContrat, Date dateLimite, EtatOffre etat) {
-        this.codeOffre = codeOffre;
+    public Offre (Integer idEmployer, String titrePoste, TypeContrat typeContrat, Date dateLimite, EtatOffre etat, String description) {
         this.idEmployer = idEmployer;
         this.titrePoste = titrePoste;
         this.typeContrat = typeContrat;
         this.dateLimite = dateLimite;
         this.etat = etat;
+        this.description = description;
     }
 
     public Integer getId() {
         return id;
-    }
-
-    public String getCodeOffre() {
-        return codeOffre;
     }
 
     public Integer getIdEmployer() {
@@ -60,12 +56,10 @@ public class Offre {
         return etat;
     }
 
+    public String getDescription() {return description;}
+
     public void setId(Integer id) {
         this.id = id;
-    }
-
-    public void setCodeOffre(String codeOffre) {
-        this.codeOffre = codeOffre;
     }
 
     public void setIdEmployer(Integer idEmployer) {
@@ -88,11 +82,11 @@ public class Offre {
         this.etat = etat;
     }
 
+    public void setDescription(String description) {this.description = description;}
+
     @Override
     public String toString() {
         return "Offre{" +
-//                "id=" + id +
-                ", codeOffre='" + codeOffre + '\'' +
                 ", idEmployer=" + idEmployer +
                 ", titrePoste='" + titrePoste + '\'' +
                 ", typeContrat='" + typeContrat.getDisplayName() + '\'' +

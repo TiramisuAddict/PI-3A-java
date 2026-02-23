@@ -6,96 +6,102 @@ import entity.TypeContrat;
 import javafx.collections.FXCollections;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
 import javafx.geometry.Pos;
+import javafx.scene.Parent;
 import javafx.scene.control.*;
+
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.*;
 import service.OffreCRUD;
 import utils.BadgeFactory;
 import utils.LayoutAnimator;
 
+import java.io.IOException;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Set;
+
+import javafx.stage.Modality;
+import javafx.stage.Stage;
+import javafx.scene.Scene;
 
 public class OffreController {
 
-    @FXML private TextField txtCode, txtTitre;
+    //Form components
+    @FXML private TextField txtTitre;
     @FXML private ComboBox<TypeContrat> comboType;
     @FXML private DatePicker dpDate;
     @FXML private ComboBox<EtatOffre> comboEtat;
+    @FXML private Button btnSave, btnUpdate, btnDelete,btnDetail;
 
+    //List container
     @FXML private VBox offersContainer;
-    @FXML private FlowPane StatisticsPane;
 
+    //Variables
+    private final Set<Offre> selectedOffres = new java.util.HashSet<>();
+
+    private String currentDescription = "";
     OffreCRUD crud = new OffreCRUD();
 
-    //Under Construction
-    private HBox selectedPathCard = null;
+    //Stats components
+    @FXML private Label lblTotal, lblOuvert, lblFerme;
+    @FXML private FlowPane StatisticsPane;
 
+    //Search components
     @FXML private TextField txtSearch;
-    @FXML private ComboBox<String> filterType;
+
+    //Filter checkbox
+    @FXML private ComboBox<String> filterTypeCB;
 
     @FXML
     public void initialize() {
-
+        //Animations
         new LayoutAnimator(offersContainer);
         new LayoutAnimator(StatisticsPane);
 
+        //Fill form combo boxes
         comboType.setItems(FXCollections.observableArrayList(TypeContrat.values()));
         comboEtat.setItems(FXCollections.observableArrayList(EtatOffre.values()));
 
-        filterType.setItems(FXCollections.observableArrayList("Tous", "CDI", "CDD", "CVP", "Stage"));
+        filterTypeCB.setItems(FXCollections.observableArrayList("Tous", "CDI", "CDD", "CVP", "Stage"));
 
-        refreshDashboard();
+        loadOffersList();
     }
 
-    @FXML
-    public void generateCodeOffer(ActionEvent actionEvent) {
-        String prefix = (txtTitre.getText().length() >= 3) ? txtTitre.getText().substring(0, 3).toUpperCase() : txtTitre.getText().toUpperCase();
-
-        long currentTime = System.currentTimeMillis();
-
-        String timeBase36 = Long.toString(currentTime, 36).toUpperCase();
-        String suffix = timeBase36.substring(timeBase36.length() - 5);
-
-        txtCode.setText(prefix + suffix);
-    }
-
-    private void refreshDashboard() {
+    private void loadOffersList() {
         offersContainer.getChildren().clear();
 
         List<Offre> offres;
+
         try {
             offres = crud.afficher();
             for (Offre o : offres) {
                 addOfferCard(o);
             }
+
+            lblTotal.setText(String.valueOf(offres.size()));
+            lblOuvert.setText(String.valueOf(offres.stream().filter(o -> o.getEtat() == EtatOffre.OUVERT).count()));
+            lblFerme.setText(String.valueOf(offres.stream().filter(o -> o.getEtat() == EtatOffre.FERME).count()));
+
+            offersContainer.layout();
         } catch (SQLException e) {
             System.out.println("Erreur lors du chargement des offres: " + e.getMessage());
         }
-    }
-
-    private String formatDate(String dateStr) {
-        LocalDate date = LocalDate.parse(dateStr);
-        return date.format(java.time.format.DateTimeFormatter.ofPattern("dd MMM yyyy"));
-    }
+    } //LOAD CARDS AND BASIC STATS
 
     private void addOfferCard(Offre o) {
         HBox card = new HBox();
-        //unstable
-        card.getStyleClass().add("glass-card");
-
         card.setSpacing(20);
         card.setAlignment(Pos.CENTER_LEFT);
+        card.getStyleClass().add("glass-card");
+        card.setStyle("-fx-background-color: -color-bg-default; -fx-background-radius: 10; " +
+                "-fx-padding: 15; -fx-border-color: -color-border-muted; -fx-border-radius: 10; -fx-cursor: hand;");
 
-        card.setStyle("-fx-background-color: -color-bg-subtle; " +
-                "-fx-background-radius: 5; " +
-                "-fx-padding: 15; " +
-                "-fx-border-color: -color-border-muted; " +
-                "-fx-border-radius: 5; " +
-                "-fx-cursor: hand;");
+        CheckBox cb = new CheckBox();
+        cb.setMouseTransparent(true);
 
-        // Icon
         StackPane iconBox = new StackPane();
         iconBox.setPrefSize(45, 45);
         iconBox.setStyle("-fx-background-color: -color-accent-3; -fx-background-radius: 5;");
@@ -103,37 +109,30 @@ public class OffreController {
         iconLabel.setStyle("-fx-text-fill: white;");
         iconBox.getChildren().add(iconLabel);
 
-        // Text Content
         VBox details = new VBox();
         HBox.setHgrow(details, Priority.ALWAYS);
         Label titleLabel = new Label(o.getTitrePoste());
         titleLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 16px;");
-
-        Label subLabel = new Label(o.getCodeOffre() + " • " + o.getTypeContrat() + " • Expire le: " + formatDate(o.getDateLimite().toString()));
-
+        Label subLabel = new Label(o.getTypeContrat() + " • Expire le: " + formatDate(o.getDateLimite().toString()));
         subLabel.getStyleClass().add("text-muted");
         details.getChildren().addAll(titleLabel, subLabel);
 
-        card.getChildren().addAll(iconBox, details, BadgeFactory.createBadge(o.getEtat().getDisplayName().toUpperCase()));
-
+        card.getChildren().addAll(cb, iconBox, details, BadgeFactory.createBadge(o.getEtat().getDisplayName().toUpperCase()));
 
         card.setOnMouseClicked(e -> {
-            // 1. CLEAR previous selection
-            if (selectedPathCard != null) {
-                selectedPathCard.getStyleClass().remove("card-selected");
-            }// 2. APPLY new selection
-            card.getStyleClass().add("card-selected");
-            selectedPathCard = card;
+            cb.setSelected(!cb.isSelected());
 
-            txtCode.setText(o.getCodeOffre());
-            txtTitre.setText(o.getTitrePoste());
-            comboType.setValue(o.getTypeContrat());
-            comboEtat.setValue(o.getEtat());
-            dpDate.setValue(LocalDate.parse(o.getDateLimite().toString()));
+            if (cb.isSelected()) {
+                selectedOffres.add(o);
+            } else {
+                selectedOffres.remove(o);
+            }
+
+            updateButtonStates();
         });
 
         offersContainer.getChildren().add(card);
-    }
+    } //CREATE CARDS
 
     private boolean formOffreValide() {
         if (txtTitre.getText() == null || txtTitre.getText().length() <= 4) {
@@ -141,16 +140,6 @@ public class OffreController {
             alert.setTitle("Erreur de validation");
             alert.setHeaderText(null);
             alert.setContentText("Le titre de l'offre doit contenir au moins 5 caractères.");
-            alert.showAndWait();
-
-            return false;
-        }
-
-        if (txtCode.getText() == null ){
-            Alert alert = new Alert(Alert.AlertType.ERROR);
-            alert.setTitle("Erreur de validation");
-            alert.setHeaderText(null);
-            alert.setContentText("Le code de l'offre ne peut pas être vide.");
             alert.showAndWait();
 
             return false;
@@ -177,88 +166,221 @@ public class OffreController {
         }
 
         return true;
-    }
+    } //BASIC VALIDATION
 
-    @FXML
-    private void handleSave(ActionEvent event) {
-        if (formOffreValide()) {
-            Offre o = new Offre(txtCode.getText(), 1, txtTitre.getText(), comboType.getValue(), java.sql.Date.valueOf(dpDate.getValue()), comboEtat.getValue());
+    private void updateButtonStates() {
+        int count = selectedOffres.size();
 
-            try {
-                crud.ajouter(o);
-            } catch (Exception e) {
-                System.out.println("Erreur lors de l'ajout de l'offre: " + e.getMessage());
-                return;
+        switch (count) {
+            case 0 -> {
+                btnSave.setDisable(false);
+                btnUpdate.setDisable(true);
+                btnDelete.setDisable(true);
+                btnDelete.setText("Supprimer");
+                clearForm(null);
             }
-            addOfferCard(o);
+            case 1 -> {
+                //enable form fields
+                txtTitre.setDisable(false);
+                comboType.setDisable(false);
+                comboEtat.setDisable(false);
+                dpDate.setDisable(false);
 
-            refreshDashboard();}
-    }
+                btnDetail.setDisable(false);
+
+                //enable buttons
+                btnSave.setDisable(true);
+                btnUpdate.setDisable(false);
+                btnDelete.setDisable(false);
+                btnDelete.setText("Supprimer");
+
+                //update form on selection
+                Offre single = selectedOffres.iterator().next();
+                txtTitre.setText(single.getTitrePoste());
+                comboType.setValue(single.getTypeContrat());
+                comboEtat.setValue(single.getEtat());
+                dpDate.setValue(LocalDate.parse(single.getDateLimite().toString()));
+                currentDescription = single.getDescription();
+            }
+            default -> {
+                //disable form fields
+                txtTitre.setDisable(true);
+                comboType.setDisable(true);
+                comboEtat.setDisable(true);
+                dpDate.setDisable(true);
+
+                btnDetail.setDisable(true);
+
+                //disable buttons
+                btnSave.setDisable(true);
+                btnUpdate.setDisable(true);
+                btnDelete.setDisable(false);
+                btnDelete.setText("Supprimer (" + count + ")");
+            }
+        }
+    } //UPDATE BUTTONS STATE AND FORM FIELDS BASED ON SELECTION
 
     @FXML
-    private void handleUpdate(ActionEvent event) {
-        if (formOffreValide()){
-        Offre o = new Offre(txtCode.getText(), 1, txtTitre.getText(), comboType.getValue(), java.sql.Date.valueOf(dpDate.getValue()), comboEtat.getValue());
-
-        try {
-            int temp = crud.getIdByCodeOffre(o.getCodeOffre());
-            o.setId(temp);
-
-        } catch (SQLException ex) {
-            throw new RuntimeException("Erreur lors de la recuperation d'ID " + ex);
-        }
-
-        try {
-            crud.modifier(o);
-        } catch (SQLException e) {
-            System.out.println("Erreur lors de la modification de l'offre: " + e.getMessage());
-            return;
-        }
-
-        refreshDashboard();}
-    }
-
-    @FXML
-    private void handleDelete(ActionEvent event) {
-        if (selectedPathCard != null) {
-            Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-            alert.setTitle("Confirmation de suppression");
-            alert.setHeaderText(null);
-            alert.setContentText("Êtes-vous sûr de vouloir supprimer cette offre ?");
-
-            ButtonType buttonYes = new ButtonType("Oui", ButtonBar.ButtonData.YES);
-            ButtonType buttonNo = new ButtonType("Non", ButtonBar.ButtonData.NO);
-
-            alert.getButtonTypes().setAll(buttonYes, buttonNo);
-
-            alert.showAndWait().ifPresent(type -> {
-                if (type == buttonYes) {
-                    try {
-                        crud.supprimer(crud.getIdByCodeOffre(txtCode.getText()));
-                    } catch (SQLException e) {
-                        System.out.println("Erreur lors de la suppression de l'offre: " + e.getMessage());
-                    }
-                }
-            });
-
-            offersContainer.getChildren().remove(selectedPathCard);
-
-            handleNewOffer(null);
-
-            selectedPathCard = null;
-        }
-    }
-
-    @FXML
-    private void handleNewOffer(ActionEvent event) {
-        txtCode.clear();
+    private void clearForm(ActionEvent event) {
         txtTitre.clear();
         dpDate.setValue(null);
         comboType.getSelectionModel().clearSelection();
         comboEtat.getSelectionModel().clearSelection();
+        currentDescription = "";
 
-        if (selectedPathCard != null) {
-            selectedPathCard.getStyleClass().remove("card-selected");
+        txtTitre.setDisable(false);
+        comboType.setDisable(false);
+        comboEtat.setDisable(false);
+        dpDate.setDisable(false);
+
+        btnDetail.setDisable(false);
+
+        //enable buttons
+        btnSave.setDisable(false);
+        btnUpdate.setDisable(true);
+        btnDelete.setDisable(true);
+        btnDelete.setText("Supprimer");
+
+        selectedOffres.clear();
+
+        offersContainer.getChildren().forEach(node -> {
+            if (node instanceof HBox card) {
+                card.getChildren().stream()
+                        .filter(child -> child instanceof CheckBox)
+                        .forEach(child -> ((CheckBox) child).setSelected(false));
+            }
+        });
+    } //CLEAR FORM AND UNSELECT CARDS
+
+    //CRUD operations
+
+    @FXML
+    private void addOffre(ActionEvent event) {
+        if (formOffreValide()) {
+            Offre o = new Offre(1,
+                    txtTitre.getText(),
+                    comboType.getValue(),
+                    java.sql.Date.valueOf(dpDate.getValue()),
+                    comboEtat.getValue(),
+                    currentDescription);
+            try {
+                crud.ajouter(o);
+
+                clearForm(null);
+                loadOffersList();
+            } catch (Exception e) {
+                System.out.println("Erreur lors de l'ajout: " + e.getMessage());
+            }
         }
+    }
+
+    @FXML
+    private void updateOffre(ActionEvent event)  {
+        if (formOffreValide()) {
+            Offre o = selectedOffres.iterator().next();
+
+            o.setTitrePoste(txtTitre.getText());
+            o.setTypeContrat(comboType.getValue());
+            o.setDateLimite(java.sql.Date.valueOf(dpDate.getValue()));
+            o.setEtat(comboEtat.getValue());
+            o.setDescription(currentDescription);
+
+            try {
+                crud.modifier(o);
+
+                selectedOffres.clear();
+                updateButtonStates();
+                clearForm(null);
+                loadOffersList();
+            } catch (SQLException e) {
+                System.out.println("Erreur lors de la modification: " + e.getMessage());
+            }
+        }
+    }
+
+    @FXML
+    private void deleteOffre(ActionEvent event) {
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Confirmation");
+        alert.setContentText("Supprimer " + selectedOffres.size() + " offre(s) ?");
+
+        alert.showAndWait().ifPresent(response -> {
+            if (response == ButtonType.OK) {
+                try {
+                    for (Offre o : selectedOffres) {
+                        crud.supprimer(o.getId());
+                    }
+
+                    selectedOffres.clear();
+                    loadOffersList();
+                    updateButtonStates();
+
+                } catch (SQLException e) {
+                    System.out.println("Erreur lors de la suppression: " + e.getMessage());
+                }
+            }
+        });
+    }
+
+    //Format Date
+    private String formatDate(String dateStr) {
+        LocalDate date = LocalDate.parse(dateStr);
+        return date.format(java.time.format.DateTimeFormatter.ofPattern("dd MMM yyyy"));
+    }
+
+    //Web view editor for description
+    @FXML
+    private void handleOpenEditor() {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/offres/description-offre.fxml"));
+            Parent root = loader.load();
+
+            DescriptionOffreController editorController = loader.getController();
+
+            editorController.setInitialText(currentDescription);
+
+            Stage stage = new Stage();
+            stage.initModality(Modality.APPLICATION_MODAL);
+            stage.setTitle("Éditeur de texte riche");
+            stage.setScene(new Scene(root));
+            stage.showAndWait();
+
+            if (editorController.isSaveClicked()) {
+                this.currentDescription = editorController.getHtmlText();
+                System.out.println("Description mise à jour !");
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    //Search
+    @FXML
+    public void searchOffre(KeyEvent keyEvent) {
+        String query = txtSearch.getText().toLowerCase();
+
+        offersContainer.getChildren().forEach(node -> {
+            if (node instanceof HBox card) {
+                Label titleLabel = (Label) ((VBox) card.getChildren().get(2)).getChildren().getFirst();
+                boolean matches = titleLabel.getText().toLowerCase().contains(query);
+                card.setVisible(matches);
+                card.setManaged(matches);
+            }
+        });
+    }
+
+    //Filter by type
+    public void OffreFiltre(ActionEvent actionEvent) {
+        String selectedType = filterTypeCB.getValue();
+
+        offersContainer.getChildren().forEach(node -> {
+            if (node instanceof HBox card) {
+                Label subLabel = (Label) ((VBox) card.getChildren().get(2)).getChildren().get(1);
+                boolean matches = selectedType.equals("Tous") || subLabel.getText().toLowerCase().contains(selectedType.toLowerCase());
+                card.setVisible(matches);
+                card.setManaged(matches);
+            }
+        });
     }
 }
