@@ -118,6 +118,7 @@ public class ProjetsController {
 
     // Team management
     private final ObservableList<EmployeeInfo> allEmployees = FXCollections.observableArrayList();
+    private final ObservableList<EmployeeInfo> responsables = FXCollections.observableArrayList();
     private final ObservableList<EmployeeInfo> projectTeamMembers = FXCollections.observableArrayList();
 
     private Projet selectedProject = null;
@@ -367,7 +368,13 @@ public class ProjetsController {
         try {
             List<EmployeeInfo> employees = employeeCRUD.getAllEmployees();
             allEmployees.setAll(employees);
-            detailResponsableBox.setItems(FXCollections.observableArrayList(employees));
+
+            // Load only responsables for the responsable dropdown
+            List<EmployeeInfo> responsablesList = employeeCRUD.getResponsables();
+            responsables.setAll(responsablesList);
+            detailResponsableBox.setItems(FXCollections.observableArrayList(responsablesList));
+
+            // For adding employees to team, show all employees
             addEmployeeBox.setItems(FXCollections.observableArrayList(employees));
         } catch (SQLException e) {
             e.printStackTrace();
@@ -730,6 +737,7 @@ public class ProjetsController {
             private final Button btnRemove = new Button("✕");
             private final HBox container = new HBox(10);
             private final Label nameLabel = new Label();
+            private final Label roleLabel = new Label();
             private final Region spacer = new Region();
 
             {
@@ -750,15 +758,27 @@ public class ProjetsController {
                 if (empty || emp == null) {
                     setGraphic(null);
                 } else {
+                    // Check if this employee is the responsable
+                    boolean isResponsable = selectedProject != null && emp.id() == selectedProject.getResponsable_id();
+
                     nameLabel.setText("👤 " + emp.getFullName());
                     nameLabel.setStyle("-fx-font-weight: 600;");
 
                     // Dynamically update container based on current role
                     container.getChildren().clear();
-                    container.getChildren().addAll(nameLabel, spacer);
+                    container.getChildren().add(nameLabel);
 
-                    // Only show remove button for managers - check role dynamically
-                    if (UserSession.getInstance().canManageProjects()) {
+                    // Add responsable badge if this is the project responsable
+                    if (isResponsable) {
+                        roleLabel.setText("👔 Responsable");
+                        roleLabel.setStyle("-fx-background-color: #DBEAFE; -fx-text-fill: #1D4ED8; -fx-padding: 2 8; -fx-background-radius: 10; -fx-font-size: 10px; -fx-font-weight: 700;");
+                        container.getChildren().add(roleLabel);
+                    }
+
+                    container.getChildren().add(spacer);
+
+                    // Only show remove button for managers and not for the responsable
+                    if (UserSession.getInstance().canManageProjects() && !isResponsable) {
                         container.getChildren().add(btnRemove);
                     }
 
@@ -818,6 +838,12 @@ public class ProjetsController {
     private void removeEmployeeFromTeam(EmployeeInfo emp) {
         if (selectedProject == null) return;
 
+        // Prevent removing the responsable from the team
+        if (emp.id() == selectedProject.getResponsable_id()) {
+            showError("Action non autorisée", "Le responsable du projet ne peut pas être retiré de l'équipe.\nPour changer de responsable, modifiez-le dans les détails du projet.");
+            return;
+        }
+
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
         confirm.setTitle("Confirmation");
         confirm.setHeaderText("Retirer " + emp.getFullName() + " de l'équipe ?");
@@ -871,9 +897,9 @@ public class ProjetsController {
         detailStatutBox.setValue(selectedProject.getStatut());
         detailPrioriteBox.setValue(selectedProject.getPriority());
 
-        // Find and set responsable
+        // Find and set responsable (search in responsables list)
         int respId = selectedProject.getResponsable_id();
-        for (EmployeeInfo emp : allEmployees) {
+        for (EmployeeInfo emp : responsables) {
             if (emp.id() == respId) {
                 detailResponsableBox.setValue(emp);
                 break;
@@ -952,6 +978,9 @@ public class ProjetsController {
         priority pr = detailPrioriteBox.getValue();
 
         try {
+            // Check if responsable changed
+            boolean responsableChanged = resp.id() != selectedProject.getResponsable_id();
+
             // Update selectedProject object
             selectedProject.setNom(nom.trim());
             selectedProject.setDescription(detailDescArea.getText());
@@ -962,6 +991,15 @@ public class ProjetsController {
             selectedProject.setPriority(pr);
 
             projetCRUD.modifier(selectedProject);
+
+            // If responsable changed, ensure new responsable is in the team
+            if (responsableChanged) {
+                List<Integer> currentTeam = equipeCRUD.getEmployeeIdsForProject(selectedProject.getProjet_id());
+                if (!currentTeam.contains(resp.id())) {
+                    equipeCRUD.addEmployeeToProject(selectedProject.getProjet_id(), resp.id());
+                }
+                loadProjectTeam(); // Refresh team list
+            }
 
             detailsInfoLabel.setText("✅ Projet mis à jour.");
             loadProjectsFromDB();
@@ -1053,8 +1091,10 @@ public class ProjetsController {
                 Label title = new Label(safe(p.getNom()));
                 title.setStyle("-fx-font-size: 14px; -fx-font-weight: 800;");
 
+                // Get responsable name from allEmployees
+                String responsableName = getEmployeeNameById(p.getResponsable_id());
                 String subtitleText =
-                        "Responsable #" + p.getResponsable_id() +
+                        "👔 " + responsableName +
                                 " • Priorité: " + prettyEnum(p.getPriority());
 
                 Label subtitle = new Label(subtitleText);

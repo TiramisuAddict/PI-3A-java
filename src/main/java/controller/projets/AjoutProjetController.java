@@ -52,6 +52,7 @@ public class AjoutProjetController {
 
     // Track selected employees with checkboxes
     private final ObservableList<EmployeeInfo> allEmployees = FXCollections.observableArrayList();
+    private final ObservableList<EmployeeInfo> responsables = FXCollections.observableArrayList();
     private final ObservableList<EmployeeInfo> filteredEmployees = FXCollections.observableArrayList();
     private final Map<Integer, BooleanProperty> selectionMap = new HashMap<>();
 
@@ -100,15 +101,36 @@ public class AjoutProjetController {
                 selectionMap.put(emp.id(), selected);
             }
 
-            // Populate responsable dropdown
-            responsableBox.setItems(FXCollections.observableArrayList(employees));
-            if (!employees.isEmpty()) {
+            // Load only responsables for the responsable dropdown
+            List<EmployeeInfo> responsablesList = employeeCRUD.getResponsables();
+            responsables.setAll(responsablesList);
+            responsableBox.setItems(FXCollections.observableArrayList(responsablesList));
+            if (!responsablesList.isEmpty()) {
                 responsableBox.getSelectionModel().selectFirst();
+                // Auto-select the first responsable to be part of the team
+                autoSelectResponsable(responsablesList.get(0));
             }
+
+            // Add listener to auto-select responsable when changed
+            responsableBox.valueProperty().addListener((obs, oldResp, newResp) -> {
+                // Auto-select new responsable to be part of the team
+                if (newResp != null) {
+                    autoSelectResponsable(newResp);
+                }
+            });
 
         } catch (SQLException e) {
             e.printStackTrace();
             showError("Erreur chargement employés: " + e.getMessage());
+        }
+    }
+
+    private void autoSelectResponsable(EmployeeInfo responsable) {
+        if (responsable != null) {
+            BooleanProperty prop = selectionMap.get(responsable.id());
+            if (prop != null && !prop.get()) {
+                prop.set(true);
+            }
         }
     }
 
@@ -196,6 +218,12 @@ public class AjoutProjetController {
         }
 
         List<Integer> selectedEmployees = getSelectedEmployeeIds();
+
+        // Ensure the responsable is always part of the team
+        if (!selectedEmployees.contains(responsable.id())) {
+            selectedEmployees.add(responsable.id());
+        }
+
         if (selectedEmployees.isEmpty()) {
             showError("Veuillez sélectionner au moins un employé pour l'équipe.");
             return;
@@ -260,8 +288,8 @@ public class AjoutProjetController {
         statutBox.setValue(p.getStatut());
         prioriteBox.setValue(p.getPriority());
 
-        // Set responsable
-        for (EmployeeInfo emp : allEmployees) {
+        // Set responsable (search in responsables list)
+        for (EmployeeInfo emp : responsables) {
             if (emp.id() == p.getResponsable_id()) {
                 responsableBox.setValue(emp);
                 break;

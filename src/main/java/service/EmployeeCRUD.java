@@ -67,4 +67,26 @@ public class EmployeeCRUD {
     public EmployeeInfo authenticateById(int employeeId) throws SQLException {
         return getEmployeeById(employeeId);
     }
+
+    /**
+     * Get all employees with role "responsable"
+     * @return List of employees who are responsables
+     */
+    public List<EmployeeInfo> getResponsables() throws SQLException {
+        String sql = "SELECT id_emp, nom, prenom, role FROM employee WHERE role = 'responsable' ORDER BY nom, prenom";
+        List<EmployeeInfo> list = new ArrayList<>();
+
+        try (Statement stmt = cnx.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                list.add(new EmployeeInfo(
+                        rs.getInt("id_emp"),
+                        rs.getString("nom"),
+                        rs.getString("prenom"),
+                        rs.getString("role")
+                ));
+            }
+        }
+        return list;
+    }
 }
