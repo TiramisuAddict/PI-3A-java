@@ -1,5 +1,6 @@
 C:\Users\msi\OneDrive - ESPRIT\Documents\keftewi\PI-3A-java-dev\src\main\java\controller\App.java
 C:\Users\msi\OneDrive - ESPRIT\Documents\keftewi\PI-3A-java-dev\src\main\java\controller\AppLauncher.java
+C:\Users\msi\OneDrive - ESPRIT\Documents\keftewi\PI-3A-java-dev\src\main\java\controller\components\DocumentGeneratorPanel.java
 C:\Users\msi\OneDrive - ESPRIT\Documents\keftewi\PI-3A-java-dev\src\main\java\controller\demandes\DemandeFormHelper.java
 C:\Users\msi\OneDrive - ESPRIT\Documents\keftewi\PI-3A-java-dev\src\main\java\controller\demandes\NavigationHelper.java
 C:\Users\msi\OneDrive - ESPRIT\Documents\keftewi\PI-3A-java-dev\src\main\java\controller\employers\admin_sys\adminController.java
@@ -19,6 +20,7 @@ C:\Users\msi\OneDrive - ESPRIT\Documents\keftewi\PI-3A-java-dev\src\main\java\co
 C:\Users\msi\OneDrive - ESPRIT\Documents\keftewi\PI-3A-java-dev\src\main\java\controller\MainViewController.java
 C:\Users\msi\OneDrive - ESPRIT\Documents\keftewi\PI-3A-java-dev\src\main\java\controller\offres\OffresController.java
 C:\Users\msi\OneDrive - ESPRIT\Documents\keftewi\PI-3A-java-dev\src\main\java\controller\projets\ProjetsController.java
+C:\Users\msi\OneDrive - ESPRIT\Documents\keftewi\PI-3A-java-dev\src\main\java\controller\widgets\WeatherWidgetController.java
 C:\Users\msi\OneDrive - ESPRIT\Documents\keftewi\PI-3A-java-dev\src\main\java\entities\demande\Demande.java
 C:\Users\msi\OneDrive - ESPRIT\Documents\keftewi\PI-3A-java-dev\src\main\java\entities\demande\DemandeDetails.java
 C:\Users\msi\OneDrive - ESPRIT\Documents\keftewi\PI-3A-java-dev\src\main\java\entities\demande\HistoriqueDemande.java
@@ -29,6 +31,11 @@ C:\Users\msi\OneDrive - ESPRIT\Documents\keftewi\PI-3A-java-dev\src\main\java\en
 C:\Users\msi\OneDrive - ESPRIT\Documents\keftewi\PI-3A-java-dev\src\main\java\entities\employe\role.java
 C:\Users\msi\OneDrive - ESPRIT\Documents\keftewi\PI-3A-java-dev\src\main\java\entities\employe\session.java
 C:\Users\msi\OneDrive - ESPRIT\Documents\keftewi\PI-3A-java-dev\src\main\java\entities\employe\statut.java
+C:\Users\msi\OneDrive - ESPRIT\Documents\keftewi\PI-3A-java-dev\src\main\java\service\api\AIDocumentGeneratorService.java
+C:\Users\msi\OneDrive - ESPRIT\Documents\keftewi\PI-3A-java-dev\src\main\java\service\api\ApiConfig.java
+C:\Users\msi\OneDrive - ESPRIT\Documents\keftewi\PI-3A-java-dev\src\main\java\service\api\EmailService.java
+C:\Users\msi\OneDrive - ESPRIT\Documents\keftewi\PI-3A-java-dev\src\main\java\service\api\MapPickerDialog.java
+C:\Users\msi\OneDrive - ESPRIT\Documents\keftewi\PI-3A-java-dev\src\main\java\service\api\WeatherService.java
 C:\Users\msi\OneDrive - ESPRIT\Documents\keftewi\PI-3A-java-dev\src\main\java\service\demande\DemandeCRUD.java
 C:\Users\msi\OneDrive - ESPRIT\Documents\keftewi\PI-3A-java-dev\src\main\java\service\demande\DemandeDetailsCRUD.java
 C:\Users\msi\OneDrive - ESPRIT\Documents\keftewi\PI-3A-java-dev\src\main\java\service\demande\HistoriqueDemandeCRUD.java
@@ -40,4 +47,8 @@ C:\Users\msi\OneDrive - ESPRIT\Documents\keftewi\PI-3A-java-dev\src\main\java\se
 C:\Users\msi\OneDrive - ESPRIT\Documents\keftewi\PI-3A-java-dev\src\main\java\service\InterfaceCRUD.java
 C:\Users\msi\OneDrive - ESPRIT\Documents\keftewi\PI-3A-java-dev\src\main\java\test\Main.java
 C:\Users\msi\OneDrive - ESPRIT\Documents\keftewi\PI-3A-java-dev\src\main\java\test\ProjectStructurePrinter.java
+C:\Users\msi\OneDrive - ESPRIT\Documents\keftewi\PI-3A-java-dev\src\main\java\test\TestDocumentGenerator.java
+C:\Users\msi\OneDrive - ESPRIT\Documents\keftewi\PI-3A-java-dev\src\main\java\test\TestEmailService.java
+C:\Users\msi\OneDrive - ESPRIT\Documents\keftewi\PI-3A-java-dev\src\main\java\test\TestMapTiles.java
+C:\Users\msi\OneDrive - ESPRIT\Documents\keftewi\PI-3A-java-dev\src\main\java\test\TestWeatherService.java
 C:\Users\msi\OneDrive - ESPRIT\Documents\keftewi\PI-3A-java-dev\src\main\java\utils\MyDB.java

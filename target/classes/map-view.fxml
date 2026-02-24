@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.web.WebView?>
+<?import javafx.scene.text.Font?>
+
+<AnchorPane prefHeight="600.0" prefWidth="900.0"
+            xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="controller.map.MapController">
+    <children>
+        <VBox AnchorPane.bottomAnchor="0" AnchorPane.leftAnchor="0"
+              AnchorPane.rightAnchor="0" AnchorPane.topAnchor="0">
+            <children>
+                <!-- Search Bar -->
+                <HBox alignment="CENTER_LEFT" spacing="10"
+                      style="-fx-background-color: white; -fx-padding: 15;
+                             -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 10, 0, 0, 2);">
+                    <children>
+                        <Label text="🗺️" style="-fx-font-size: 24;" />
+                        <Label text="Carte" style="-fx-font-size: 18; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" />
+
+                        <Region HBox.hgrow="ALWAYS" />
+
+                        <!-- Search Container -->
+                        <VBox spacing="0">
+                            <children>
+                                <HBox spacing="10" alignment="CENTER_LEFT">
+                                    <children>
+                                        <TextField fx:id="searchField"
+                                                   prefWidth="350" prefHeight="40"
+                                                   promptText="🔍 Rechercher une adresse, un lieu..."
+                                                   style="-fx-background-radius: 20; -fx-border-radius: 20;
+                                                          -fx-border-color: #e0e0e0; -fx-font-size: 13;
+                                                          -fx-padding: 5 15;">
+                                            <font><Font size="13" /></font>
+                                        </TextField>
+
+                                        <Button fx:id="searchButton"
+                                                onAction="#handleSearch"
+                                                text="Rechercher"
+                                                prefHeight="40"
+                                                style="-fx-background-color: #3498db; -fx-text-fill: white;
+                                                       -fx-background-radius: 20; -fx-cursor: hand;
+                                                       -fx-font-weight: bold;">
+                                        </Button>
+
+                                        <ProgressIndicator fx:id="searchProgress"
+                                                           prefWidth="25" prefHeight="25"
+                                                           visible="false" />
+                                    </children>
+                                </HBox>
+
+                                <!-- Search Results Dropdown -->
+                                <VBox fx:id="searchResultsContainer"
+                                      visible="false" managed="false"
+                                      style="-fx-background-color: white;
+                                             -fx-background-radius: 12;
+                                             -fx-border-radius: 12;
+                                             -fx-border-color: #e0e0e0;
+                                             -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 15, 0, 0, 5);">
+                                    <padding>
+                                        <Insets top="5" bottom="5" left="5" right="5" />
+                                    </padding>
+                                    <children>
+                                        <Label text="📍 Résultats de recherche"
+                                               style="-fx-font-weight: bold; -fx-text-fill: #7f8c8d;
+                                                      -fx-font-size: 11; -fx-padding: 8 10;" />
+
+                                        <ListView fx:id="searchResultsList"
+                                                  prefWidth="400"
+                                                  prefHeight="350"
+                                                  maxHeight="400"
+                                                  style="-fx-background-color: transparent;
+                                                         -fx-background-insets: 0;
+                                                         -fx-padding: 0;" />
+                                    </children>
+                                </VBox>
+                            </children>
+                        </VBox>
+
+                        <Region HBox.hgrow="ALWAYS" />
+
+                        <Label fx:id="statusLabel" text="Prêt"
+                               style="-fx-text-fill: #7f8c8d; -fx-font-size: 12;" />
+                    </children>
+                </HBox>
+
+                <!-- Map Container -->
+                <StackPane VBox.vgrow="ALWAYS">
+                    <children>
+                        <VBox fx:id="mapContainer">
+                            <children>
+                                <WebView fx:id="mapWebView" VBox.vgrow="ALWAYS" />
+                            </children>
+                        </VBox>
+                    </children>
+                </StackPane>
+            </children>
+        </VBox>
+    </children>
+</AnchorPane>

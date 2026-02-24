@@ -1,7 +1,3 @@
-controller\employers\RHetAdminE\EmployerController$1.class
-controller\demandes\DemandeFormHelper.class
-controller\demandes\DemandeFormHelper$FieldType.class
-controller\demandes\NavigationHelper.class
-service\demande\HistoriqueDemandeCRUD.class
-controller\employers\RHetAdminE\EmployerController.class
-controller\demandes\DemandeFormHelper$FieldDefinition.class
+controller\employers\RHetAdminE\DemandesController$4.class
+controller\employers\RHetAdminE\DemandesController$2.class
+controller\employers\RHetAdminE\DemandesController$3.class

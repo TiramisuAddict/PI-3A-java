@@ -2,8 +2,13 @@ package controller.demandes;
 
 import javafx.collections.FXCollections;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.control.*;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
+import service.api.MapPickerDialog;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -13,6 +18,7 @@ public class DemandeFormHelper {
 
     private Map<String, Control> dynamicFields = new LinkedHashMap<>();
     private Map<String, Label> dynamicErrorLabels = new LinkedHashMap<>();
+    private Set<String> locationFieldKeys = new HashSet<>(); // Track which fields are location fields
 
     // Define categories and their types
     private static final Map<String, List<String>> CATEGORY_TYPES = new LinkedHashMap<>();
@@ -91,7 +97,6 @@ public class DemandeFormHelper {
         });
     }
 
-
     public void initializeEmployeeComboBoxes(ComboBox<String> categorieCombo,
                                              ComboBox<String> typeDemandeCombo,
                                              ComboBox<String> prioriteCombo) {
@@ -119,15 +124,13 @@ public class DemandeFormHelper {
 
     // ==================== DYNAMIC FIELDS ====================
 
-
     public void updateDynamicFields(String typeDemande, VBox container, TitledPane detailsPane) {
         System.out.println("=== updateDynamicFields called ===");
         System.out.println("Type: " + typeDemande);
-        System.out.println("Container: " + container);
-        System.out.println("DetailsPane: " + detailsPane);
 
         dynamicFields.clear();
         dynamicErrorLabels.clear();
+        locationFieldKeys.clear();
         container.getChildren().clear();
 
         if (typeDemande == null || typeDemande.isEmpty()) {
@@ -167,7 +170,6 @@ public class DemandeFormHelper {
 
         System.out.println("Dynamic fields created: " + dynamicFields.size());
     }
-
 
     private List<FieldDefinition> getFieldsForType(String typeDemande) {
         List<FieldDefinition> fields = new ArrayList<>();
@@ -218,6 +220,8 @@ public class DemandeFormHelper {
                         FieldType.TEXT, true));
                 fields.add(new FieldDefinition("departementSouhaite", "Département souhaité",
                         FieldType.TEXT, true));
+                fields.add(new FieldDefinition("lieuMutation", "Lieu de mutation",
+                        FieldType.LOCATION, true));
                 fields.add(new FieldDefinition("posteSouhaite", "Poste souhaité",
                         FieldType.TEXT, false));
                 fields.add(new FieldDefinition("motif", "Motif de la demande",
@@ -351,6 +355,8 @@ public class DemandeFormHelper {
                         FieldType.TEXT, true));
                 fields.add(new FieldDefinition("organisme", "Organisme de formation",
                         FieldType.TEXT, true));
+                fields.add(new FieldDefinition("lieuFormation", "Lieu de formation",
+                        FieldType.LOCATION, true));
                 fields.add(new FieldDefinition("duree", "Durée", FieldType.TEXT, true));
                 fields.add(new FieldDefinition("cout", "Coût estimé (TND)",
                         FieldType.NUMBER, false));
@@ -366,6 +372,8 @@ public class DemandeFormHelper {
                         FieldType.TEXT, true));
                 fields.add(new FieldDefinition("organismeCertif", "Organisme certificateur",
                         FieldType.TEXT, true));
+                fields.add(new FieldDefinition("lieuExamen", "Lieu d'examen",
+                        FieldType.LOCATION, true));
                 fields.add(new FieldDefinition("coutCertif", "Coût (TND)", FieldType.NUMBER, false));
                 fields.add(new FieldDefinition("datePassage", "Date de passage souhaitée",
                         FieldType.DATE, false));
@@ -382,6 +390,8 @@ public class DemandeFormHelper {
                         true, Arrays.asList("1 jour", "2 jours", "3 jours", "4 jours", "Temps plein")));
                 fields.add(new FieldDefinition("joursSouhaites", "Jours souhaités (ex: Lundi, Mardi)",
                         FieldType.TEXT, false));
+                fields.add(new FieldDefinition("adresseTeletravail", "Adresse de télétravail",
+                        FieldType.LOCATION, true));
                 fields.add(new FieldDefinition("dateDebutTeletravail", "Date de début", FieldType.DATE, true));
                 fields.add(new FieldDefinition("dateFinTeletravail", "Date de fin (si temporaire)",
                         FieldType.DATE, false));
@@ -423,7 +433,6 @@ public class DemandeFormHelper {
         return fields;
     }
 
-
     private VBox createFieldBox(FieldDefinition field) {
         VBox fieldBox = new VBox(5);
         fieldBox.setPadding(new Insets(5, 0, 5, 0));
@@ -432,17 +441,21 @@ public class DemandeFormHelper {
         Label label = new Label(field.label + (field.required ? " *" : ""));
         label.setStyle("-fx-font-weight: bold; -fx-text-fill: #333;");
 
-        Control control = createControl(field);
-        dynamicFields.put(field.key, control);
-
         Label errorLabel = new Label();
         errorLabel.setStyle("-fx-text-fill: red; -fx-font-size: 11;");
         dynamicErrorLabels.put(field.key, errorLabel);
 
-        // Clear error on input
-        addClearErrorListener(control, errorLabel);
+        if (field.type == FieldType.LOCATION) {
+            // Create location field with map button
+            HBox locationBox = createLocationField(field);
+            fieldBox.getChildren().addAll(label, locationBox, errorLabel);
+        } else {
+            Control control = createControl(field);
+            dynamicFields.put(field.key, control);
+            addClearErrorListener(control, errorLabel);
+            fieldBox.getChildren().addAll(label, control, errorLabel);
+        }
 
-        fieldBox.getChildren().addAll(label, control, errorLabel);
         return fieldBox;
     }
 
@@ -461,7 +474,6 @@ public class DemandeFormHelper {
                 TextField numberField = new TextField();
                 numberField.setPromptText("Entrez un nombre");
                 numberField.setPrefWidth(200);
-                // Allow only numbers
                 numberField.textProperty().addListener((o, ov, nv) -> {
                     if (!nv.matches("\\d*\\.?\\d*")) {
                         numberField.setText(ov);
@@ -504,6 +516,66 @@ public class DemandeFormHelper {
         return control;
     }
 
+    // Create location field with map button - stores TextField in dynamicFields
+    private HBox createLocationField(FieldDefinition field) {
+        HBox locationBox = new HBox(10);
+        locationBox.setAlignment(Pos.CENTER_LEFT);
+        locationBox.setMaxWidth(Double.MAX_VALUE);
+        HBox.setHgrow(locationBox, Priority.ALWAYS);
+
+        TextField locationField = new TextField();
+        locationField.setPromptText("Cliquez sur 📍 pour sélectionner une adresse");
+        locationField.setMaxWidth(Double.MAX_VALUE);
+        locationField.setPrefWidth(350);
+        HBox.setHgrow(locationField, Priority.ALWAYS);
+
+        Button mapButton = new Button("📍 Carte");
+        mapButton.setStyle("-fx-background-color: #3498db; -fx-text-fill: white; -fx-cursor: hand; -fx-font-weight: bold; -fx-padding: 8 15;");
+        mapButton.setMinWidth(100);
+
+        mapButton.setOnAction(e -> {
+            MapPickerDialog dialog = new MapPickerDialog();
+            String currentAddress = locationField.getText();
+
+            Optional<MapPickerDialog.LocationResult> result;
+            if (currentAddress != null && !currentAddress.isEmpty()) {
+                result = dialog.showAndWait(currentAddress);
+            } else {
+                result = dialog.showAndWait();
+            }
+
+            result.ifPresent(location -> {
+                locationField.setText(location.getAddress());
+                locationField.setUserData(location);
+                System.out.println("Location selected: " + location.getAddress());
+            });
+        });
+
+        // Hover effects
+        mapButton.setOnMouseEntered(e ->
+                mapButton.setStyle("-fx-background-color: #2980b9; -fx-text-fill: white; -fx-cursor: hand; -fx-font-weight: bold; -fx-padding: 8 15;"));
+        mapButton.setOnMouseExited(e ->
+                mapButton.setStyle("-fx-background-color: #3498db; -fx-text-fill: white; -fx-cursor: hand; -fx-font-weight: bold; -fx-padding: 8 15;"));
+
+        locationBox.getChildren().addAll(locationField, mapButton);
+
+        // Store the TextField (which IS a Control) in dynamicFields
+        dynamicFields.put(field.key, locationField);
+        locationFieldKeys.add(field.key);
+
+        // Add error clear listener
+        Label errorLabel = dynamicErrorLabels.get(field.key);
+        if (errorLabel != null) {
+            locationField.textProperty().addListener((o, ov, nv) -> {
+                if (nv != null && !nv.trim().isEmpty()) {
+                    clearFieldError(locationField, errorLabel);
+                }
+            });
+        }
+
+        return locationBox;
+    }
+
     private void addClearErrorListener(Control control, Label errorLabel) {
         if (control instanceof TextField) {
             ((TextField) control).textProperty().addListener((o, ov, nv) -> {
@@ -533,7 +605,6 @@ public class DemandeFormHelper {
     }
 
     // ==================== VALIDATION ====================
-
 
     public boolean validateForm(TextField titreField, Label titreError,
                                 ComboBox<String> categorieCombo, Label categorieError,
@@ -593,7 +664,6 @@ public class DemandeFormHelper {
         return valid;
     }
 
-
     public boolean validateDynamicFields() {
         boolean valid = true;
 
@@ -602,22 +672,34 @@ public class DemandeFormHelper {
             Control control = entry.getValue();
             Label errorLabel = dynamicErrorLabels.get(key);
 
-            // Check if field is empty
             boolean isEmpty = isFieldEmpty(control);
 
-            // Check if required (label ends with *)
-            if (control.getParent() instanceof VBox) {
-                VBox parent = (VBox) control.getParent();
-                if (!parent.getChildren().isEmpty() && parent.getChildren().get(0) instanceof Label) {
-                    Label fieldLabel = (Label) parent.getChildren().get(0);
-                    boolean isRequired = fieldLabel.getText().endsWith("*");
+            // Check if required by looking at parent VBox label
+            if (control.getParent() != null) {
+                VBox parent = null;
 
-                    if (isRequired && isEmpty) {
-                        if (errorLabel != null) {
-                            errorLabel.setText("Ce champ est obligatoire");
+                // For location fields, the parent is HBox, grandparent is VBox
+                if (control.getParent() instanceof HBox) {
+                    if (control.getParent().getParent() instanceof VBox) {
+                        parent = (VBox) control.getParent().getParent();
+                    }
+                } else if (control.getParent() instanceof VBox) {
+                    parent = (VBox) control.getParent();
+                }
+
+                if (parent != null && !parent.getChildren().isEmpty()) {
+                    Node firstChild = parent.getChildren().get(0);
+                    if (firstChild instanceof Label) {
+                        Label fieldLabel = (Label) firstChild;
+                        boolean isRequired = fieldLabel.getText().endsWith("*");
+
+                        if (isRequired && isEmpty) {
+                            if (errorLabel != null) {
+                                errorLabel.setText("Ce champ est obligatoire");
+                            }
+                            control.setStyle("-fx-border-color: red;");
+                            valid = false;
                         }
-                        control.setStyle("-fx-border-color: red;");
-                        valid = false;
                     }
                 }
             }
@@ -625,7 +707,6 @@ public class DemandeFormHelper {
 
         return valid;
     }
-
 
     private boolean isFieldEmpty(Control control) {
         if (control instanceof TextField) {
@@ -640,7 +721,6 @@ public class DemandeFormHelper {
         return true;
     }
 
-
     public void clearFieldError(Control control, Label errorLabel) {
         if (control != null) {
             control.setStyle("");
@@ -651,7 +731,6 @@ public class DemandeFormHelper {
     }
 
     // ==================== FIELD VALUE MANIPULATION ====================
-
 
     public void setFieldValue(Control control, String value) {
         if (control == null || value == null || value.isEmpty()) {
@@ -693,7 +772,6 @@ public class DemandeFormHelper {
 
     // ==================== JSON BUILDING ====================
 
-
     public String buildDetailsJson() {
         if (dynamicFields.isEmpty()) {
             return "{}";
@@ -730,7 +808,6 @@ public class DemandeFormHelper {
     }
 
     // ==================== JSON PARSING ====================
-
 
     public Map<String, String> parseDetailsJson(String json) {
         Map<String, String> result = new LinkedHashMap<>();
@@ -811,10 +888,14 @@ public class DemandeFormHelper {
         return dynamicErrorLabels;
     }
 
+    public boolean isLocationField(String key) {
+        return locationFieldKeys.contains(key);
+    }
+
     // ==================== INNER CLASSES ====================
 
     private enum FieldType {
-        TEXT, NUMBER, TEXTAREA, DATE, COMBO
+        TEXT, NUMBER, TEXTAREA, DATE, COMBO, LOCATION
     }
 
     private static class FieldDefinition {

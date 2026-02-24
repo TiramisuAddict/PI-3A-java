@@ -4,302 +4,286 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.text.Font?>
+<?import javafx.scene.image.ImageView?>
 
-<AnchorPane prefHeight="650.0" prefWidth="1100.0"
+<AnchorPane prefHeight="700.0" prefWidth="1200.0"
             xmlns="http://javafx.com/javafx/21"
             xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="controller.employers.RHetAdminE.DemandesController">
     <children>
         <TabPane fx:id="mainTabPane" tabClosingPolicy="UNAVAILABLE"
-                 AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0"
-                 AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+                 AnchorPane.bottomAnchor="0" AnchorPane.leftAnchor="0"
+                 AnchorPane.rightAnchor="0" AnchorPane.topAnchor="0">
             <tabs>
+                <!-- TAB 1: DEMANDES -->
                 <Tab text="📋 Demandes" closable="false">
-                    <VBox spacing="10.0">
-                        <padding>
-                            <Insets bottom="15.0" left="15.0"
-                                    right="15.0" top="15.0" />
-                        </padding>
+                    <HBox spacing="15">
+                        <padding><Insets bottom="15" left="15" right="15" top="15" /></padding>
                         <children>
-                            <Label text="Gestion des Demandes"
-                                   textFill="#2c3e50">
-                                <font>
-                                    <Font name="System Bold" size="24.0" />
-                                </font>
-                            </Label>
-
-                            <!-- Top Bar: Search only, NO add button -->
-                            <HBox alignment="CENTER_LEFT" spacing="10.0">
-                                <padding>
-                                    <Insets top="5.0" bottom="5.0" />
-                                </padding>
+                            <VBox spacing="10" HBox.hgrow="ALWAYS">
                                 <children>
-                                    <Label text="🔍"
-                                           style="-fx-font-size: 16;" />
-                                    <TextField fx:id="rechercheField"
-                                               prefWidth="350.0"
-                                               promptText="Rechercher par titre..." />
-                                </children>
-                            </HBox>
-
-                            <SplitPane fx:id="splitPane"
-                                       dividerPositions="0.6"
-                                       VBox.vgrow="ALWAYS">
-                                <items>
-                                    <VBox spacing="5.0">
-                                        <padding>
-                                            <Insets right="5.0" />
-                                        </padding>
+                                    <Label text="Gestion des Demandes" textFill="#2c3e50">
+                                        <font><Font name="System Bold" size="24" /></font>
+                                    </Label>
+                                    <HBox alignment="CENTER_LEFT" spacing="10">
+                                        <padding><Insets top="5" bottom="5" /></padding>
                                         <children>
-                                            <TableView fx:id="demandesTable"
-                                                       VBox.vgrow="ALWAYS">
-                                                <columns>
-                                                    <TableColumn fx:id="titreCol"
-                                                                 prefWidth="130.0"
-                                                                 text="Titre" />
-                                                    <TableColumn fx:id="categorieCol"
-                                                                 prefWidth="90.0"
-                                                                 text="Catégorie" />
-                                                    <TableColumn fx:id="typeCol"
-                                                                 prefWidth="90.0"
-                                                                 text="Type" />
-                                                    <TableColumn fx:id="prioriteCol"
-                                                                 prefWidth="75.0"
-                                                                 text="Priorité" />
-                                                    <TableColumn fx:id="statusCol"
-                                                                 prefWidth="75.0"
-                                                                 text="Statut" />
-                                                    <TableColumn fx:id="dateCol"
-                                                                 prefWidth="90.0"
-                                                                 text="Date" />
-                                                    <TableColumn fx:id="actionsCol"
-                                                                 prefWidth="170.0"
-                                                                 text="Actions" />
-                                                </columns>
-                                            </TableView>
+                                            <Label text="🔍" style="-fx-font-size: 16;" />
+                                            <TextField fx:id="rechercheField" prefWidth="350" promptText="Rechercher par titre..." />
+                                        </children>
+                                    </HBox>
+                                    <SplitPane dividerPositions="0.6" VBox.vgrow="ALWAYS">
+                                        <items>
+                                            <VBox spacing="5">
+                                                <padding><Insets right="5" /></padding>
+                                                <children>
+                                                    <TableView fx:id="demandesTable" VBox.vgrow="ALWAYS">
+                                                        <columns>
+                                                            <TableColumn fx:id="titreCol" prefWidth="130" text="Titre" />
+                                                            <TableColumn fx:id="categorieCol" prefWidth="90" text="Catégorie" />
+                                                            <TableColumn fx:id="typeCol" prefWidth="90" text="Type" />
+                                                            <TableColumn fx:id="prioriteCol" prefWidth="75" text="Priorité" />
+                                                            <TableColumn fx:id="statusCol" prefWidth="75" text="Statut" />
+                                                            <TableColumn fx:id="dateCol" prefWidth="90" text="Date" />
+                                                            <TableColumn fx:id="actionsCol" prefWidth="170" text="Actions" />
+                                                        </columns>
+                                                    </TableView>
+                                                </children>
+                                            </VBox>
+                                            <ScrollPane fitToWidth="true">
+                                                <content>
+                                                    <VBox spacing="10" style="-fx-background-color: #f8f9fa;">
+                                                        <padding><Insets bottom="15" left="15" right="15" top="15" /></padding>
+                                                        <children>
+                                                            <VBox fx:id="placeholderBox" alignment="CENTER" spacing="10" style="-fx-padding: 50;">
+                                                                <children>
+                                                                    <Label text="📋" style="-fx-font-size: 48;" />
+                                                                    <Label text="Sélectionnez une demande" style="-fx-font-size: 16; -fx-text-fill: #999;" />
+                                                                </children>
+                                                            </VBox>
+                                                            <VBox fx:id="detailsContent" spacing="10" visible="false" managed="false">
+                                                                <children>
+                                                                    <Label fx:id="detailTitreLabel" style="-fx-font-size: 18; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" />
+                                                                    <Separator />
+                                                                    <GridPane hgap="10" vgap="8">
+                                                                        <columnConstraints>
+                                                                            <ColumnConstraints minWidth="100" />
+                                                                            <ColumnConstraints hgrow="ALWAYS" />
+                                                                        </columnConstraints>
+                                                                        <Label text="Catégorie:" style="-fx-font-weight: bold; -fx-text-fill: #666;" GridPane.rowIndex="0" />
+                                                                        <Label fx:id="detailCategorieLabel" GridPane.columnIndex="1" GridPane.rowIndex="0" />
+                                                                        <Label text="Type:" style="-fx-font-weight: bold; -fx-text-fill: #666;" GridPane.rowIndex="1" />
+                                                                        <Label fx:id="detailTypeLabel" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+                                                                        <Label text="Priorité:" style="-fx-font-weight: bold; -fx-text-fill: #666;" GridPane.rowIndex="2" />
+                                                                        <Label fx:id="detailPrioriteLabel" GridPane.columnIndex="1" GridPane.rowIndex="2" />
+                                                                        <Label text="Statut:" style="-fx-font-weight: bold; -fx-text-fill: #666;" GridPane.rowIndex="3" />
+                                                                        <Label fx:id="detailStatusLabel" GridPane.columnIndex="1" GridPane.rowIndex="3" />
+                                                                        <Label text="Date:" style="-fx-font-weight: bold; -fx-text-fill: #666;" GridPane.rowIndex="4" />
+                                                                        <Label fx:id="detailDateLabel" GridPane.columnIndex="1" GridPane.rowIndex="4" />
+                                                                    </GridPane>
+                                                                    <Separator />
+                                                                    <Label text="Description:" style="-fx-font-weight: bold; -fx-text-fill: #666;" />
+                                                                    <Label fx:id="detailDescriptionLabel" wrapText="true" style="-fx-padding: 5 10; -fx-background-color: white; -fx-background-radius: 5;" />
+                                                                    <Separator />
+                                                                    <Label text="Détails Spécifiques:" style="-fx-font-weight: bold; -fx-text-fill: #666;" />
+                                                                    <VBox fx:id="detailSpecificContainer" spacing="5" style="-fx-padding: 5 10; -fx-background-color: white; -fx-background-radius: 5;" />
+                                                                    <Separator />
+
+                                                                    <!-- ACTIONS BUTTONS -->
+                                                                    <HBox alignment="CENTER_LEFT" spacing="10">
+                                                                        <Label text="Actions:" style="-fx-font-weight: bold; -fx-text-fill: #666; -fx-font-size: 14;" />
+                                                                        <Region HBox.hgrow="ALWAYS" />
+                                                                        <Button onAction="#generateDocument" text="📄 Générer Document IA"
+                                                                                style="-fx-background-color: #9b59b6; -fx-text-fill: white; -fx-cursor: hand; -fx-background-radius: 5; -fx-padding: 8 15;">
+                                                                        </Button>
+                                                                        <Button fx:id="avancerBtn" onAction="#ouvrirAvancer" text="⚡ Avancer Statut"
+                                                                                style="-fx-background-color: #f39c12; -fx-text-fill: white; -fx-cursor: hand; -fx-background-radius: 5; -fx-padding: 8 15;">
+                                                                        </Button>
+                                                                    </HBox>
+
+                                                                    <Separator />
+                                                                    <Label text="Historique:" style="-fx-font-weight: bold; -fx-text-fill: #666; -fx-font-size: 14;" />
+                                                                    <VBox fx:id="historiqueContainer" spacing="8" />
+                                                                </children>
+                                                            </VBox>
+                                                        </children>
+                                                    </VBox>
+                                                </content>
+                                            </ScrollPane>
+                                        </items>
+                                    </SplitPane>
+                                </children>
+                            </VBox>
+
+                            <!-- RIGHT PANEL: Weather -->
+                            <VBox spacing="10" alignment="TOP_CENTER" minWidth="300" maxWidth="310">
+                                <children>
+                                    <VBox fx:id="weatherWidgetContainer" spacing="8" prefWidth="295"
+                                          style="-fx-background-color: linear-gradient(to bottom right, #1e3c72, #2a5298);
+                                                 -fx-background-radius: 14; -fx-padding: 16;
+                                                 -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.25), 12, 0, 0, 4);">
+                                        <children>
+                                            <HBox alignment="CENTER_LEFT" spacing="8">
+                                                <Label text="☁️ Météo" style="-fx-text-fill: white; -fx-font-size: 13; -fx-font-weight: bold;" />
+                                                <Region HBox.hgrow="ALWAYS" />
+                                                <Label fx:id="cityLabel" text="--" style="-fx-text-fill: rgba(255,255,255,0.7); -fx-font-size: 11;" />
+                                                <Button text="🔄" onAction="#refreshWeather"
+                                                        style="-fx-background-color: rgba(255,255,255,0.15); -fx-text-fill: white;
+                                                               -fx-background-radius: 12; -fx-cursor: hand;
+                                                               -fx-min-width: 28; -fx-min-height: 28; -fx-font-size: 11;" />
+                                            </HBox>
+
+                                            <HBox fx:id="alertBox" visible="false" managed="false" alignment="CENTER"
+                                                  style="-fx-background-color: rgba(231,76,60,0.9); -fx-background-radius: 8; -fx-padding: 6;">
+                                                <Label fx:id="alertLabel" wrapText="true"
+                                                       style="-fx-text-fill: white; -fx-font-size: 10; -fx-font-weight: bold;" />
+                                            </HBox>
+
+                                            <HBox spacing="12" alignment="CENTER_LEFT">
+                                                <ImageView fx:id="weatherIcon" fitHeight="55" fitWidth="55" preserveRatio="true" />
+                                                <VBox spacing="1">
+                                                    <Label fx:id="temperatureLabel" text="--°C"
+                                                           style="-fx-text-fill: white; -fx-font-size: 30; -fx-font-weight: bold;" />
+                                                    <Label fx:id="descriptionLabel" text="--"
+                                                           style="-fx-text-fill: rgba(255,255,255,0.8); -fx-font-size: 11;" />
+                                                </VBox>
+                                            </HBox>
+
+                                            <HBox spacing="0" alignment="CENTER">
+                                                <VBox spacing="2" alignment="CENTER" HBox.hgrow="ALWAYS"
+                                                      style="-fx-background-color: rgba(255,255,255,0.08); -fx-background-radius: 8; -fx-padding: 8 4;">
+                                                    <Label text="💧" style="-fx-font-size: 13;" />
+                                                    <Label fx:id="humidityLabel" text="--%"
+                                                           style="-fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 12;" />
+                                                    <Label text="Humidité" style="-fx-text-fill: rgba(255,255,255,0.5); -fx-font-size: 8;" />
+                                                </VBox>
+                                                <VBox spacing="2" alignment="CENTER" HBox.hgrow="ALWAYS"
+                                                      style="-fx-background-color: rgba(255,255,255,0.08); -fx-background-radius: 8; -fx-padding: 8 4;">
+                                                    <Label text="💨" style="-fx-font-size: 13;" />
+                                                    <Label fx:id="windLabel" text="--"
+                                                           style="-fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 12;" />
+                                                    <Label text="Vent" style="-fx-text-fill: rgba(255,255,255,0.5); -fx-font-size: 8;" />
+                                                </VBox>
+                                                <VBox spacing="2" alignment="CENTER" HBox.hgrow="ALWAYS"
+                                                      style="-fx-background-color: rgba(255,255,255,0.08); -fx-background-radius: 8; -fx-padding: 8 4;">
+                                                    <Label text="🌡️" style="-fx-font-size: 13;" />
+                                                    <Label fx:id="feelsLikeLabel" text="--°C"
+                                                           style="-fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 12;" />
+                                                    <Label text="Ressenti" style="-fx-text-fill: rgba(255,255,255,0.5); -fx-font-size: 8;" />
+                                                </VBox>
+                                            </HBox>
+
+                                            <HBox alignment="CENTER">
+                                                <Button fx:id="toggleForecastBtn" text="📅 Voir la semaine ▼"
+                                                        onAction="#toggleForecast"
+                                                        style="-fx-background-color: rgba(255,255,255,0.12);
+                                                               -fx-text-fill: rgba(255,255,255,0.8);
+                                                               -fx-background-radius: 8; -fx-cursor: hand;
+                                                               -fx-font-size: 10; -fx-padding: 6 12;" />
+                                            </HBox>
+
+                                            <VBox fx:id="forecastSection" spacing="6" visible="false" managed="false">
+                                                <children>
+                                                    <Label text="📅 Prévisions 5 jours"
+                                                           style="-fx-text-fill: rgba(255,255,255,0.7);
+                                                                  -fx-font-size: 10; -fx-font-weight: bold;" />
+                                                    <HBox fx:id="forecastContainer" spacing="4" alignment="CENTER">
+                                                        <children>
+                                                            <Label text="Chargement..."
+                                                                   style="-fx-text-fill: rgba(255,255,255,0.4); -fx-font-size: 10;" />
+                                                        </children>
+                                                    </HBox>
+                                                </children>
+                                            </VBox>
+
+                                            <Label fx:id="recommendationLabel" text="..." wrapText="true"
+                                                   alignment="CENTER" maxWidth="Infinity"
+                                                   style="-fx-text-fill: white; -fx-font-size: 10;
+                                                          -fx-background-color: rgba(255,255,255,0.12);
+                                                          -fx-background-radius: 8; -fx-padding: 6;" />
+
+                                            <Label fx:id="lastUpdateLabel" text="--"
+                                                   alignment="CENTER_RIGHT" maxWidth="Infinity"
+                                                   style="-fx-text-fill: rgba(255,255,255,0.35); -fx-font-size: 8;" />
                                         </children>
                                     </VBox>
 
-                                    <ScrollPane fitToWidth="true">
-                                        <content>
-                                            <VBox fx:id="detailsPanel"
-                                                  spacing="10.0"
-                                                  style="-fx-background-color: #f8f9fa;">
-                                                <padding>
-                                                    <Insets bottom="15.0"
-                                                            left="15.0"
-                                                            right="15.0"
-                                                            top="15.0" />
-                                                </padding>
-                                                <children>
-                                                    <VBox fx:id="placeholderBox"
-                                                          alignment="CENTER"
-                                                          spacing="10.0"
-                                                          style="-fx-padding: 50;">
-                                                        <children>
-                                                            <Label text="📋"
-                                                                   style="-fx-font-size: 48;" />
-                                                            <Label text="Sélectionnez une demande"
-                                                                   style="-fx-font-size: 16; -fx-text-fill: #999;" />
-                                                            <Label text="Cliquez sur une ligne pour voir les détails"
-                                                                   style="-fx-font-size: 12; -fx-text-fill: #bbb;" />
-                                                        </children>
-                                                    </VBox>
+                                    <VBox fx:id="weatherTipsBox" spacing="6"
+                                          style="-fx-background-color: white; -fx-background-radius: 10; -fx-padding: 12;
+                                                 -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.06), 6, 0, 0, 2);">
+                                        <Label text="💡 Conseils RH" style="-fx-font-weight: bold; -fx-text-fill: #2c3e50; -fx-font-size: 11;" />
+                                        <Label fx:id="weatherTipLabel" text="..." wrapText="true" prefWidth="260"
+                                               style="-fx-text-fill: #666; -fx-font-size: 10;" />
+                                    </VBox>
 
-                                                    <VBox fx:id="detailsContent"
-                                                          spacing="10.0"
-                                                          visible="false"
-                                                          managed="false">
-                                                        <children>
-                                                            <HBox alignment="CENTER_LEFT"
-                                                                  spacing="10.0">
-                                                                <children>
-                                                                    <Label fx:id="detailTitreLabel"
-                                                                           text=""
-                                                                           style="-fx-font-size: 18; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" />
-                                                                </children>
-                                                            </HBox>
-                                                            <Separator />
-                                                            <GridPane hgap="10.0"
-                                                                      vgap="8.0">
-                                                                <columnConstraints>
-                                                                    <ColumnConstraints
-                                                                            minWidth="100.0" />
-                                                                    <ColumnConstraints
-                                                                            hgrow="ALWAYS" />
-                                                                </columnConstraints>
-                                                                <children>
-                                                                    <Label text="Catégorie:"
-                                                                           style="-fx-font-weight: bold; -fx-text-fill: #666;"
-                                                                           GridPane.rowIndex="0" />
-                                                                    <Label fx:id="detailCategorieLabel"
-                                                                           GridPane.columnIndex="1"
-                                                                           GridPane.rowIndex="0" />
-                                                                    <Label text="Type:"
-                                                                           style="-fx-font-weight: bold; -fx-text-fill: #666;"
-                                                                           GridPane.rowIndex="1" />
-                                                                    <Label fx:id="detailTypeLabel"
-                                                                           GridPane.columnIndex="1"
-                                                                           GridPane.rowIndex="1" />
-                                                                    <Label text="Priorité:"
-                                                                           style="-fx-font-weight: bold; -fx-text-fill: #666;"
-                                                                           GridPane.rowIndex="2" />
-                                                                    <Label fx:id="detailPrioriteLabel"
-                                                                           GridPane.columnIndex="1"
-                                                                           GridPane.rowIndex="2" />
-                                                                    <Label text="Statut:"
-                                                                           style="-fx-font-weight: bold; -fx-text-fill: #666;"
-                                                                           GridPane.rowIndex="3" />
-                                                                    <Label fx:id="detailStatusLabel"
-                                                                           GridPane.columnIndex="1"
-                                                                           GridPane.rowIndex="3" />
-                                                                    <Label text="Date:"
-                                                                           style="-fx-font-weight: bold; -fx-text-fill: #666;"
-                                                                           GridPane.rowIndex="4" />
-                                                                    <Label fx:id="detailDateLabel"
-                                                                           GridPane.columnIndex="1"
-                                                                           GridPane.rowIndex="4" />
-                                                                </children>
-                                                            </GridPane>
-                                                            <Separator />
-                                                            <Label text="Description:"
-                                                                   style="-fx-font-weight: bold; -fx-text-fill: #666;" />
-                                                            <Label fx:id="detailDescriptionLabel"
-                                                                   wrapText="true"
-                                                                   style="-fx-padding: 5 10; -fx-background-color: white; -fx-background-radius: 5;" />
-                                                            <Separator />
-                                                            <Label text="Détails Spécifiques:"
-                                                                   style="-fx-font-weight: bold; -fx-text-fill: #666;" />
-                                                            <VBox fx:id="detailSpecificContainer"
-                                                                  spacing="5.0"
-                                                                  style="-fx-padding: 5 10; -fx-background-color: white; -fx-background-radius: 5;" />
-                                                            <Separator />
-                                                            <HBox alignment="CENTER_LEFT"
-                                                                  spacing="10.0">
-                                                                <children>
-                                                                    <Label text="Historique:"
-                                                                           style="-fx-font-weight: bold; -fx-text-fill: #666; -fx-font-size: 14;" />
-                                                                    <Region
-                                                                            HBox.hgrow="ALWAYS" />
-                                                                    <Button fx:id="avancerBtn"
-                                                                            onAction="#ouvrirAvancer"
-                                                                            text="⚡ Avancer Statut"
-                                                                            style="-fx-background-color: #f39c12; -fx-text-fill: white;">
-                                                                        <font>
-                                                                            <Font name="System Bold"
-                                                                                  size="12.0" />
-                                                                        </font>
-                                                                    </Button>
-                                                                </children>
-                                                            </HBox>
-                                                            <VBox fx:id="historiqueContainer"
-                                                                  spacing="8.0" />
-                                                        </children>
-                                                    </VBox>
-                                                </children>
+                                    <VBox spacing="6"
+                                          style="-fx-background-color: white; -fx-background-radius: 10; -fx-padding: 12;
+                                                 -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.06), 6, 0, 0, 2);">
+                                        <Label text="📊 Aperçu" style="-fx-font-weight: bold; -fx-text-fill: #2c3e50; -fx-font-size: 11;" />
+                                        <HBox spacing="8" alignment="CENTER">
+                                            <VBox alignment="CENTER" spacing="2" HBox.hgrow="ALWAYS">
+                                                <Label fx:id="quickStatTotal" text="0" style="-fx-font-size: 18; -fx-font-weight: bold; -fx-text-fill: #3498db;" />
+                                                <Label text="Total" style="-fx-font-size: 8; -fx-text-fill: #999;" />
                                             </VBox>
-                                        </content>
-                                    </ScrollPane>
-                                </items>
-                            </SplitPane>
+                                            <VBox alignment="CENTER" spacing="2" HBox.hgrow="ALWAYS">
+                                                <Label fx:id="quickStatPending" text="0" style="-fx-font-size: 18; -fx-font-weight: bold; -fx-text-fill: #f39c12;" />
+                                                <Label text="En attente" style="-fx-font-size: 8; -fx-text-fill: #999;" />
+                                            </VBox>
+                                            <VBox alignment="CENTER" spacing="2" HBox.hgrow="ALWAYS">
+                                                <Label fx:id="quickStatUrgent" text="0" style="-fx-font-size: 18; -fx-font-weight: bold; -fx-text-fill: #e74c3c;" />
+                                                <Label text="Urgent" style="-fx-font-size: 8; -fx-text-fill: #999;" />
+                                            </VBox>
+                                        </HBox>
+                                    </VBox>
+                                </children>
+                            </VBox>
                         </children>
-                    </VBox>
+                    </HBox>
                 </Tab>
 
+                <!-- TAB 2: STATISTIQUES -->
                 <Tab text="📊 Statistiques" closable="false">
-                    <ScrollPane fitToWidth="true"
-                                style="-fx-background-color: #f8f9fa;">
+                    <ScrollPane fitToWidth="true" style="-fx-background-color: #f8f9fa;">
                         <content>
-                            <VBox spacing="25.0" style="-fx-padding: 30;">
-                                <children>
-                                    <HBox alignment="CENTER_LEFT"
-                                          spacing="15.0">
-                                        <children>
-                                            <Label text="📊 Statistiques des Demandes"
-                                                   style="-fx-font-size: 24; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" />
-                                            <Region HBox.hgrow="ALWAYS" />
-                                            <Button onAction="#refreshStatistiques"
-                                                    text="🔄 Actualiser"
-                                                    style="-fx-background-color: #3498db; -fx-text-fill: white; -fx-padding: 8 16; -fx-font-weight: bold;" />
-                                        </children>
-                                    </HBox>
-                                    <HBox spacing="20.0" alignment="CENTER">
-                                        <children>
-                                            <VBox alignment="CENTER"
-                                                  spacing="10.0"
-                                                  HBox.hgrow="ALWAYS"
-                                                  style="-fx-background-color: white; -fx-padding: 25; -fx-background-radius: 10; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 10, 0, 0, 2);">
-                                                <children>
-                                                    <Label text="📋"
-                                                           style="-fx-font-size: 36;" />
-                                                    <Label fx:id="lblTotalDemandes"
-                                                           text="0"
-                                                           style="-fx-font-size: 48; -fx-font-weight: bold; -fx-text-fill: #3498db;" />
-                                                    <Label text="Total Demandes"
-                                                           style="-fx-font-size: 14; -fx-text-fill: #7f8c8d;" />
-                                                </children>
-                                            </VBox>
-                                            <VBox alignment="CENTER"
-                                                  spacing="10.0"
-                                                  HBox.hgrow="ALWAYS"
-                                                  style="-fx-background-color: white; -fx-padding: 25; -fx-background-radius: 10; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 10, 0, 0, 2);">
-                                                <children>
-                                                    <Label text="📝"
-                                                           style="-fx-font-size: 36;" />
-                                                    <Label fx:id="lblTotalHistorique"
-                                                           text="0"
-                                                           style="-fx-font-size: 48; -fx-font-weight: bold; -fx-text-fill: #e74c3c;" />
-                                                    <Label text="Changements Statut"
-                                                           style="-fx-font-size: 14; -fx-text-fill: #7f8c8d;" />
-                                                </children>
-                                            </VBox>
-                                            <VBox alignment="CENTER"
-                                                  spacing="10.0"
-                                                  HBox.hgrow="ALWAYS"
-                                                  style="-fx-background-color: white; -fx-padding: 25; -fx-background-radius: 10; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 10, 0, 0, 2);">
-                                                <children>
-                                                    <Label text="✅"
-                                                           style="-fx-font-size: 36;" />
-                                                    <Label fx:id="lblDemandesResolues"
-                                                           text="0"
-                                                           style="-fx-font-size: 48; -fx-font-weight: bold; -fx-text-fill: #27ae60;" />
-                                                    <Label text="Résolues"
-                                                           style="-fx-font-size: 14; -fx-text-fill: #7f8c8d;" />
-                                                </children>
-                                            </VBox>
-                                        </children>
-                                    </HBox>
-                                    <Separator />
-                                    <Label text="📌 Par Statut"
-                                           style="-fx-font-size: 18; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" />
-                                    <HBox fx:id="statutStatsContainer"
-                                          spacing="15.0"
-                                          alignment="CENTER" />
-                                    <Separator />
-                                    <Label text="🔥 Par Priorité"
-                                           style="-fx-font-size: 18; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" />
-                                    <HBox fx:id="prioriteStatsContainer"
-                                          spacing="15.0"
-                                          alignment="CENTER" />
-                                    <Separator />
-                                    <Label text="📂 Par Type de Demande"
-                                           style="-fx-font-size: 18; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" />
-                                    <HBox fx:id="typeStatsContainer"
-                                          spacing="15.0"
-                                          alignment="CENTER" />
-                                    <Separator />
-                                    <Label text="🏷️ Par Catégorie"
-                                           style="-fx-font-size: 18; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" />
-                                    <HBox fx:id="categorieStatsContainer"
-                                          spacing="15.0"
-                                          alignment="CENTER" />
-                                    <Separator />
-                                    <Label text="👤 Par Acteur (Historique)"
-                                           style="-fx-font-size: 18; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" />
-                                    <HBox fx:id="acteurStatsContainer"
-                                          spacing="15.0"
-                                          alignment="CENTER" />
-                                </children>
+                            <VBox spacing="25" style="-fx-padding: 30;">
+                                <HBox alignment="CENTER_LEFT" spacing="15">
+                                    <Label text="📊 Statistiques des Demandes" style="-fx-font-size: 24; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" />
+                                    <Region HBox.hgrow="ALWAYS" />
+                                    <Button onAction="#refreshStatistiques" text="🔄 Actualiser"
+                                            style="-fx-background-color: #3498db; -fx-text-fill: white; -fx-padding: 8 16; -fx-font-weight: bold; -fx-cursor: hand; -fx-background-radius: 8;" />
+                                </HBox>
+                                <HBox spacing="20" alignment="CENTER">
+                                    <VBox alignment="CENTER" spacing="10" HBox.hgrow="ALWAYS" style="-fx-background-color: white; -fx-padding: 25; -fx-background-radius: 10; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 10, 0, 0, 2);">
+                                        <Label text="📋" style="-fx-font-size: 36;" />
+                                        <Label fx:id="lblTotalDemandes" text="0" style="-fx-font-size: 48; -fx-font-weight: bold; -fx-text-fill: #3498db;" />
+                                        <Label text="Total Demandes" style="-fx-font-size: 14; -fx-text-fill: #7f8c8d;" />
+                                    </VBox>
+                                    <VBox alignment="CENTER" spacing="10" HBox.hgrow="ALWAYS" style="-fx-background-color: white; -fx-padding: 25; -fx-background-radius: 10; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 10, 0, 0, 2);">
+                                        <Label text="📝" style="-fx-font-size: 36;" />
+                                        <Label fx:id="lblTotalHistorique" text="0" style="-fx-font-size: 48; -fx-font-weight: bold; -fx-text-fill: #e74c3c;" />
+                                        <Label text="Changements" style="-fx-font-size: 14; -fx-text-fill: #7f8c8d;" />
+                                    </VBox>
+                                    <VBox alignment="CENTER" spacing="10" HBox.hgrow="ALWAYS" style="-fx-background-color: white; -fx-padding: 25; -fx-background-radius: 10; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 10, 0, 0, 2);">
+                                        <Label text="✅" style="-fx-font-size: 36;" />
+                                        <Label fx:id="lblDemandesResolues" text="0" style="-fx-font-size: 48; -fx-font-weight: bold; -fx-text-fill: #27ae60;" />
+                                        <Label text="Résolues" style="-fx-font-size: 14; -fx-text-fill: #7f8c8d;" />
+                                    </VBox>
+                                </HBox>
+                                <Separator />
+                                <Label text="📌 Par Statut" style="-fx-font-size: 18; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" />
+                                <HBox fx:id="statutStatsContainer" spacing="15" alignment="CENTER" />
+                                <Separator />
+                                <Label text="🔥 Par Priorité" style="-fx-font-size: 18; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" />
+                                <HBox fx:id="prioriteStatsContainer" spacing="15" alignment="CENTER" />
+                                <Separator />
+                                <Label text="📂 Par Type" style="-fx-font-size: 18; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" />
+                                <HBox fx:id="typeStatsContainer" spacing="15" alignment="CENTER" />
+                                <Separator />
+                                <Label text="🏷️ Par Catégorie" style="-fx-font-size: 18; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" />
+                                <HBox fx:id="categorieStatsContainer" spacing="15" alignment="CENTER" />
+                                <Separator />
+                                <Label text="👤 Par Acteur" style="-fx-font-size: 18; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" />
+                                <HBox fx:id="acteurStatsContainer" spacing="15" alignment="CENTER" />
                             </VBox>
                         </content>
                     </ScrollPane>

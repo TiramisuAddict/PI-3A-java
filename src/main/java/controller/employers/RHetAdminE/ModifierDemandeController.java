@@ -168,7 +168,6 @@ public class ModifierDemandeController implements Initializable {
     @FXML
     private void retourListe() {
         try {
-            // ADD the leading slash /
             NavigationHelper.loadView("/emp/RHetAdminE/demandes.fxml");
         } catch (IOException e) {
             e.printStackTrace();
