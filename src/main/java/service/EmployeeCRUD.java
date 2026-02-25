@@ -69,8 +69,8 @@ public class EmployeeCRUD {
     }
 
     /**
-     * Get all employees with role "responsable"
-     * @return List of employees who are responsables
+     * Get all employees with 'responsable' role
+     * @return List of employees who can be project managers
      */
     public List<EmployeeInfo> getResponsables() throws SQLException {
         String sql = "SELECT id_emp, nom, prenom, role FROM employee WHERE role = 'responsable' ORDER BY nom, prenom";

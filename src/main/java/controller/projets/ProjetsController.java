@@ -7,7 +7,7 @@ import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
-import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.input.*;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -17,7 +17,6 @@ import javafx.stage.Stage;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.util.Callback;
 
 import java.io.IOException;
 import java.sql.SQLException;
@@ -71,27 +70,38 @@ public class ProjetsController {
     @FXML private Button btnAddEmployee;
     @FXML private ListView<EmployeeInfo> detailTeamListView;
 
-    // TASKS TAB
+    // TASKS TAB - Kanban Board
     @FXML private Label selectedProjectTitle;
+    @FXML private Label kanbanSubtitle;
     @FXML private TextField taskSearchField;
-    @FXML private ComboBox<statut_t> taskStatusFilter;
     @FXML private Button btnRefreshTasks;
     @FXML private Button btnCreateTaskInline;
-    @FXML private TableView<Tache> tasksTable;
+    
+    // Kanban Board containers
+    @FXML private HBox kanbanBoard;
+    @FXML private VBox columnTodo;
+    @FXML private VBox columnInProgress;
+    @FXML private VBox columnBlocked;
+    @FXML private VBox columnDone;
+    @FXML private VBox todoTasksContainer;
+    @FXML private VBox inProgressTasksContainer;
+    @FXML private VBox blockedTasksContainer;
+    @FXML private VBox doneTasksContainer;
+    @FXML private HBox todoAddCard;
+    @FXML private HBox inProgressAddCard;
+    @FXML private HBox blockedAddCard;
+    
+    // Kanban count labels
+    @FXML private Label todoCount;
+    @FXML private Label inProgressCount;
+    @FXML private Label blockedCount;
+    @FXML private Label doneCount;
 
     // Task stats labels
     @FXML private Label taskTotalLabel;
     @FXML private Label taskCompletedLabel;
     @FXML private Label taskInProgressLabel;
 
-    @FXML private TableColumn<Tache, String> colTitre;
-    @FXML private TableColumn<Tache, Integer> colAssignee;
-    @FXML private TableColumn<Tache, priority> colPriorite;
-    @FXML private TableColumn<Tache, statut_t> colStatut;
-    @FXML private TableColumn<Tache, LocalDate> colDateDebut;
-    @FXML private TableColumn<Tache, LocalDate> colDueDate;
-    @FXML private TableColumn<Tache, Integer> colProgress;
-    @FXML private TableColumn<Tache, Void> colActions;
 
     @FXML private Label taskInfoLabel;
 
@@ -190,12 +200,7 @@ public class ProjetsController {
         btnRefreshTasks.setOnAction(e -> loadTasksForSelectedProject());
         taskSearchField.textProperty().addListener((obs, o, n) -> applyTaskFilters());
 
-        // Task status filter
-        taskStatusFilter.getItems().setAll(statut_t.values());
-        taskStatusFilter.getItems().addFirst(null);
-        taskStatusFilter.valueProperty().addListener((obs, o, n) -> applyTaskFilters());
-
-        // Setup tasks table
+        // Setup Kanban board
         setupTasksTable();
 
         // initial state
@@ -238,10 +243,8 @@ public class ProjetsController {
         // Re-setup team list view to apply correct role permissions for remove buttons
         setupTeamListView();
 
-        // Re-setup the action column visibility
-        if (colActions != null) {
-            colActions.setVisible(canManage);
-        }
+        // Re-setup Kanban board for new role
+        setupKanbanBoard();
     }
 
     /**
@@ -460,214 +463,738 @@ public class ProjetsController {
     }
 
 
-    private void setupTasksTable() {
-        // Set up column cell value factories
-        colTitre.setCellValueFactory(new PropertyValueFactory<>("titre"));
-        colAssignee.setCellValueFactory(new PropertyValueFactory<>("id_employe"));
-        colPriorite.setCellValueFactory(new PropertyValueFactory<>("priority_tache"));
-        colStatut.setCellValueFactory(new PropertyValueFactory<>("statut_tache"));
-        colDateDebut.setCellValueFactory(new PropertyValueFactory<>("date_deb"));
-        colDueDate.setCellValueFactory(new PropertyValueFactory<>("date_limite"));
-        colProgress.setCellValueFactory(new PropertyValueFactory<>("progression"));
-
-        // Custom cell factory for assignee to show employee name instead of ID
-        colAssignee.setCellFactory(col -> new TableCell<>() {
-            @Override
-            protected void updateItem(Integer item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || item == null || item == 0) {
-                    setText(null);
-                    setGraphic(null);
-                } else {
-                    String employeeName = getEmployeeNameById(item);
-                    Label badge = new Label(employeeName);
-                    badge.setStyle("-fx-background-color: #E0E7FF; -fx-text-fill: #3730A3; -fx-padding: 4 8; -fx-background-radius: 6; -fx-font-size: 11px;");
-                    setGraphic(badge);
-                }
-            }
-        });
-
-        // Custom cell factory for priority with colored badges
-        colPriorite.setCellFactory(col -> new TableCell<>() {
-            @Override
-            protected void updateItem(priority item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || item == null) {
-                    setText(null);
-                    setGraphic(null);
-                } else {
-                    Label badge = new Label(prettyEnum(item));
-                    badge.setStyle(getPriorityBadgeStyle(item));
-                    setGraphic(badge);
-                }
-            }
-        });
-
-        // For employees: make status column editable with a ComboBox
+    private void setupKanbanBoard() {
+        // Setup drag and drop for each column
+        setupColumnDragDrop(todoTasksContainer, statut_t.A_FAIRE);
+        setupColumnDragDrop(inProgressTasksContainer, statut_t.EN_COURS);
+        setupColumnDragDrop(blockedTasksContainer, statut_t.BLOCQUEE);
+        setupColumnDragDrop(doneTasksContainer, statut_t.TERMINEE);
+        
+        // Setup "Add task" buttons at bottom of columns
         UserSession session = UserSession.getInstance();
-        if (session.isEmployee()) {
-            colStatut.setCellFactory(col -> new TableCell<>() {
-                private final ComboBox<statut_t> statusCombo = new ComboBox<>();
-
-                {
-                    statusCombo.getItems().setAll(statut_t.values());
-                    statusCombo.setStyle("-fx-background-radius: 8; -fx-font-size: 11px;");
-                    statusCombo.setOnAction(e -> {
-                        Tache tache = getTableView().getItems().get(getIndex());
-                        statut_t newStatus = statusCombo.getValue();
-                        if (newStatus != null && newStatus != tache.getStatut_tache()) {
-                            updateTaskStatusInline(tache, newStatus);
-                        }
-                    });
-                }
-
-                @Override
-                protected void updateItem(statut_t item, boolean empty) {
-                    super.updateItem(item, empty);
-                    if (empty || item == null) {
-                        setGraphic(null);
-                    } else {
-                        statusCombo.setValue(item);
-                        setGraphic(statusCombo);
-                    }
-                }
-            });
-
-            // For employees: make progress column editable with a Slider
-            colProgress.setCellFactory(col -> new TableCell<>() {
-                private final Slider slider = new Slider(0, 100, 0);
-                private final Label valueLabel = new Label("0%");
-                private final VBox container = new VBox(4);
-                private boolean updating = false;
-
-                {
-                    slider.setShowTickLabels(false);
-                    slider.setShowTickMarks(false);
-                    slider.setBlockIncrement(10);
-                    slider.setPrefWidth(80);
-                    slider.setStyle("-fx-control-inner-background: #E2E8F0;");
-
-                    valueLabel.setStyle("-fx-font-size: 10px; -fx-text-fill: #64748B;");
-
-                    container.setAlignment(Pos.CENTER);
-                    container.getChildren().addAll(slider, valueLabel);
-
-                    slider.valueProperty().addListener((obs, oldVal, newVal) -> {
-                        valueLabel.setText(newVal.intValue() + "%");
-                    });
-
-                    slider.setOnMouseReleased(e -> {
-                        if (!updating) {
-                            Tache tache = getTableView().getItems().get(getIndex());
-                            int newProgress = (int) slider.getValue();
-                            if (newProgress != tache.getProgression()) {
-                                updateTaskProgressInline(tache, newProgress);
-                            }
-                        }
-                    });
-                }
-
-                @Override
-                protected void updateItem(Integer item, boolean empty) {
-                    super.updateItem(item, empty);
-                    if (empty || item == null) {
-                        setGraphic(null);
-                    } else {
-                        updating = true;
-                        slider.setValue(item);
-                        valueLabel.setText(item + "%");
-                        updating = false;
-                        setGraphic(container);
-                    }
-                }
-            });
+        boolean canManage = session.canManageTasks();
+        
+        if (canManage) {
+            setupAddCardButton(todoAddCard, statut_t.A_FAIRE);
+            setupAddCardButton(inProgressAddCard, statut_t.EN_COURS);
+            setupAddCardButton(blockedAddCard, statut_t.BLOCQUEE);
         } else {
-            // Custom cell factory for status with colored badges (for managers)
-            colStatut.setCellFactory(col -> new TableCell<>() {
-                @Override
-                protected void updateItem(statut_t item, boolean empty) {
-                    super.updateItem(item, empty);
-                    if (empty || item == null) {
-                        setText(null);
-                        setGraphic(null);
-                    } else {
-                        Label badge = new Label(prettyEnum(item));
-                        badge.setStyle(getTaskStatusBadgeStyle(item));
-                        setGraphic(badge);
-                    }
-                }
-            });
+            // Hide add buttons for employees
+            if (todoAddCard != null) todoAddCard.setVisible(false);
+            if (inProgressAddCard != null) inProgressAddCard.setVisible(false);
+            if (blockedAddCard != null) blockedAddCard.setVisible(false);
+        }
+    }
+    
+    /**
+     * Setup drag and drop handlers for a column
+     */
+    private void setupColumnDragDrop(VBox container, statut_t targetStatus) {
+        // Get the column color based on status
+        String columnBgColor = getColumnBackgroundColor(targetStatus);
+        String highlightColor = getColumnHighlightColor(targetStatus);
 
-            // Custom cell factory for progress bar (for managers)
-            colProgress.setCellFactory(col -> new TableCell<>() {
-                @Override
-                protected void updateItem(Integer item, boolean empty) {
-                    super.updateItem(item, empty);
-                    if (empty || item == null) {
-                        setGraphic(null);
-                    } else {
-                        ProgressBar bar = new ProgressBar(item / 100.0);
-                        bar.setPrefWidth(80);
-                        bar.setStyle("-fx-accent: #10B981;");
-                        Label lbl = new Label(item + "%");
-                        lbl.setStyle("-fx-font-size: 11px; -fx-text-fill: #64748B;");
-                        HBox box = new HBox(6, bar, lbl);
-                        box.setAlignment(Pos.CENTER_LEFT);
-                        setGraphic(box);
+        container.setOnDragOver(event -> {
+            if (event.getGestureSource() != container && event.getDragboard().hasString()) {
+                event.acceptTransferModes(TransferMode.MOVE);
+            }
+            event.consume();
+        });
+        
+        container.setOnDragEntered(event -> {
+            if (event.getGestureSource() != container && event.getDragboard().hasString()) {
+                // Smooth highlight effect
+                container.setStyle("-fx-padding: 8 12 12 12; -fx-background-color: " + highlightColor + "; -fx-background-radius: 8; -fx-border-color: " + getColumnAccentColor(targetStatus) + "; -fx-border-width: 2; -fx-border-style: dashed; -fx-border-radius: 8;");
+            }
+            event.consume();
+        });
+        
+        container.setOnDragExited(event -> {
+            // Reset to original style
+            container.setStyle("-fx-padding: 8 12 12 12;");
+            event.consume();
+        });
+        
+        container.setOnDragDropped(event -> {
+            Dragboard db = event.getDragboard();
+            boolean success = false;
+            
+            if (db.hasString()) {
+                try {
+                    int taskId = Integer.parseInt(db.getString());
+                    Tache task = findTaskById(taskId);
+                    
+                    if (task != null && task.getStatut_tache() != targetStatus) {
+                        // Check if employee can only change status of their own tasks
+                        UserSession session = UserSession.getInstance();
+                        if (session.isEmployee() && task.getId_employe() != session.getUserId()) {
+                            showError("Action non autorisée", "Vous ne pouvez modifier que vos propres tâches.");
+                        } else {
+                            updateTaskStatus(task, targetStatus);
+                            success = true;
+                        }
                     }
+                } catch (NumberFormatException e) {
+                    e.printStackTrace();
                 }
-            });
+            }
+            
+            event.setDropCompleted(success);
+            event.consume();
+        });
+    }
+    
+    private String getColumnBackgroundColor(statut_t status) {
+        return switch (status) {
+            case A_FAIRE -> "#F1F5F9";
+            case EN_COURS -> "#EFF6FF";
+            case BLOCQUEE -> "#FEF2F2";
+            case TERMINEE -> "#ECFDF5";
+        };
+    }
+
+    private String getColumnHighlightColor(statut_t status) {
+        return switch (status) {
+            case A_FAIRE -> "#E2E8F0";
+            case EN_COURS -> "#DBEAFE";
+            case BLOCQUEE -> "#FEE2E2";
+            case TERMINEE -> "#D1FAE5";
+        };
+    }
+
+    private String getColumnAccentColor(statut_t status) {
+        return switch (status) {
+            case A_FAIRE -> "#64748B";
+            case EN_COURS -> "#3B82F6";
+            case BLOCQUEE -> "#EF4444";
+            case TERMINEE -> "#10B981";
+        };
+    }
+
+    /**
+     * Setup add card button functionality
+     */
+    private void setupAddCardButton(HBox addCard, statut_t defaultStatus) {
+        if (addCard == null) return;
+        
+        addCard.setOnMouseEntered(e ->
+            addCard.setStyle("-fx-background-color: rgba(99,102,241,0.1); -fx-background-radius: 8; -fx-padding: 12; -fx-cursor: hand;")
+        );
+
+        addCard.setOnMouseExited(e ->
+            addCard.setStyle("-fx-background-color: transparent; -fx-padding: 12; -fx-cursor: hand;")
+        );
+
+        addCard.setOnMouseClicked(e -> openCreateTaskModalWithStatus(defaultStatus));
+    }
+    
+    /**
+     * Find a task by its ID
+     */
+    private Tache findTaskById(int taskId) {
+        return masterTasks.stream()
+                .filter(t -> t.getId_tache() == taskId)
+                .findFirst()
+                .orElse(null);
+    }
+    
+    /**
+     * Update task status via drag and drop
+     */
+    private void updateTaskStatus(Tache task, statut_t newStatus) {
+        try {
+            statut_t oldStatus = task.getStatut_tache();
+            task.setStatut_tache(newStatus);
+            
+            // Auto-update progression
+            if (newStatus == statut_t.TERMINEE) {
+                task.setProgression(100);
+            } else if (newStatus == statut_t.A_FAIRE && task.getProgression() == 100) {
+                task.setProgression(0);
+            }
+            
+            tacheCRUD.modifier(task);
+            loadTasksForSelectedProject();
+            taskInfoLabel.setText("✅ Tâche déplacée: " + prettyEnum(oldStatus) + " → " + prettyEnum(newStatus));
+            
+        } catch (SQLException e) {
+            e.printStackTrace();
+            showError("Erreur", "Impossible de mettre à jour le statut: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Create a Kanban task card with modern light design
+     */
+    private VBox createTaskCard(Tache task) {
+        VBox card = new VBox(10);
+        card.setPadding(new Insets(14));
+        card.setStyle(getTaskCardStyle(task));
+        card.setUserData(task);
+        
+        // Make card draggable with smooth animation
+        card.setOnDragDetected(event -> {
+            UserSession session = UserSession.getInstance();
+            // Employees can only drag their own tasks
+            if (session.isEmployee() && task.getId_employe() != session.getUserId()) {
+                return;
+            }
+            
+            Dragboard db = card.startDragAndDrop(TransferMode.MOVE);
+            ClipboardContent content = new ClipboardContent();
+            content.putString(String.valueOf(task.getId_tache()));
+            db.setContent(content);
+            
+            // Create a snapshot for drag image
+            db.setDragView(card.snapshot(null, null));
+
+            // Visual feedback during drag - scale down and fade
+            card.setScaleX(0.95);
+            card.setScaleY(0.95);
+            card.setOpacity(0.6);
+            card.setStyle(getTaskCardDraggingStyle(task));
+
+            event.consume();
+        });
+        
+        card.setOnDragDone(event -> {
+            // Reset card appearance with smooth transition
+            card.setScaleX(1.0);
+            card.setScaleY(1.0);
+            card.setOpacity(1.0);
+            card.setStyle(getTaskCardStyle(task));
+            event.consume();
+        });
+        
+        // Hover effect
+        card.setOnMouseEntered(e -> {
+            card.setStyle(getTaskCardHoverStyle(task));
+            card.setCursor(javafx.scene.Cursor.HAND);
+        });
+        
+        card.setOnMouseExited(e -> {
+            card.setStyle(getTaskCardStyle(task));
+        });
+        
+        // Priority indicator - left border stripe
+        String priorityColor = getPriorityColor(task.getPriority_tache());
+
+        // Title
+        Label titleLabel = new Label(task.getTitre());
+        titleLabel.setStyle("-fx-font-weight: 600; -fx-font-size: 14px; -fx-text-fill: #1E293B; -fx-font-family: 'Segoe UI', sans-serif;");
+        titleLabel.setWrapText(true);
+        titleLabel.setMaxWidth(250);
+        
+        // Description (truncated)
+        String desc = task.getDescription();
+        if (desc != null && !desc.isEmpty()) {
+            Label descLabel = new Label(desc.length() > 80 ? desc.substring(0, 80) + "..." : desc);
+            descLabel.setStyle("-fx-text-fill: #64748B; -fx-font-size: 12px; -fx-font-family: 'Segoe UI', sans-serif;");
+            descLabel.setWrapText(true);
+            descLabel.setMaxWidth(250);
+            card.getChildren().add(descLabel);
+        }
+        
+        // Tags row (priority + due date)
+        HBox tagsRow = new HBox(8);
+        tagsRow.setAlignment(Pos.CENTER_LEFT);
+        
+        // Priority badge
+        Label priorityBadge = new Label(getPriorityLabel(task.getPriority_tache()));
+        priorityBadge.setStyle(getKanbanPriorityBadgeStyle(task.getPriority_tache()));
+        tagsRow.getChildren().add(priorityBadge);
+        
+        // Due date if exists
+        if (task.getDate_limite() != null) {
+            Label dueDateLabel = new Label("📅 " + formatDate(task.getDate_limite()));
+            dueDateLabel.setStyle(getDueDateStyle(task.getDate_limite()));
+            tagsRow.getChildren().add(dueDateLabel);
         }
 
-        // Action buttons column - only for managers
+        // Bottom row (assignee + progress)
+        HBox bottomRow = new HBox(8);
+        bottomRow.setAlignment(Pos.CENTER_LEFT);
+
+        // Assignee avatar
+        String employeeName = getEmployeeNameById(task.getId_employe());
+        String initials = getInitials(employeeName);
+        Label avatar = new Label(initials);
+        avatar.setStyle("-fx-background-color: " + getAvatarColor(task.getId_employe()) + "; -fx-text-fill: white; -fx-font-size: 10px; -fx-font-weight: 700; -fx-padding: 5 7; -fx-background-radius: 50; -fx-font-family: 'Segoe UI', sans-serif;");
+        avatar.setTooltip(new Tooltip(employeeName));
+        bottomRow.getChildren().add(avatar);
+
+        // Employee name
+        Label nameLabel = new Label(employeeName);
+        nameLabel.setStyle("-fx-text-fill: #64748B; -fx-font-size: 12px; -fx-font-family: 'Segoe UI', sans-serif;");
+        bottomRow.getChildren().add(nameLabel);
+
+        // Spacer
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+        bottomRow.getChildren().add(spacer);
+
+        // Progress indicator
+        if (task.getProgression() > 0) {
+            HBox progressBox = new HBox(4);
+            progressBox.setAlignment(Pos.CENTER);
+            
+            ProgressBar miniProgress = new ProgressBar(task.getProgression() / 100.0);
+            miniProgress.setPrefWidth(50);
+            miniProgress.setPrefHeight(6);
+            miniProgress.setStyle("-fx-accent: " + getProgressColor(task.getProgression()) + ";");
+            
+            Label progressLabel = new Label(task.getProgression() + "%");
+            progressLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #64748B; -fx-font-family: 'Segoe UI', sans-serif;");
+
+            progressBox.getChildren().addAll(miniProgress, progressLabel);
+            bottomRow.getChildren().add(progressBox);
+        }
+        
+        // Assemble card with priority stripe on left
+        card.getChildren().addFirst(titleLabel);
+        card.getChildren().addAll(tagsRow, bottomRow);
+        
+        // Apply left border for priority indicator
+        card.setStyle(card.getStyle() + " -fx-border-color: " + priorityColor + " transparent transparent transparent; -fx-border-width: 3 0 0 0; -fx-border-radius: 10 10 0 0;");
+
+        // Click to edit (for managers) or view details
+        card.setOnMouseClicked(event -> {
+            if (event.getClickCount() == 2) {
+                UserSession session = UserSession.getInstance();
+                if (session.canManageTasks()) {
+                    openEditTaskModal(task);
+                } else {
+                    showTaskDetailsPopup(task);
+                }
+            }
+        });
+        
+        // Right-click context menu
+        ContextMenu contextMenu = createTaskContextMenu(task);
+        card.setOnContextMenuRequested(event -> {
+            contextMenu.show(card, event.getScreenX(), event.getScreenY());
+        });
+        
+        return card;
+    }
+    
+    private String formatDate(LocalDate date) {
+        if (date == null) return "";
+        LocalDate today = LocalDate.now();
+        if (date.equals(today)) return "Aujourd'hui";
+        if (date.equals(today.plusDays(1))) return "Demain";
+        if (date.equals(today.minusDays(1))) return "Hier";
+        return date.getDayOfMonth() + "/" + date.getMonthValue();
+    }
+
+    private String getPriorityLabel(priority p) {
+        if (p == null) return "Normal";
+        return switch (p) {
+            case HAUTE -> "Haute";
+            case MOYENNE -> "Moyenne";
+            case BASSE -> "Basse";
+        };
+    }
+
+    private String getPriorityColor(priority p) {
+        if (p == null) return "#94A3B8";
+        return switch (p) {
+            case HAUTE -> "#EF4444";
+            case MOYENNE -> "#F59E0B";
+            case BASSE -> "#22C55E";
+        };
+    }
+
+    /**
+     * Create context menu for task card
+     */
+    private ContextMenu createTaskContextMenu(Tache task) {
+        ContextMenu menu = new ContextMenu();
+        UserSession session = UserSession.getInstance();
+        
+        // View details
+        MenuItem viewItem = new MenuItem("👁 Voir les détails");
+        viewItem.setOnAction(e -> showTaskDetailsPopup(task));
+        menu.getItems().add(viewItem);
+        
         if (session.canManageTasks()) {
-            colActions.setCellFactory(new Callback<>() {
-                @Override
-                public TableCell<Tache, Void> call(TableColumn<Tache, Void> param) {
-                    return new TableCell<>() {
-                        private final Button btnEdit = new Button("✏️");
-                        private final Button btnDelete = new Button("🗑");
-                        private final HBox pane = new HBox(6, btnEdit, btnDelete);
-
-                        {
-                            btnEdit.setStyle("-fx-background-color: #DBEAFE; -fx-text-fill: #1D4ED8; -fx-background-radius: 6; -fx-cursor: hand; -fx-padding: 4 8;");
-                            btnDelete.setStyle("-fx-background-color: #FEE2E2; -fx-text-fill: #DC2626; -fx-background-radius: 6; -fx-cursor: hand; -fx-padding: 4 8;");
-                            pane.setAlignment(Pos.CENTER);
-
-                            btnEdit.setOnAction(e -> {
-                                Tache tache = getTableView().getItems().get(getIndex());
-                                openEditTaskModal(tache);
-                            });
-
-                            btnDelete.setOnAction(e -> {
-                                Tache tache = getTableView().getItems().get(getIndex());
-                                deleteTask(tache);
-                            });
-                        }
-
-                        @Override
-                        protected void updateItem(Void item, boolean empty) {
-                            super.updateItem(item, empty);
-                            setGraphic(empty ? null : pane);
-                        }
-                    };
+            // Edit
+            MenuItem editItem = new MenuItem("✏️ Modifier");
+            editItem.setOnAction(e -> openEditTaskModal(task));
+            menu.getItems().add(editItem);
+            
+            // Separator
+            menu.getItems().add(new SeparatorMenuItem());
+            
+            // Move to status submenu
+            Menu moveMenu = new Menu("📦 Déplacer vers...");
+            for (statut_t status : statut_t.values()) {
+                if (status != task.getStatut_tache()) {
+                    MenuItem statusItem = new MenuItem(getStatusEmoji(status) + " " + prettyEnum(status));
+                    statusItem.setOnAction(e -> updateTaskStatus(task, status));
+                    moveMenu.getItems().add(statusItem);
                 }
-            });
-        } else {
-            // For employees: hide the actions column or show empty
-            colActions.setCellFactory(col -> new TableCell<>() {
-                @Override
-                protected void updateItem(Void item, boolean empty) {
-                    super.updateItem(item, empty);
-                    setGraphic(null);
-                    setText(null);
+            }
+            menu.getItems().add(moveMenu);
+            
+            // Separator
+            menu.getItems().add(new SeparatorMenuItem());
+            
+            // Delete
+            MenuItem deleteItem = new MenuItem("🗑 Supprimer");
+            deleteItem.setStyle("-fx-text-fill: #DC2626;");
+            deleteItem.setOnAction(e -> deleteTask(task));
+            menu.getItems().add(deleteItem);
+        } else if (session.isEmployee() && task.getId_employe() == session.getUserId()) {
+            // Employee can change status of their own tasks
+            menu.getItems().add(new SeparatorMenuItem());
+            
+            Menu moveMenu = new Menu("📦 Changer le statut...");
+            for (statut_t status : statut_t.values()) {
+                if (status != task.getStatut_tache()) {
+                    MenuItem statusItem = new MenuItem(getStatusEmoji(status) + " " + prettyEnum(status));
+                    statusItem.setOnAction(e -> updateTaskStatus(task, status));
+                    moveMenu.getItems().add(statusItem);
                 }
+            }
+            menu.getItems().add(moveMenu);
+        }
+        
+        return menu;
+    }
+    
+    /**
+     * Show task details in a popup
+     */
+    private void showTaskDetailsPopup(Tache task) {
+        Dialog<Void> dialog = new Dialog<>();
+        dialog.setTitle("Détails de la tâche");
+        dialog.setHeaderText(null);
+        
+        VBox content = new VBox(16);
+        content.setPadding(new Insets(24));
+        content.setStyle("-fx-background-color: white;");
+        content.setPrefWidth(420);
+
+        // Title with priority color bar
+        HBox titleRow = new HBox(12);
+        titleRow.setAlignment(Pos.CENTER_LEFT);
+
+        VBox priorityIndicator = new VBox();
+        priorityIndicator.setPrefWidth(4);
+        priorityIndicator.setPrefHeight(40);
+        priorityIndicator.setStyle("-fx-background-color: " + getPriorityColor(task.getPriority_tache()) + "; -fx-background-radius: 2;");
+
+        Label title = new Label(task.getTitre());
+        title.setStyle("-fx-font-size: 20px; -fx-font-weight: 700; -fx-text-fill: #1E293B; -fx-font-family: 'Segoe UI', sans-serif;");
+        title.setWrapText(true);
+        titleRow.getChildren().addAll(priorityIndicator, title);
+
+        // Status and priority badges
+        HBox badgesRow = new HBox(10);
+        badgesRow.setAlignment(Pos.CENTER_LEFT);
+
+        Label statusBadge = new Label(getStatusEmoji(task.getStatut_tache()) + " " + prettyEnum(task.getStatut_tache()));
+        statusBadge.setStyle(getKanbanStatusBadgeStyle(task.getStatut_tache()));
+        
+        Label priorityBadge = new Label(getPriorityLabel(task.getPriority_tache()));
+        priorityBadge.setStyle(getKanbanPriorityBadgeStyle(task.getPriority_tache()));
+
+        badgesRow.getChildren().addAll(statusBadge, priorityBadge);
+
+        // Description
+        VBox descBox = new VBox(6);
+        Label descTitle = new Label("Description");
+        descTitle.setStyle("-fx-font-weight: 600; -fx-text-fill: #64748B; -fx-font-size: 12px; -fx-font-family: 'Segoe UI', sans-serif;");
+        Label descContent = new Label(task.getDescription() != null && !task.getDescription().isEmpty() ? task.getDescription() : "Aucune description");
+        descContent.setStyle("-fx-text-fill: #334155; -fx-font-size: 14px; -fx-font-family: 'Segoe UI', sans-serif;");
+        descContent.setWrapText(true);
+        descBox.getChildren().addAll(descTitle, descContent);
+        
+        // Assignee
+        HBox assigneeRow = new HBox(10);
+        assigneeRow.setAlignment(Pos.CENTER_LEFT);
+        String employeeName = getEmployeeNameById(task.getId_employe());
+        Label avatar = new Label(getInitials(employeeName));
+        avatar.setStyle("-fx-background-color: " + getAvatarColor(task.getId_employe()) + "; -fx-text-fill: white; -fx-font-size: 11px; -fx-font-weight: 700; -fx-padding: 6 8; -fx-background-radius: 50; -fx-font-family: 'Segoe UI', sans-serif;");
+        Label assigneeName = new Label(employeeName);
+        assigneeName.setStyle("-fx-text-fill: #334155; -fx-font-size: 14px; -fx-font-family: 'Segoe UI', sans-serif;");
+        assigneeRow.getChildren().addAll(new Label("Assigné à:") {{ setStyle("-fx-text-fill: #64748B; -fx-font-size: 12px; -fx-font-family: 'Segoe UI', sans-serif;"); }}, avatar, assigneeName);
+
+        // Dates
+        HBox datesRow = new HBox(30);
+        VBox startDate = new VBox(4);
+        startDate.getChildren().addAll(
+            new Label("Date début") {{ setStyle("-fx-font-weight: 600; -fx-text-fill: #64748B; -fx-font-size: 12px; -fx-font-family: 'Segoe UI', sans-serif;"); }},
+            new Label(task.getDate_deb() != null ? task.getDate_deb().toString() : "Non défini") {{ setStyle("-fx-text-fill: #334155; -fx-font-size: 14px; -fx-font-family: 'Segoe UI', sans-serif;"); }}
+        );
+        VBox endDate = new VBox(4);
+        endDate.getChildren().addAll(
+            new Label("Date limite") {{ setStyle("-fx-font-weight: 600; -fx-text-fill: #64748B; -fx-font-size: 12px; -fx-font-family: 'Segoe UI', sans-serif;"); }},
+            new Label(task.getDate_limite() != null ? task.getDate_limite().toString() : "Non défini") {{ setStyle("-fx-text-fill: #334155; -fx-font-size: 14px; -fx-font-family: 'Segoe UI', sans-serif;"); }}
+        );
+        datesRow.getChildren().addAll(startDate, endDate);
+        
+        // Progress
+        VBox progressBox = new VBox(8);
+        Label progressTitle = new Label("Progression: " + task.getProgression() + "%");
+        progressTitle.setStyle("-fx-font-weight: 600; -fx-text-fill: #334155; -fx-font-size: 14px; -fx-font-family: 'Segoe UI', sans-serif;");
+        ProgressBar progressBar = new ProgressBar(task.getProgression() / 100.0);
+        progressBar.setPrefWidth(370);
+        progressBar.setPrefHeight(8);
+        progressBar.setStyle("-fx-accent: " + getProgressColor(task.getProgression()) + ";");
+        progressBox.getChildren().addAll(progressTitle, progressBar);
+        
+        // For employees, add progress slider
+        UserSession session = UserSession.getInstance();
+        if (session.isEmployee() && task.getId_employe() == session.getUserId()) {
+            Separator sep = new Separator();
+            sep.setStyle("-fx-background-color: #E2E8F0;");
+
+            Label updateLabel = new Label("Mettre à jour la progression:");
+            updateLabel.setStyle("-fx-font-weight: 600; -fx-text-fill: #334155; -fx-font-family: 'Segoe UI', sans-serif;");
+
+            Slider progressSlider = new Slider(0, 100, task.getProgression());
+            progressSlider.setShowTickLabels(true);
+            progressSlider.setShowTickMarks(true);
+            progressSlider.setMajorTickUnit(25);
+            progressSlider.setBlockIncrement(10);
+            progressSlider.setStyle("-fx-control-inner-background: #E2E8F0;");
+
+            Button updateBtn = new Button("💾 Enregistrer");
+            updateBtn.setStyle("-fx-background-color: #6366F1; -fx-text-fill: white; -fx-background-radius: 8; -fx-cursor: hand; -fx-padding: 10 20; -fx-font-family: 'Segoe UI', sans-serif;");
+            updateBtn.setOnAction(e -> {
+                int newProgress = (int) progressSlider.getValue();
+                updateTaskProgressInline(task, newProgress);
+                dialog.close();
             });
-            colActions.setVisible(false);
+            
+            content.getChildren().addAll(sep, updateLabel, progressSlider, updateBtn);
+        }
+        
+        content.getChildren().addAll(titleRow, badgesRow, new Separator() {{ setStyle("-fx-background-color: #E2E8F0;"); }}, descBox, assigneeRow, datesRow, progressBox);
+
+        dialog.getDialogPane().setContent(content);
+        dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
+        dialog.getDialogPane().setStyle("-fx-background-color: white;");
+        dialog.showAndWait();
+    }
+    
+    // ===== Kanban Styling Methods =====
+    
+    private String getTaskCardStyle(Tache task) {
+        return "-fx-background-color: white; -fx-background-radius: 10; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.06), 8, 0, 0, 2);";
+    }
+    
+    private String getTaskCardHoverStyle(Tache task) {
+        return "-fx-background-color: #FAFAFA; -fx-background-radius: 10; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.12), 12, 0, 0, 4);";
+    }
+
+    private String getTaskCardDraggingStyle(Tache task) {
+        return "-fx-background-color: white; -fx-background-radius: 10; -fx-effect: dropshadow(gaussian, rgba(99,102,241,0.3), 15, 0, 0, 5);";
+    }
+    
+    private String getPriorityBarStyle(priority p) {
+        if (p == null) return "-fx-background-color: #94A3B8; -fx-background-radius: 10 10 0 0;";
+        return switch (p) {
+            case HAUTE -> "-fx-background-color: #EF4444; -fx-background-radius: 10 10 0 0;";
+            case MOYENNE -> "-fx-background-color: #F59E0B; -fx-background-radius: 10 10 0 0;";
+            case BASSE -> "-fx-background-color: #22C55E; -fx-background-radius: 10 10 0 0;";
+        };
+    }
+    
+    private String getPriorityEmoji(priority p) {
+        if (p == null) return "⚪";
+        return switch (p) {
+            case HAUTE -> "🔴";
+            case MOYENNE -> "🟡";
+            case BASSE -> "🟢";
+        };
+    }
+    
+    private String getStatusEmoji(statut_t s) {
+        if (s == null) return "⚪";
+        return switch (s) {
+            case A_FAIRE -> "📝";
+            case EN_COURS -> "🔄";
+            case BLOCQUEE -> "⛔";
+            case TERMINEE -> "✅";
+        };
+    }
+    
+    private String getKanbanPriorityBadgeStyle(priority p) {
+        String base = "-fx-padding: 3 8; -fx-background-radius: 6; -fx-font-size: 11px; -fx-font-weight: 600; -fx-font-family: 'Segoe UI', sans-serif;";
+        if (p == null) return base + "-fx-background-color: #F1F5F9; -fx-text-fill: #64748B;";
+        return switch (p) {
+            case HAUTE -> base + "-fx-background-color: #FEE2E2; -fx-text-fill: #DC2626;";
+            case MOYENNE -> base + "-fx-background-color: #FEF3C7; -fx-text-fill: #D97706;";
+            case BASSE -> base + "-fx-background-color: #DCFCE7; -fx-text-fill: #16A34A;";
+        };
+    }
+    
+    private String getKanbanStatusBadgeStyle(statut_t s) {
+        String base = "-fx-padding: 6 12; -fx-background-radius: 8; -fx-font-size: 12px; -fx-font-weight: 600; -fx-font-family: 'Segoe UI', sans-serif;";
+        if (s == null) return base + "-fx-background-color: #F1F5F9; -fx-text-fill: #64748B;";
+        return switch (s) {
+            case A_FAIRE -> base + "-fx-background-color: #F1F5F9; -fx-text-fill: #64748B;";
+            case EN_COURS -> base + "-fx-background-color: #DBEAFE; -fx-text-fill: #2563EB;";
+            case BLOCQUEE -> base + "-fx-background-color: #FEE2E2; -fx-text-fill: #DC2626;";
+            case TERMINEE -> base + "-fx-background-color: #DCFCE7; -fx-text-fill: #16A34A;";
+        };
+    }
+    
+    private String getDueDateStyle(LocalDate dueDate) {
+        String base = "-fx-font-size: 11px; -fx-padding: 3 8; -fx-background-radius: 6; -fx-font-family: 'Segoe UI', sans-serif;";
+        if (dueDate == null) return base + "-fx-text-fill: #94A3B8;";
+        
+        LocalDate today = LocalDate.now();
+        if (dueDate.isBefore(today)) {
+            // Overdue
+            return base + "-fx-background-color: #FEE2E2; -fx-text-fill: #DC2626;";
+        } else if (dueDate.equals(today) || dueDate.isBefore(today.plusDays(3))) {
+            // Due soon
+            return base + "-fx-background-color: #FEF3C7; -fx-text-fill: #D97706;";
+        }
+        return base + "-fx-background-color: #F1F5F9; -fx-text-fill: #64748B;";
+    }
+    
+    private String getProgressColor(int progress) {
+        if (progress >= 100) return "#22C55E";
+        if (progress >= 60) return "#3B82F6";
+        if (progress >= 30) return "#F59E0B";
+        return "#94A3B8";
+    }
+    
+    private String getInitials(String fullName) {
+        if (fullName == null || fullName.isEmpty()) return "?";
+        String[] parts = fullName.split(" ");
+        if (parts.length >= 2) {
+            return (parts[0].charAt(0) + "" + parts[1].charAt(0)).toUpperCase();
+        }
+        return fullName.substring(0, Math.min(2, fullName.length())).toUpperCase();
+    }
+    
+    private String getAvatarColor(int employeeId) {
+        String[] colors = {"#6366F1", "#EC4899", "#F59E0B", "#10B981", "#3B82F6", "#8B5CF6", "#06B6D4"};
+        return colors[Math.abs(employeeId) % colors.length];
+    }
+    
+    /**
+     * Populate Kanban columns with tasks
+     */
+    private void populateKanbanBoard() {
+        // Clear all columns
+        todoTasksContainer.getChildren().clear();
+        inProgressTasksContainer.getChildren().clear();
+        blockedTasksContainer.getChildren().clear();
+        doneTasksContainer.getChildren().clear();
+        
+        // Counters
+        int todoCounter = 0, inProgressCounter = 0, blockedCounter = 0, doneCounter = 0;
+        
+        // Apply search filter
+        String searchText = taskSearchField.getText() != null ? taskSearchField.getText().toLowerCase().trim() : "";
+        
+        for (Tache task : masterTasks) {
+            // Apply search filter
+            if (!searchText.isEmpty()) {
+                String title = task.getTitre() != null ? task.getTitre().toLowerCase() : "";
+                String desc = task.getDescription() != null ? task.getDescription().toLowerCase() : "";
+                if (!title.contains(searchText) && !desc.contains(searchText)) {
+                    continue;
+                }
+            }
+            
+            VBox card = createTaskCard(task);
+            
+            switch (task.getStatut_tache()) {
+                case A_FAIRE:
+                    todoTasksContainer.getChildren().add(card);
+                    todoCounter++;
+                    break;
+                case EN_COURS:
+                    inProgressTasksContainer.getChildren().add(card);
+                    inProgressCounter++;
+                    break;
+                case BLOCQUEE:
+                    blockedTasksContainer.getChildren().add(card);
+                    blockedCounter++;
+                    break;
+                case TERMINEE:
+                    doneTasksContainer.getChildren().add(card);
+                    doneCounter++;
+                    break;
+            }
+        }
+        
+        // Update column counts
+        todoCount.setText(String.valueOf(todoCounter));
+        inProgressCount.setText(String.valueOf(inProgressCounter));
+        blockedCount.setText(String.valueOf(blockedCounter));
+        doneCount.setText(String.valueOf(doneCounter));
+        
+        // Update stats
+        updateTaskInfo();
+        
+        // Show empty state if needed
+        if (masterTasks.isEmpty()) {
+            addEmptyStateToColumn(todoTasksContainer, "Aucune tâche à faire");
+        }
+    }
+    
+    /**
+     * Add empty state placeholder to a column
+     */
+    private void addEmptyStateToColumn(VBox container, String message) {
+        VBox emptyState = new VBox(8);
+        emptyState.setAlignment(Pos.CENTER);
+        emptyState.setPadding(new Insets(30, 20, 30, 20));
+        emptyState.setStyle("-fx-background-color: rgba(255,255,255,0.5); -fx-background-radius: 8;");
+
+        Label icon = new Label("📭");
+        icon.setStyle("-fx-font-size: 28px;");
+
+        Label text = new Label(message);
+        text.setStyle("-fx-text-fill: #94A3B8; -fx-font-size: 13px; -fx-font-family: 'Segoe UI', sans-serif;");
+
+        emptyState.getChildren().addAll(icon, text);
+        container.getChildren().add(emptyState);
+    }
+    
+    /**
+     * Open create task modal with a preset status
+     */
+    private void openCreateTaskModalWithStatus(statut_t defaultStatus) {
+        if (selectedProject == null) {
+            showError("Aucun projet sélectionné", "Veuillez d'abord sélectionner un projet.");
+            return;
         }
 
-        // Bind table to filtered tasks list
-        tasksTable.setItems(filteredTasks);
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/AjoutTache.fxml"));
+            Parent root = loader.load();
+
+            AjoutTacheController c = loader.getController();
+            c.setProjectId(selectedProject.getProjet_id());
+            c.setOnSaved(this::loadTasksForSelectedProject);
+            c.loadEmployeesForProject();
+            c.setDefaultStatus(defaultStatus);
+
+            Stage modal = new Stage();
+            modal.initModality(Modality.APPLICATION_MODAL);
+            modal.setTitle("Nouvelle tâche - " + prettyEnum(defaultStatus));
+            modal.setScene(new Scene(root));
+            modal.showAndWait();
+
+        } catch (IOException ex) {
+            ex.printStackTrace();
+            showError("Erreur", "Impossible d'ouvrir le formulaire de tâche: " + ex.getMessage());
+        }
+    }
+
+    private void setupTasksTable() {
+        // Initialize Kanban board
+        setupKanbanBoard();
     }
 
     /**
@@ -1226,24 +1753,17 @@ public class ProjetsController {
         }
     }
 
-    private void applyTaskFilters() {
-        String q = taskSearchField.getText() == null ? "" : taskSearchField.getText().trim().toLowerCase();
-        statut_t statusFilterVal = taskStatusFilter.getValue();
-
-        List<Tache> tmp = masterTasks.stream()
-                .filter(t -> matchesTaskQuery(t, q))
-                .filter(t -> statusFilterVal == null || t.getStatut_tache() == statusFilterVal)
-                .collect(Collectors.toList());
-
-        filteredTasks.setAll(tmp);
-        updateTaskInfo();
-    }
 
     private boolean matchesTaskQuery(Tache t, String q) {
         if (q.isBlank()) return true;
         String titre = t.getTitre() == null ? "" : t.getTitre().toLowerCase();
         String desc = t.getDescription() == null ? "" : t.getDescription().toLowerCase();
         return titre.contains(q) || desc.contains(q);
+    }
+
+    private void applyTaskFilters() {
+        // Populate the Kanban board with filtered tasks
+        populateKanbanBoard();
     }
 
     private void updateTaskInfo() {

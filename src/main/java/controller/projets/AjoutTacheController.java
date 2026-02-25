@@ -195,6 +195,15 @@ public class AjoutTacheController implements Initializable {
     }
 
     /**
+     * Set default status for new task (used by Kanban board when clicking add in a specific column)
+     */
+    public void setDefaultStatus(statut_t status) {
+        if (status != null && statusBox != null) {
+            statusBox.setValue(status);
+        }
+    }
+
+    /**
      * Set a task to edit. Call this after loadEmployeesForProject()
      */
     public void setTacheToEdit(Tache t) {

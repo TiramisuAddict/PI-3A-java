@@ -17,7 +17,9 @@ public class ProjetCRUD implements InterfaceCRUD <Projet> {
         projet.setProjet_id(generatedId);
     }
 
-
+    /**
+     * Insert a project and return its generated ID
+     */
     public int ajouterAndGetId(Projet projet) throws SQLException {
         String sql = "INSERT INTO projet(responsable_id, nom, description, date_debut, date_fin_prevue, date_fin_reelle, statut, priorite) "
                 + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
@@ -44,7 +46,7 @@ public class ProjetCRUD implements InterfaceCRUD <Projet> {
 
         ps.executeUpdate();
 
-
+        // Get generated ID
         try (ResultSet generatedKeys = ps.getGeneratedKeys()) {
             if (generatedKeys.next()) {
                 return generatedKeys.getInt(1);
@@ -56,6 +58,7 @@ public class ProjetCRUD implements InterfaceCRUD <Projet> {
 
     @Override
     public void modifier(Projet projet) throws SQLException {
+        // Code pour modifier un projet dans la base de données
         String sql = "UPDATE projet SET responsable_id = ?, nom = ?, description = ?, date_debut = ?, date_fin_prevue = ?, date_fin_reelle = ?, statut = ?, priorite = ? WHERE id_projet = ?";
         PreparedStatement ps = connection.prepareStatement(sql);
         ps.setInt(1, projet.getResponsable_id());
@@ -73,6 +76,7 @@ public class ProjetCRUD implements InterfaceCRUD <Projet> {
 
     @Override
     public void supprimer(int id) throws SQLException {
+        // Code pour supprimer un projet de la base de données en utilisant son ID
         String sql = "DELETE FROM projet WHERE id_projet = ?";
         PreparedStatement ps = connection.prepareStatement(sql);
         ps.setInt(1, id);
