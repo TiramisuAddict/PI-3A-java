@@ -7,12 +7,18 @@ import com.itextpdf.text.Font;
 import com.itextpdf.text.FontFactory;
 import com.itextpdf.text.PageSize;
 import com.itextpdf.text.Paragraph;
+import com.itextpdf.text.Phrase;
+import com.itextpdf.text.Rectangle;
+import com.itextpdf.text.pdf.PdfPCell;
+import com.itextpdf.text.pdf.PdfPTable;
 import com.itextpdf.text.pdf.PdfWriter;
 
 import org.apache.poi.xwpf.usermodel.ParagraphAlignment;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
 import org.apache.poi.xwpf.usermodel.XWPFParagraph;
 import org.apache.poi.xwpf.usermodel.XWPFRun;
+import org.apache.poi.xwpf.usermodel.XWPFTable;
+import org.apache.poi.xwpf.usermodel.XWPFTableRow;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -37,27 +43,42 @@ public class AIDocumentGeneratorService {
     private static final int TIMEOUT_CONNECT = 30000;
     private static final int TIMEOUT_READ = 120000;
 
-    // ═══════════════════════════════════════════════════════════════════════
+    // ═══════════════════════════════════════════════════════════════════════════
+    // MOMENTUM COLOR PALETTE
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    // Primary colors
+    private static final BaseColor ACCENT_PRIMARY = new BaseColor(74, 93, 239);      // #4A5DEF
+    private static final BaseColor ACCENT_DARK = new BaseColor(57, 68, 213);         // #3944D5
+    private static final BaseColor ACCENT_LIGHT = new BaseColor(192, 224, 255);      // #C0E0FF
+    private static final BaseColor ACCENT_BG = new BaseColor(240, 245, 255);         // #F0F5FF
+
+    // Text colors
+    private static final BaseColor TEXT_DARK = new BaseColor(44, 62, 80);            // #2c3e50
+    private static final BaseColor TEXT_MUTED = new BaseColor(107, 114, 128);        // #6b7280
+    private static final BaseColor TEXT_LIGHT = new BaseColor(153, 153, 153);        // #999999
+
+    // Status colors
+    private static final BaseColor SUCCESS_COLOR = new BaseColor(39, 174, 96);       // #27ae60
+    private static final BaseColor WARNING_COLOR = new BaseColor(243, 156, 18);      // #f39c12
+    private static final BaseColor DANGER_COLOR = new BaseColor(231, 76, 60);        // #e74c3c
+
+    // ═══════════════════════════════════════════════════════════════════════════
     // MAIN GENERATION METHOD
-    // ═══════════════════════════════════════════════════════════════════════
+    // ═══════════════════════════════════════════════════════════════════════════
 
     public CompletableFuture<GeneratedDocument> generateDocumentAsync(
-            String type,
-            String employeeName,
-            String position,
-            String employeeID,
-            Date hireDate,
-            String additionalInfo) {
+            String type, String employeeName, String position,
+            String employeeID, Date hireDate, String additionalInfo) {
 
         return CompletableFuture.supplyAsync(() -> {
             System.out.println("═══════════════════════════════════════════════");
-            System.out.println("🚀 Starting document generation...");
+            System.out.println("🚀 Generating document...");
             System.out.println("   Type: " + type);
             System.out.println("   Employee: " + employeeName);
-            System.out.println("   Position: " + position);
             System.out.println("═══════════════════════════════════════════════");
 
-            // Try AI generation first
+            // Try AI first
             if (isOllamaAvailable()) {
                 try {
                     String prompt = buildPrompt(type, employeeName, position, employeeID, additionalInfo);
@@ -66,34 +87,28 @@ public class AIDocumentGeneratorService {
                     if (aiResponse != null && !aiResponse.trim().isEmpty()) {
                         GeneratedDocument doc = parseAIResponse(aiResponse, type, employeeName);
                         if (doc != null && doc.isValid) {
-                            System.out.println("✅ AI document generated successfully!");
+                            System.out.println("✅ AI document generated!");
                             return doc;
                         }
                     }
                 } catch (Exception e) {
-                    System.out.println("⚠️ AI generation failed, using template: " + e.getMessage());
+                    System.out.println("⚠️ AI failed, using template");
                 }
-            } else {
-                System.out.println("⚠️ Ollama not available, using template");
             }
 
             // Fallback to template
-            System.out.println("📝 Using template-based document...");
+            System.out.println("📝 Using template document...");
             return createTemplateDocument(type, employeeName, position, employeeID, additionalInfo);
         });
     }
-
-    // ═══════════════════════════════════════════════════════════════════════
-    // CHECK OLLAMA AVAILABILITY
-    // ═══════════════════════════════════════════════════════════════════════
 
     private boolean isOllamaAvailable() {
         try {
             URL url = new URL("http://localhost:11434/api/tags");
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("GET");
-            conn.setConnectTimeout(5000);
-            conn.setReadTimeout(5000);
+            conn.setConnectTimeout(3000);
+            conn.setReadTimeout(3000);
             int code = conn.getResponseCode();
             conn.disconnect();
             return code == 200;
@@ -102,42 +117,21 @@ public class AIDocumentGeneratorService {
         }
     }
 
-    // ═══════════════════════════════════════════════════════════════════════
-    // BUILD AI PROMPT
-    // ═══════════════════════════════════════════════════════════════════════
-
     private String buildPrompt(String type, String name, String position, String id, String info) {
         String today = new SimpleDateFormat("dd MMMM yyyy", Locale.FRENCH).format(new Date());
         String refDate = new SimpleDateFormat("yyyyMMdd").format(new Date());
 
-        return "Vous êtes un assistant RH professionnel. Générez un document RH formel.\n\n" +
-                "IMPORTANT: Répondez UNIQUEMENT avec un objet JSON valide. Pas de texte avant ou après.\n\n" +
-                "Structure JSON requise:\n" +
-                "{\n" +
-                "  \"title\": \"Titre du document\",\n" +
-                "  \"reference\": \"REF/RH/" + refDate + "/001\",\n" +
-                "  \"header\": \"ENTREPRISE\\n123 Avenue\\nTunis\",\n" +
-                "  \"recipient\": \"À qui de droit\",\n" +
-                "  \"subject\": \"Objet du document\",\n" +
-                "  \"body\": \"Contenu principal...\",\n" +
-                "  \"closing\": \"Cordialement,\",\n" +
-                "  \"signature\": \"Service RH\",\n" +
-                "  \"footer\": \"Document généré électroniquement\",\n" +
-                "  \"summary\": \"Résumé\"\n" +
-                "}\n\n" +
-                "Informations:\n" +
-                "- Type: " + type + "\n" +
-                "- Employé: " + name + "\n" +
-                "- Poste: " + position + "\n" +
-                "- ID: " + id + "\n" +
-                "- Date: " + today + "\n" +
-                "- Contexte: " + (info != null ? info : "Aucun") + "\n\n" +
-                "Répondez avec le JSON uniquement:";
+        return "Vous êtes un assistant RH. Générez un document professionnel.\n\n" +
+                "Répondez UNIQUEMENT avec un JSON valide:\n\n" +
+                "{\n  \"title\": \"...\",\n  \"reference\": \"REF/RH/" + refDate + "/001\",\n" +
+                "  \"header\": \"ENTREPRISE\\nAdresse\",\n  \"recipient\": \"À qui de droit\",\n" +
+                "  \"subject\": \"Objet\",\n  \"body\": \"Contenu...\",\n" +
+                "  \"closing\": \"Cordialement,\",\n  \"signature\": \"Service RH\",\n" +
+                "  \"footer\": \"Document généré électroniquement\"\n}\n\n" +
+                "Type: " + type + "\nEmployé: " + name + "\nPoste: " + position + "\n" +
+                "ID: " + id + "\nDate: " + today + "\nContexte: " + (info != null ? info : "Aucun") +
+                "\n\nRépondez avec le JSON:";
     }
-
-    // ═══════════════════════════════════════════════════════════════════════
-    // CALL OLLAMA API
-    // ═══════════════════════════════════════════════════════════════════════
 
     private String callOllama(String prompt) throws Exception {
         URL url = new URL(API_URL);
@@ -158,12 +152,9 @@ public class AIDocumentGeneratorService {
         body.put("options", options);
 
         JSONArray messages = new JSONArray();
-        messages.put(new JSONObject()
-                .put("role", "system")
-                .put("content", "Tu es un assistant RH. Réponds uniquement en JSON valide."));
-        messages.put(new JSONObject()
-                .put("role", "user")
-                .put("content", prompt));
+        messages.put(new JSONObject().put("role", "system")
+                .put("content", "Réponds uniquement en JSON valide."));
+        messages.put(new JSONObject().put("role", "user").put("content", prompt));
         body.put("messages", messages);
 
         try (OutputStream os = conn.getOutputStream()) {
@@ -185,38 +176,25 @@ public class AIDocumentGeneratorService {
         reader.close();
         conn.disconnect();
 
-        JSONObject jsonResponse = new JSONObject(response.toString());
-        return jsonResponse.getJSONObject("message").getString("content");
+        JSONObject json = new JSONObject(response.toString());
+        return json.getJSONObject("message").getString("content");
     }
 
-    // ═══════════════════════════════════════════════════════════════════════
-    // PARSE AI RESPONSE - FIXED (No more error spam)
-    // ═══════════════════════════════════════════════════════════════════════
-
     private GeneratedDocument parseAIResponse(String aiResponse, String fallbackTitle, String employeeName) {
-        if (aiResponse == null || aiResponse.trim().isEmpty()) {
-            return null;
-        }
+        if (aiResponse == null || aiResponse.trim().isEmpty()) return null;
 
         try {
-            String cleaned = aiResponse.trim();
+            String cleaned = aiResponse.trim()
+                    .replaceAll("```json\\s*", "")
+                    .replaceAll("```\\s*", "")
+                    .trim();
 
-            // Remove markdown code blocks
-            cleaned = cleaned.replaceAll("```json\\s*", "");
-            cleaned = cleaned.replaceAll("```\\s*", "");
-            cleaned = cleaned.trim();
-
-            // Find JSON object boundaries
             int start = cleaned.indexOf("{");
             int end = cleaned.lastIndexOf("}");
 
-            if (start == -1 || end == -1 || end <= start) {
-                return null; // No valid JSON found, will use template
-            }
+            if (start == -1 || end == -1 || end <= start) return null;
 
             String jsonStr = cleaned.substring(start, end + 1);
-
-            // Try to parse
             JSONObject json = new JSONObject(jsonStr);
 
             GeneratedDocument doc = new GeneratedDocument();
@@ -230,7 +208,6 @@ public class AIDocumentGeneratorService {
             doc.closing = json.optString("closing", "Cordialement,");
             doc.signature = json.optString("signature", "Service RH").replace("\\n", "\n");
             doc.footer = json.optString("footer", "Document généré électroniquement");
-            doc.summary = json.optString("summary", "");
             doc.employeeName = employeeName;
             doc.generatedDate = new Date();
             doc.isValid = !doc.body.isEmpty();
@@ -238,15 +215,9 @@ public class AIDocumentGeneratorService {
             return doc.isValid ? doc : null;
 
         } catch (Exception e) {
-            // Silent fail - will use template instead
-            // No need to print stack trace since template fallback works
             return null;
         }
     }
-
-    // ═══════════════════════════════════════════════════════════════════════
-    // TEMPLATE DOCUMENT (Always works!)
-    // ═══════════════════════════════════════════════════════════════════════
 
     private GeneratedDocument createTemplateDocument(String type, String name,
                                                      String position, String id, String info) {
@@ -257,11 +228,11 @@ public class AIDocumentGeneratorService {
         doc.employeeName = name;
         doc.generatedDate = new Date();
         doc.reference = "REF/RH/" + refDate + "/001";
-        doc.header = "ENTREPRISE\n123 Avenue Principale\nTunis, Tunisie\nTél: +216 XX XXX XXX";
+        doc.header = "MOMENTUM HR\n123 Avenue Principale\nTunis, Tunisie\nTél: +216 XX XXX XXX";
         doc.recipient = "À qui de droit";
         doc.closing = "Cordialement,";
         doc.signature = "Le Directeur des Ressources Humaines\n\n[Signature]\n\nService RH";
-        doc.footer = "Document généré électroniquement - Valide sans signature";
+        doc.footer = "Document généré par Momentum HR - Valide sans signature";
         doc.isValid = true;
 
         String typeLower = type != null ? type.toLowerCase() : "";
@@ -269,7 +240,8 @@ public class AIDocumentGeneratorService {
         if (typeLower.contains("attestation") || typeLower.contains("travail")) {
             doc.title = "ATTESTATION DE TRAVAIL";
             doc.subject = "Attestation de Travail";
-            doc.body = "Je soussigné(e), Directeur des Ressources Humaines, atteste par la présente que:\n\n" +
+            doc.body = "Je soussigné(e), Directeur des Ressources Humaines de MOMENTUM HR, " +
+                    "atteste par la présente que:\n\n" +
                     "Nom et Prénom: " + name + "\n" +
                     "Poste occupé: " + position + "\n" +
                     "Numéro d'employé: " + id + "\n\n" +
@@ -277,7 +249,6 @@ public class AIDocumentGeneratorService {
                     (info != null && !info.isEmpty() ? "Informations complémentaires:\n" + info + "\n\n" : "") +
                     "Cette attestation est délivrée à l'intéressé(e) pour servir et valoir ce que de droit.\n\n" +
                     "Fait à Tunis, le " + today;
-            doc.summary = "Attestation de travail pour " + name;
 
         } else if (typeLower.contains("congé") || typeLower.contains("conge")) {
             doc.title = "AUTORISATION DE CONGÉ";
@@ -286,37 +257,10 @@ public class AIDocumentGeneratorService {
                     "Nom et Prénom: " + name + "\n" +
                     "Poste: " + position + "\n" +
                     "Numéro d'employé: " + id + "\n\n" +
-                    "Nous avons le plaisir de vous informer que votre demande de congé a été approuvée.\n\n" +
+                    "Nous avons le plaisir de vous informer que votre demande a été approuvée.\n\n" +
                     (info != null && !info.isEmpty() ? "Détails:\n" + info + "\n\n" : "") +
                     "Nous vous souhaitons un excellent repos.\n\n" +
                     "Fait à Tunis, le " + today;
-            doc.summary = "Autorisation de congé pour " + name;
-
-        } else if (typeLower.contains("salaire") || typeLower.contains("certificat")) {
-            doc.title = "CERTIFICAT DE SALAIRE";
-            doc.subject = "Certificat de Salaire";
-            doc.body = "Je soussigné(e), Directeur des Ressources Humaines, certifie que:\n\n" +
-                    "Nom et Prénom: " + name + "\n" +
-                    "Poste: " + position + "\n" +
-                    "Numéro d'employé: " + id + "\n\n" +
-                    "est employé(e) au sein de notre entreprise et perçoit une rémunération mensuelle.\n\n" +
-                    (info != null && !info.isEmpty() ? "Informations:\n" + info + "\n\n" : "") +
-                    "Ce certificat est délivré à la demande de l'intéressé(e).\n\n" +
-                    "Fait à Tunis, le " + today;
-            doc.summary = "Certificat de salaire pour " + name;
-
-        } else if (typeLower.contains("recommandation")) {
-            doc.title = "LETTRE DE RECOMMANDATION";
-            doc.subject = "Lettre de Recommandation";
-            doc.body = "À qui de droit,\n\n" +
-                    "J'ai le plaisir de recommander " + name + " qui a occupé le poste de " + position +
-                    " au sein de notre entreprise.\n\n" +
-                    "Durant sa période d'emploi, " + name + " a fait preuve de professionnalisme, " +
-                    "de compétence et d'un excellent esprit d'équipe.\n\n" +
-                    (info != null && !info.isEmpty() ? "Commentaires:\n" + info + "\n\n" : "") +
-                    "Je recommande vivement " + name + " pour toute opportunité professionnelle future.\n\n" +
-                    "Fait à Tunis, le " + today;
-            doc.summary = "Lettre de recommandation pour " + name;
 
         } else if (typeLower.contains("équipement") || typeLower.contains("equipement") || typeLower.contains("materiel")) {
             doc.title = "DEMANDE D'ÉQUIPEMENT";
@@ -325,38 +269,36 @@ public class AIDocumentGeneratorService {
                     "Nom et Prénom: " + name + "\n" +
                     "Poste: " + position + "\n" +
                     "Numéro d'employé: " + id + "\n\n" +
-                    "Nous accusons réception de votre demande d'équipement.\n\n" +
+                    "Nous accusons réception de votre demande.\n\n" +
                     (info != null && !info.isEmpty() ? "Détails de la demande:\n" + info + "\n\n" : "") +
                     "Votre demande sera traitée dans les plus brefs délais.\n\n" +
                     "Fait à Tunis, le " + today;
-            doc.summary = "Demande d'équipement pour " + name;
 
         } else {
-            // Default template for any other type
             doc.title = type != null ? type.toUpperCase() : "DOCUMENT RH";
             doc.subject = type != null ? type : "Document RH";
             doc.body = "Document généré pour:\n\n" +
                     "Nom et Prénom: " + name + "\n" +
                     "Poste: " + position + "\n" +
                     "Numéro d'employé: " + id + "\n\n" +
-                    "Type de document: " + (type != null ? type : "Document") + "\n\n" +
+                    "Type: " + (type != null ? type : "Document") + "\n\n" +
                     (info != null && !info.isEmpty() ? "Informations:\n" + info + "\n\n" : "") +
                     "Fait à Tunis, le " + today;
-            doc.summary = (type != null ? type : "Document") + " pour " + name;
         }
 
-        System.out.println("✅ Template document created: " + doc.title);
+        doc.summary = doc.title + " pour " + name;
+        System.out.println("✅ Template created: " + doc.title);
         return doc;
     }
 
-    // ═══════════════════════════════════════════════════════════════════════
-    // EXPORT TO PDF
-    // ═══════════════════════════════════════════════════════════════════════
+    // ═══════════════════════════════════════════════════════════════════════════
+    // EXPORT TO PDF - WITH MOMENTUM STYLING
+    // ═══════════════════════════════════════════════════════════════════════════
 
     public CompletableFuture<File> exportToPDFAsync(GeneratedDocument doc, String path) {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                com.itextpdf.text.Document pdfDocument = new com.itextpdf.text.Document(
+                com.itextpdf.text.Document pdf = new com.itextpdf.text.Document(
                         PageSize.A4, 50, 50, 50, 50);
 
                 File file = new File(path);
@@ -364,106 +306,200 @@ public class AIDocumentGeneratorService {
                     file.getParentFile().mkdirs();
                 }
 
-                PdfWriter.getInstance(pdfDocument, new FileOutputStream(file));
-                pdfDocument.open();
+                PdfWriter writer = PdfWriter.getInstance(pdf, new FileOutputStream(file));
+                pdf.open();
 
-                Font titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 16, BaseColor.BLACK);
-                Font headerFont = FontFactory.getFont(FontFactory.HELVETICA, 10, BaseColor.DARK_GRAY);
-                Font bodyFont = FontFactory.getFont(FontFactory.HELVETICA, 11, BaseColor.BLACK);
-                Font footerFont = FontFactory.getFont(FontFactory.HELVETICA_OBLIQUE, 9, BaseColor.GRAY);
+                // Fonts
+                Font titleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 18, ACCENT_PRIMARY);
+                Font headerFont = FontFactory.getFont(FontFactory.HELVETICA, 10, TEXT_MUTED);
+                Font subjectFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 12, TEXT_DARK);
+                Font bodyFont = FontFactory.getFont(FontFactory.HELVETICA, 11, TEXT_DARK);
+                Font footerFont = FontFactory.getFont(FontFactory.HELVETICA_OBLIQUE, 9, TEXT_LIGHT);
+                Font accentFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 10, ACCENT_PRIMARY);
 
-                // Header
-                if (doc.header != null && !doc.header.isEmpty()) {
-                    for (String line : doc.header.split("\n")) {
-                        Paragraph p = new Paragraph(line.trim(), headerFont);
-                        p.setAlignment(Element.ALIGN_RIGHT);
-                        pdfDocument.add(p);
-                    }
-                    pdfDocument.add(Chunk.NEWLINE);
-                }
+                // ═══════════════════════════════════════════════════════════════════
+                // HEADER BAR (Momentum styled)
+                // ═══════════════════════════════════════════════════════════════════
+                PdfPTable headerBar = new PdfPTable(1);
+                headerBar.setWidthPercentage(100);
 
-                // Reference
-                if (doc.reference != null && !doc.reference.isEmpty()) {
-                    Paragraph ref = new Paragraph("Réf: " + doc.reference, headerFont);
-                    pdfDocument.add(ref);
-                    pdfDocument.add(Chunk.NEWLINE);
-                }
+                PdfPCell headerCell = new PdfPCell();
+                headerCell.setBackgroundColor(ACCENT_PRIMARY);
+                headerCell.setPadding(15);
+                headerCell.setBorder(Rectangle.NO_BORDER);
 
-                // Date
+                Paragraph headerText = new Paragraph();
+                Font headerTitleFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD, 14, BaseColor.WHITE);
+                Font headerSubFont = FontFactory.getFont(FontFactory.HELVETICA, 10, new BaseColor(200, 220, 255));
+
+                headerText.add(new Chunk("MOMENTUM HR\n", headerTitleFont));
+                headerText.add(new Chunk("Système de Gestion des Ressources Humaines", headerSubFont));
+                headerCell.addElement(headerText);
+                headerBar.addCell(headerCell);
+
+                pdf.add(headerBar);
+                pdf.add(Chunk.NEWLINE);
+
+                // ═══════════════════════════════════════════════════════════════════
+                // DOCUMENT INFO BOX
+                // ═══════════════════════════════════════════════════════════════════
+                PdfPTable infoBox = new PdfPTable(2);
+                infoBox.setWidthPercentage(100);
+                infoBox.setWidths(new float[]{1, 1});
+
+                // Left: Reference
+                PdfPCell leftCell = new PdfPCell();
+                leftCell.setBorder(Rectangle.NO_BORDER);
+                leftCell.setPadding(10);
+                leftCell.setBackgroundColor(ACCENT_BG);
+
+                Paragraph refPara = new Paragraph();
+                refPara.add(new Chunk("Référence: ", accentFont));
+                refPara.add(new Chunk(doc.reference, bodyFont));
+                leftCell.addElement(refPara);
+                infoBox.addCell(leftCell);
+
+                // Right: Date
+                PdfPCell rightCell = new PdfPCell();
+                rightCell.setBorder(Rectangle.NO_BORDER);
+                rightCell.setPadding(10);
+                rightCell.setBackgroundColor(ACCENT_BG);
+                rightCell.setHorizontalAlignment(Element.ALIGN_RIGHT);
+
                 String dateStr = new SimpleDateFormat("dd MMMM yyyy", Locale.FRENCH).format(doc.generatedDate);
                 Paragraph datePara = new Paragraph("Tunis, le " + dateStr, headerFont);
                 datePara.setAlignment(Element.ALIGN_RIGHT);
-                pdfDocument.add(datePara);
-                pdfDocument.add(Chunk.NEWLINE);
-                pdfDocument.add(Chunk.NEWLINE);
+                rightCell.addElement(datePara);
+                infoBox.addCell(rightCell);
 
-                // Title
+                pdf.add(infoBox);
+                pdf.add(Chunk.NEWLINE);
+                pdf.add(Chunk.NEWLINE);
+
+                // ═══════════════════════════════════════════════════════════════════
+                // TITLE (Centered, Momentum color)
+                // ═══════════════════════════════════════════════════════════════════
                 Paragraph title = new Paragraph(doc.title, titleFont);
                 title.setAlignment(Element.ALIGN_CENTER);
-                pdfDocument.add(title);
-                pdfDocument.add(Chunk.NEWLINE);
-                pdfDocument.add(Chunk.NEWLINE);
+                title.setSpacingAfter(20);
+                pdf.add(title);
 
-                // Recipient
+                // Decorative line
+                PdfPTable line = new PdfPTable(1);
+                line.setWidthPercentage(40);
+                PdfPCell lineCell = new PdfPCell();
+                lineCell.setBorder(Rectangle.BOTTOM);
+                lineCell.setBorderColor(ACCENT_PRIMARY);
+                lineCell.setBorderWidth(2);
+                lineCell.setFixedHeight(5);
+                line.addCell(lineCell);
+                pdf.add(line);
+                pdf.add(Chunk.NEWLINE);
+
+                // ═══════════════════════════════════════════════════════════════════
+                // RECIPIENT
+                // ═══════════════════════════════════════════════════════════════════
                 if (doc.recipient != null && !doc.recipient.isEmpty()) {
-                    pdfDocument.add(new Paragraph(doc.recipient, bodyFont));
-                    pdfDocument.add(Chunk.NEWLINE);
+                    Paragraph recipient = new Paragraph(doc.recipient, subjectFont);
+                    pdf.add(recipient);
+                    pdf.add(Chunk.NEWLINE);
                 }
 
-                // Body
+                // ═══════════════════════════════════════════════════════════════════
+                // SUBJECT
+                // ═══════════════════════════════════════════════════════════════════
+                if (doc.subject != null && !doc.subject.isEmpty() && !doc.subject.equals(doc.title)) {
+                    Paragraph subject = new Paragraph();
+                    subject.add(new Chunk("Objet: ", accentFont));
+                    subject.add(new Chunk(doc.subject, bodyFont));
+                    pdf.add(subject);
+                    pdf.add(Chunk.NEWLINE);
+                }
+
+                // ═══════════════════════════════════════════════════════════════════
+                // BODY
+                // ═══════════════════════════════════════════════════════════════════
                 if (doc.body != null && !doc.body.isEmpty()) {
-                    for (String line : doc.body.split("\n")) {
-                        Paragraph p = new Paragraph(line, bodyFont);
-                        p.setAlignment(Element.ALIGN_JUSTIFIED);
-                        pdfDocument.add(p);
+                    String[] paragraphs = doc.body.split("\n\n");
+                    for (String para : paragraphs) {
+                        String[] lines = para.split("\n");
+                        for (String bodyLine : lines) {
+                            if (!bodyLine.trim().isEmpty()) {
+                                Paragraph p = new Paragraph(bodyLine.trim(), bodyFont);
+                                p.setAlignment(Element.ALIGN_JUSTIFIED);
+                                p.setSpacingAfter(3);
+                                pdf.add(p);
+                            }
+                        }
+                        pdf.add(Chunk.NEWLINE);
                     }
-                    pdfDocument.add(Chunk.NEWLINE);
                 }
 
-                // Closing
+                pdf.add(Chunk.NEWLINE);
+
+                // ═══════════════════════════════════════════════════════════════════
+                // CLOSING
+                // ═══════════════════════════════════════════════════════════════════
                 if (doc.closing != null && !doc.closing.isEmpty()) {
-                    pdfDocument.add(new Paragraph(doc.closing, bodyFont));
-                    pdfDocument.add(Chunk.NEWLINE);
+                    Paragraph closing = new Paragraph(doc.closing, bodyFont);
+                    pdf.add(closing);
+                    pdf.add(Chunk.NEWLINE);
                 }
 
-                // Signature
+                // ═══════════════════════════════════════════════════════════════════
+                // SIGNATURE (Right aligned)
+                // ═══════════════════════════════════════════════════════════════════
                 if (doc.signature != null && !doc.signature.isEmpty()) {
-                    pdfDocument.add(Chunk.NEWLINE);
-                    for (String line : doc.signature.split("\n")) {
-                        Paragraph p = new Paragraph(line.trim(), bodyFont);
+                    pdf.add(Chunk.NEWLINE);
+                    for (String sigLine : doc.signature.split("\n")) {
+                        Paragraph p = new Paragraph(sigLine.trim(), bodyFont);
                         p.setAlignment(Element.ALIGN_RIGHT);
-                        pdfDocument.add(p);
+                        pdf.add(p);
                     }
                 }
 
-                // Footer
-                if (doc.footer != null && !doc.footer.isEmpty()) {
-                    pdfDocument.add(Chunk.NEWLINE);
-                    pdfDocument.add(Chunk.NEWLINE);
-                    Paragraph footer = new Paragraph(doc.footer, footerFont);
-                    footer.setAlignment(Element.ALIGN_CENTER);
-                    pdfDocument.add(footer);
-                }
+                // ═══════════════════════════════════════════════════════════════════
+                // FOOTER BAR
+                // ═══════════════════════════════════════════════════════════════════
+                pdf.add(Chunk.NEWLINE);
+                pdf.add(Chunk.NEWLINE);
 
-                pdfDocument.close();
-                System.out.println("✅ PDF exported successfully: " + file.getAbsolutePath());
+                PdfPTable footerBar = new PdfPTable(1);
+                footerBar.setWidthPercentage(100);
+
+                PdfPCell footerCell = new PdfPCell();
+                footerCell.setBackgroundColor(ACCENT_BG);
+                footerCell.setPadding(10);
+                footerCell.setBorder(Rectangle.TOP);
+                footerCell.setBorderColor(ACCENT_LIGHT);
+
+                Paragraph footerText = new Paragraph(doc.footer, footerFont);
+                footerText.setAlignment(Element.ALIGN_CENTER);
+                footerCell.addElement(footerText);
+                footerBar.addCell(footerCell);
+
+                pdf.add(footerBar);
+
+                pdf.close();
+                System.out.println("✅ PDF exported: " + file.getAbsolutePath());
                 return file;
 
             } catch (Exception e) {
-                System.err.println("❌ PDF export error: " + e.getMessage());
+                System.err.println("❌ PDF error: " + e.getMessage());
+                e.printStackTrace();
                 return null;
             }
         });
     }
 
-    // ═══════════════════════════════════════════════════════════════════════
-    // EXPORT TO WORD
-    // ═══════════════════════════════════════════════════════════════════════
+    // ═══════════════════════════════════════════════════════════════════════════
+    // EXPORT TO WORD - WITH MOMENTUM STYLING
+    // ═══════════════════════════════════════════════════════════════════════════
 
     public CompletableFuture<File> exportToWordAsync(GeneratedDocument doc, String path) {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                XWPFDocument wordDocument = new XWPFDocument();
+                XWPFDocument word = new XWPFDocument();
                 File file = new File(path);
 
                 if (file.getParentFile() != null) {
@@ -471,58 +507,78 @@ public class AIDocumentGeneratorService {
                 }
 
                 // Header
-                if (doc.header != null && !doc.header.isEmpty()) {
-                    XWPFParagraph headerPara = wordDocument.createParagraph();
-                    headerPara.setAlignment(ParagraphAlignment.RIGHT);
-                    for (String line : doc.header.split("\n")) {
-                        XWPFRun run = headerPara.createRun();
-                        run.setText(line.trim());
-                        run.setFontSize(10);
-                        run.setColor("666666");
-                        run.addBreak();
-                    }
-                }
+                XWPFParagraph headerPara = word.createParagraph();
+                headerPara.setAlignment(ParagraphAlignment.CENTER);
+                XWPFRun headerRun = headerPara.createRun();
+                headerRun.setText("MOMENTUM HR");
+                headerRun.setBold(true);
+                headerRun.setFontSize(16);
+                headerRun.setColor("4A5DEF"); // Momentum primary color
+                headerRun.addBreak();
+                XWPFRun subRun = headerPara.createRun();
+                subRun.setText("Système de Gestion des Ressources Humaines");
+                subRun.setFontSize(10);
+                subRun.setColor("6b7280");
+                subRun.addBreak();
+                subRun.addBreak();
 
-                // Reference
-                if (doc.reference != null && !doc.reference.isEmpty()) {
-                    XWPFParagraph refPara = wordDocument.createParagraph();
-                    XWPFRun refRun = refPara.createRun();
-                    refRun.setText("Réf: " + doc.reference);
-                    refRun.setFontSize(10);
-                    refRun.setColor("666666");
-                }
+                // Reference & Date
+                XWPFParagraph infoPara = word.createParagraph();
+                XWPFRun infoRun = infoPara.createRun();
+                infoRun.setText("Réf: " + doc.reference);
+                infoRun.setFontSize(10);
+                infoRun.setColor("4A5DEF");
+                infoRun.addBreak();
 
-                // Date
-                XWPFParagraph datePara = wordDocument.createParagraph();
+                XWPFParagraph datePara = word.createParagraph();
                 datePara.setAlignment(ParagraphAlignment.RIGHT);
                 XWPFRun dateRun = datePara.createRun();
                 dateRun.setText("Tunis, le " + new SimpleDateFormat("dd MMMM yyyy", Locale.FRENCH).format(doc.generatedDate));
                 dateRun.setFontSize(10);
+                dateRun.setColor("6b7280");
+                dateRun.addBreak();
                 dateRun.addBreak();
 
                 // Title
-                XWPFParagraph titlePara = wordDocument.createParagraph();
+                XWPFParagraph titlePara = word.createParagraph();
                 titlePara.setAlignment(ParagraphAlignment.CENTER);
                 XWPFRun titleRun = titlePara.createRun();
                 titleRun.setText(doc.title);
                 titleRun.setBold(true);
-                titleRun.setFontSize(16);
+                titleRun.setFontSize(18);
+                titleRun.setColor("4A5DEF");
                 titleRun.addBreak();
                 titleRun.addBreak();
 
                 // Recipient
                 if (doc.recipient != null && !doc.recipient.isEmpty()) {
-                    XWPFParagraph recipientPara = wordDocument.createParagraph();
+                    XWPFParagraph recipientPara = word.createParagraph();
                     XWPFRun recipientRun = recipientPara.createRun();
                     recipientRun.setText(doc.recipient);
+                    recipientRun.setBold(true);
                     recipientRun.setFontSize(11);
                     recipientRun.addBreak();
                 }
 
+                // Subject
+                if (doc.subject != null && !doc.subject.isEmpty() && !doc.subject.equals(doc.title)) {
+                    XWPFParagraph subjectPara = word.createParagraph();
+                    XWPFRun subjectLabel = subjectPara.createRun();
+                    subjectLabel.setText("Objet: ");
+                    subjectLabel.setBold(true);
+                    subjectLabel.setFontSize(11);
+                    subjectLabel.setColor("4A5DEF");
+                    XWPFRun subjectText = subjectPara.createRun();
+                    subjectText.setText(doc.subject);
+                    subjectText.setFontSize(11);
+                    subjectText.addBreak();
+                }
+
                 // Body
                 if (doc.body != null && !doc.body.isEmpty()) {
-                    XWPFParagraph bodyPara = wordDocument.createParagraph();
+                    XWPFParagraph bodyPara = word.createParagraph();
                     bodyPara.setAlignment(ParagraphAlignment.BOTH);
+
                     for (String line : doc.body.split("\n")) {
                         XWPFRun bodyRun = bodyPara.createRun();
                         bodyRun.setText(line);
@@ -533,20 +589,21 @@ public class AIDocumentGeneratorService {
 
                 // Closing
                 if (doc.closing != null && !doc.closing.isEmpty()) {
-                    wordDocument.createParagraph();
-                    XWPFParagraph closingPara = wordDocument.createParagraph();
+                    word.createParagraph();
+                    XWPFParagraph closingPara = word.createParagraph();
                     XWPFRun closingRun = closingPara.createRun();
                     closingRun.setText(doc.closing);
                     closingRun.setFontSize(11);
+                    closingRun.addBreak();
                 }
 
                 // Signature
                 if (doc.signature != null && !doc.signature.isEmpty()) {
-                    XWPFParagraph sigPara = wordDocument.createParagraph();
+                    XWPFParagraph sigPara = word.createParagraph();
                     sigPara.setAlignment(ParagraphAlignment.RIGHT);
-                    for (String line : doc.signature.split("\n")) {
+                    for (String sigLine : doc.signature.split("\n")) {
                         XWPFRun sigRun = sigPara.createRun();
-                        sigRun.setText(line.trim());
+                        sigRun.setText(sigLine.trim());
                         sigRun.setFontSize(11);
                         sigRun.addBreak();
                     }
@@ -554,10 +611,13 @@ public class AIDocumentGeneratorService {
 
                 // Footer
                 if (doc.footer != null && !doc.footer.isEmpty()) {
-                    wordDocument.createParagraph();
-                    XWPFParagraph footerPara = wordDocument.createParagraph();
+                    word.createParagraph();
+                    word.createParagraph();
+                    XWPFParagraph footerPara = word.createParagraph();
                     footerPara.setAlignment(ParagraphAlignment.CENTER);
                     XWPFRun footerRun = footerPara.createRun();
+                    footerRun.setText("─".repeat(40));
+                    footerRun.addBreak();
                     footerRun.setText(doc.footer);
                     footerRun.setFontSize(9);
                     footerRun.setItalic(true);
@@ -565,23 +625,24 @@ public class AIDocumentGeneratorService {
                 }
 
                 FileOutputStream out = new FileOutputStream(file);
-                wordDocument.write(out);
+                word.write(out);
                 out.close();
-                wordDocument.close();
+                word.close();
 
-                System.out.println("✅ Word exported successfully: " + file.getAbsolutePath());
+                System.out.println("✅ Word exported: " + file.getAbsolutePath());
                 return file;
 
             } catch (Exception e) {
-                System.err.println("❌ Word export error: " + e.getMessage());
+                System.err.println("❌ Word error: " + e.getMessage());
+                e.printStackTrace();
                 return null;
             }
         });
     }
 
-    // ═══════════════════════════════════════════════════════════════════════
+    // ═══════════════════════════════════════════════════════════════════════════
     // GENERATED DOCUMENT CLASS
-    // ═══════════════════════════════════════════════════════════════════════
+    // ═══════════════════════════════════════════════════════════════════════════
 
     public static class GeneratedDocument {
         public boolean isValid = false;
@@ -601,31 +662,40 @@ public class AIDocumentGeneratorService {
         public String getFormattedText() {
             StringBuilder sb = new StringBuilder();
 
-            if (header != null && !header.isEmpty()) {
-                sb.append(header).append("\n\n");
-            }
+            sb.append("╔══════════════════════════════════════════════════════╗\n");
+            sb.append("║             MOMENTUM HR - DOCUMENT OFFICIEL          ║\n");
+            sb.append("╚══════════════════════════════════════════════════════╝\n\n");
+
             if (reference != null && !reference.isEmpty()) {
                 sb.append("Réf: ").append(reference).append("\n\n");
             }
 
-            sb.append("══════════════════════════════════════════\n");
-            sb.append(title).append("\n");
-            sb.append("══════════════════════════════════════════\n\n");
+            sb.append("═══════════════════════════════════════════════════════\n");
+            sb.append("  ").append(title).append("\n");
+            sb.append("═══════════════════════════════════════════════════════\n\n");
 
             if (recipient != null && !recipient.isEmpty()) {
                 sb.append(recipient).append("\n\n");
             }
+
+            if (subject != null && !subject.isEmpty() && !subject.equals(title)) {
+                sb.append("Objet: ").append(subject).append("\n\n");
+            }
+
             if (body != null && !body.isEmpty()) {
                 sb.append(body).append("\n\n");
             }
+
             if (closing != null && !closing.isEmpty()) {
                 sb.append(closing).append("\n\n");
             }
+
             if (signature != null && !signature.isEmpty()) {
                 sb.append(signature).append("\n");
             }
+
             if (footer != null && !footer.isEmpty()) {
-                sb.append("\n──────────────────────────────────────────\n");
+                sb.append("\n───────────────────────────────────────────────────────\n");
                 sb.append(footer);
             }
 

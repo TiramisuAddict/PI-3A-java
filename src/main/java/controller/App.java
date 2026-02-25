@@ -27,7 +27,7 @@ public class App extends Application {
             Scene scene = new Scene(root);
 
             scene.getStylesheets().add(
-                    getClass().getResource("/customTheme.css").toExternalForm()
+                    getClass().getResource("/css/customTheme.css").toExternalForm()
             );
 
             Image appIcon = new Image(getClass().getResourceAsStream("/icons/logo.png"));

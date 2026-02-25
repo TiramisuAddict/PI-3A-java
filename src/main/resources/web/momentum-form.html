@@ -812,27 +812,22 @@ Document généré électroniquement - Valide sans signature
 
         if (!isValid) return;
 
-        // Show loading
         const btn = document.getElementById('submitBtn');
         btn.classList.add('loading');
         btn.textContent = 'Génération en cours...';
 
-        // Simulate API call
         setTimeout(() => {
             btn.classList.remove('loading');
             btn.innerHTML = '🚀 Générer le Document';
 
-            // Show success
             document.getElementById('successMessage').classList.add('show');
 
-            // Hide after 3s
             setTimeout(() => {
                 document.getElementById('successMessage').classList.remove('show');
             }, 3000);
         }, 2000);
     });
 
-    // Real-time validation
     document.querySelectorAll('input[required], select[required]').forEach(field => {
         field.addEventListener('input', function() {
             const group = this.closest('.form-group');
