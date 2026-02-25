@@ -10,9 +10,9 @@ import javafx.scene.control.TextInputDialog;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
-import models.formation;
-import models.inscription_formation;
-import models.StatutInscription;
+import models.formation.formation;
+import models.formation.inscription_formation;
+import models.formation.StatutInscription;
 import models.employe.session;
 import models.employe.employe;
 import service.formation.inscription_formationCRUD;
@@ -183,7 +183,7 @@ public class inscription_formationController {
             lblEmployeConnecte.setText(employeInfo);
             lblEmployeConnecte.setStyle("-fx-text-fill: #2d7a3e; -fx-font-weight: bold;");
         } else {
-            lblEmployeConnecte.setText("Employé connecté");
+                lblEmployeConnecte.setText("Employé connecté");
             lblEmployeConnecte.setStyle("-fx-text-fill: #2d7a3e; -fx-font-weight: bold;");
         }
     }

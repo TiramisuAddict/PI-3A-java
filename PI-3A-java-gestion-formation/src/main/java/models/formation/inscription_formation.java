@@ -1,4 +1,4 @@
-package models;
+package models.formation;
 
 import utils.RaisonAnalyzer;
 

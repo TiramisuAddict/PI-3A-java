@@ -12,9 +12,9 @@ import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.stage.Stage;
-import models.formation;
-import models.inscription_formation;
-import models.StatutInscription;
+import models.formation.formation;
+import models.formation.inscription_formation;
+import models.formation.StatutInscription;
 import service.formation.inscription_formationCRUD;
 import utils.RaisonAnalyzer;
 

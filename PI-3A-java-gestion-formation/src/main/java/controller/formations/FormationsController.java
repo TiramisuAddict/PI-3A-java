@@ -1,38 +1,32 @@
 package controller.formations;
 
 import javafx.fxml.FXML;
-import javafx.scene.control.Button;
-import javafx.scene.control.ComboBox;
-import javafx.scene.control.DatePicker;
-import javafx.scene.control.Label;
-import javafx.scene.control.TextField;
-import javafx.scene.control.Tab;
-import javafx.scene.control.TabPane;
-import javafx.scene.layout.FlowPane;
-import javafx.scene.layout.VBox;
-import javafx.scene.control.Alert;
-import javafx.scene.control.Alert.AlertType;
-import models.formation;
-import models.inscription_formation;
-import models.StatutInscription;
-import models.employe.session;
-import models.employe.employe;
-import service.formation.formationCRUD;
-import service.formation.inscription_formationCRUD;
-import javafx.scene.layout.HBox;
-import javafx.scene.text.Font;
-import javafx.scene.text.FontWeight;
-import java.time.LocalDate;
-import java.util.List;
-import javafx.scene.control.ButtonType;
-import java.util.Optional;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
+import javafx.scene.control.*;
+import javafx.scene.control.Alert.AlertType;
+import javafx.scene.layout.FlowPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
+import models.formation.formation;
+import models.formation.inscription_formation;
+import models.formation.StatutInscription;
+import models.employe.session;
+import models.employe.employe;
+import service.formation.formationCRUD;
+import service.formation.inscription_formationCRUD;
+import service.formation.EvaluationCRUD;
+
 import java.io.IOException;
 import java.sql.SQLException;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
 
 public class FormationsController {
 
@@ -87,6 +81,7 @@ public class FormationsController {
 
     private final formationCRUD formationService = new formationCRUD();
     private final inscription_formationCRUD inscriptionService = new inscription_formationCRUD();
+    private final EvaluationCRUD evaluationService = new EvaluationCRUD();
 
 
     @FXML
@@ -247,17 +242,17 @@ public class FormationsController {
             }
 
             Label organisme = new Label("🏢 Organisme: " + safeText(f.getOrganisme()));
-            organisme.setStyle("-fx-text-fill: #555; -fx-font-size: 13px;");
+            organisme.setStyle("-fx-text-fill: #555; -fx-font-size: 14px;");
 
             String dates = formatDateRange(f.getDate_debut(), f.getDate_fin());
             Label dateRange = new Label("📅 Dates: " + dates);
-            dateRange.setStyle("-fx-text-fill: #555; -fx-font-size: 13px;");
+            dateRange.setStyle("-fx-text-fill: #555; -fx-font-size: 14px;");
 
             Label lieu = new Label("📍 Lieu: " + safeText(f.getLieu()));
-            lieu.setStyle("-fx-text-fill: #555; -fx-font-size: 13px;");
+            lieu.setStyle("-fx-text-fill: #555; -fx-font-size: 14px;");
 
-            Label capacite = new Label("👥 Capacité: " + safeText(f.getCapacite()));
-            capacite.setStyle("-fx-text-fill: #555; -fx-font-size: 13px;");
+            Label capacite = new Label("👥 Capacité: " + safeText(f.getCapacite()) + " places");
+            capacite.setStyle("-fx-text-fill: #555; -fx-font-size: 14px;");
 
             HBox metaRow = new HBox(15, lieu, capacite);
             metaRow.setFillHeight(true);
@@ -284,7 +279,14 @@ public class FormationsController {
                     "-fx-effect: dropshadow(gaussian, rgba(67,233,123,0.4), 6, 0, 0, 2);");
             btnAccept.setOnAction(event -> openAcceptInscriptionsWindow(event, f));
 
-            HBox actionsRow = new HBox(10, btnEdit, btnDeleteCard, btnAccept);
+            Button btnEvaluations = new Button("⭐ Voir les évaluations");
+            btnEvaluations.setStyle("-fx-background-color: linear-gradient(to right, #f093fb, #f5576c); " +
+                    "-fx-text-fill: white; -fx-font-weight: 600; -fx-background-radius: 8; " +
+                    "-fx-padding: 8 16 8 16; -fx-cursor: hand; -fx-font-size: 12px; " +
+                    "-fx-effect: dropshadow(gaussian, rgba(245,87,108,0.4), 6, 0, 0, 2);");
+            btnEvaluations.setOnAction(event -> openEvaluationWindow(event, f));
+
+            HBox actionsRow = new HBox(10, btnEdit, btnDeleteCard, btnAccept, btnEvaluations);
             actionsRow.setStyle("-fx-padding: 10 0 0 0;");
 
             card.getChildren().addAll(headerRow, organisme, dateRange, metaRow, actionsRow);
@@ -416,15 +418,61 @@ public class FormationsController {
 
         availableFormationsContainer.getChildren().clear();
 
+        // Trier les formations par nombre d'évaluations (descendant)
+        try {
+            formations.sort((f1, f2) -> {
+                try {
+                    int count1 = evaluationService.getEvaluationCount(f1.getId_formation());
+                    int count2 = evaluationService.getEvaluationCount(f2.getId_formation());
+                    return Integer.compare(count2, count1); // Descendant (plus d'évaluations en premier)
+                } catch (SQLException e) {
+                    return 0;
+                }
+            });
+        } catch (Exception e) {
+            System.err.println("Erreur lors du tri des formations: " + e.getMessage());
+        }
+
         for (formation f : formations) {
             VBox card = new VBox(12);
             card.setStyle("-fx-background-color: white; -fx-background-radius: 12; " +
                     "-fx-padding: 20; -fx-border-color: #e0e0e0; -fx-border-radius: 12; -fx-border-width: 1; " +
                     "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.08), 8, 0, 0, 2);");
 
+            // En-tête avec titre et badge d'évaluation
+            HBox headerBox = new HBox();
+            headerBox.setSpacing(10);
+            headerBox.setStyle("-fx-alignment: center-left;");
+
             Label title = new Label(f.getTitre());
             title.setFont(Font.font(title.getFont().getFamily(), FontWeight.BOLD, 18));
             title.setStyle("-fx-text-fill: #2c3e50;");
+            HBox.setHgrow(title, javafx.scene.layout.Priority.ALWAYS);
+
+            // Badge avec le nombre d'évaluations
+            try {
+                int evaluationCount = evaluationService.getEvaluationCount(f.getId_formation());
+                double averageRating = evaluationService.getAverageRating(f.getId_formation());
+
+                if (evaluationCount > 0) {
+                    String stars = "⭐".repeat((int) Math.round(averageRating));
+                    Label ratingBadge = new Label(stars + " " + evaluationCount);
+                    ratingBadge.setStyle("-fx-background-color: linear-gradient(to right, #ffc107, #ff9800); " +
+                            "-fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 8 15 8 15; " +
+                            "-fx-background-radius: 20; -fx-font-size: 12px;");
+                    headerBox.getChildren().add(ratingBadge);
+                } else {
+                    Label noBadge = new Label("⭐ 0");
+                    noBadge.setStyle("-fx-background-color: #ccc; -fx-text-fill: white; " +
+                            "-fx-font-weight: bold; -fx-padding: 8 15 8 15; -fx-background-radius: 20; -fx-font-size: 12px;");
+                    headerBox.getChildren().add(noBadge);
+                }
+            } catch (SQLException e) {
+                System.err.println("Erreur lors du chargement des évaluations: " + e.getMessage());
+            }
+
+            headerBox.getChildren().add(0, title);
+
 
             Label organisme = new Label("🏢 Organisme: " + safeText(f.getOrganisme()));
             organisme.setStyle("-fx-text-fill: #555; -fx-font-size: 14px;");
@@ -450,7 +498,7 @@ public class FormationsController {
                 warningLabel.setStyle("-fx-text-fill: #ff9800; -fx-font-weight: bold; -fx-font-size: 14px; " +
                         "-fx-background-color: #fff3e0; -fx-padding: 10; -fx-background-radius: 6;");
 
-                card.getChildren().addAll(title, organisme, dateRange, lieu, capacite, warningLabel);
+                card.getChildren().addAll(headerBox, organisme, dateRange, lieu, capacite, warningLabel);
                 availableFormationsContainer.getChildren().add(card);
                 continue;
             }
@@ -474,7 +522,17 @@ public class FormationsController {
                         Label infoLabel = new Label("✅ Vous êtes inscrit(e) à cette formation");
                         infoLabel.setStyle("-fx-text-fill: #4caf50; -fx-font-weight: 600; -fx-font-size: 14px;");
 
-                        card.getChildren().addAll(title, organisme, dateRange, lieu, capacite, statutLabel, infoLabel);
+                        // Bouton pour voir les évaluations et évaluer
+                        Button btnEvaluations = new Button("⭐ Évaluer et voir les avis");
+                        btnEvaluations.setStyle("-fx-background-color: linear-gradient(to right, #f093fb, #f5576c); " +
+                                "-fx-text-fill: white; -fx-font-weight: 600; -fx-background-radius: 10; " +
+                                "-fx-padding: 12 20 12 20; -fx-cursor: hand; -fx-font-size: 14px; " +
+                                "-fx-effect: dropshadow(gaussian, rgba(245,87,108,0.4), 8, 0, 0, 3);");
+                        btnEvaluations.setPrefHeight(45);
+                        btnEvaluations.setMaxWidth(Double.MAX_VALUE);
+                        btnEvaluations.setOnAction(event -> openEvaluationWindow(event, f));
+
+                        card.getChildren().addAll(headerBox, organisme, dateRange, lieu, capacite, statutLabel, infoLabel, btnEvaluations);
 
                     } else if (statut == StatutInscription.REFUSEE) {
                         // Inscription refusée - Permettre de se réinscrire
@@ -490,7 +548,7 @@ public class FormationsController {
                         btnReinscrire.setMaxWidth(Double.MAX_VALUE);
                         btnReinscrire.setOnAction(event -> handleReinscrire(existingInscription, f));
 
-                        card.getChildren().addAll(title, organisme, dateRange, lieu, capacite, statutLabel, infoLabel, btnReinscrire);
+                        card.getChildren().addAll(headerBox, organisme, dateRange, lieu, capacite, statutLabel, infoLabel, btnReinscrire);
 
                     } else {
                         // EN_ATTENTE - Permettre l'annulation et la modification de la raison
@@ -517,7 +575,7 @@ public class FormationsController {
                         btnAnnuler.setOnAction(event -> handleAnnulerInscription(existingInscription));
 
                         actionButtons.getChildren().addAll(btnModifierRaison, btnAnnuler);
-                        card.getChildren().addAll(title, organisme, dateRange, lieu, capacite, statutLabel, actionButtons);
+                        card.getChildren().addAll(headerBox, organisme, dateRange, lieu, capacite, statutLabel, actionButtons);
                     }
                 } else {
                     // Pas encore inscrit - Afficher bouton S'inscrire
@@ -530,7 +588,21 @@ public class FormationsController {
                     btnInscription.setMaxWidth(Double.MAX_VALUE);
                     btnInscription.setOnAction(event -> openInscriptionWindow(event, f));
 
-                    card.getChildren().addAll(title, organisme, dateRange, lieu, capacite, btnInscription);
+                    // Bouton pour voir les évaluations (lecture seule, pas d'ajout)
+                    Button btnEvaluations = new Button("⭐ Voir les évaluations");
+                    btnEvaluations.setStyle("-fx-background-color: #9e9e9e; " +
+                            "-fx-text-fill: white; -fx-font-weight: 600; -fx-background-radius: 10; " +
+                            "-fx-padding: 12 20 12 20; -fx-cursor: not-allowed; -fx-font-size: 14px; " +
+                            "-fx-effect: dropshadow(gaussian, rgba(158,158,158,0.4), 8, 0, 0, 3);");
+                    btnEvaluations.setPrefHeight(45);
+                    btnEvaluations.setMaxWidth(Double.MAX_VALUE);
+                    btnEvaluations.setDisable(true);
+                    btnEvaluations.setTooltip(new Tooltip("Inscrivez-vous et attendez l'acceptation pour évaluer"));
+
+                    HBox buttonsBox = new HBox(10, btnInscription, btnEvaluations);
+                    buttonsBox.setPrefHeight(45);
+
+                    card.getChildren().addAll(headerBox, organisme, dateRange, lieu, capacite, buttonsBox);
                 }
             } catch (SQLException e) {
                 // En cas d'erreur, afficher le bouton S'inscrire par défaut
@@ -540,7 +612,7 @@ public class FormationsController {
                 btnInscription.setMaxWidth(Double.MAX_VALUE);
                 btnInscription.setOnAction(event -> openInscriptionWindow(event, f));
 
-                card.getChildren().addAll(title, organisme, dateRange, lieu, capacite, btnInscription);
+                card.getChildren().addAll(headerBox, organisme, dateRange, lieu, capacite, btnInscription);
             }
 
             availableFormationsContainer.getChildren().add(card);
@@ -666,6 +738,31 @@ public class FormationsController {
             stage.show();
 
         } catch (IOException | SQLException e) {
+            showAlert(AlertType.ERROR, "Erreur", "Échec d'ouverture: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Ouvrir la fenêtre pour voir et ajouter des évaluations
+     */
+    private void openEvaluationWindow(javafx.event.ActionEvent event, formation f) {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/evaluation-formation.fxml"));
+            Parent root = loader.load();
+
+            EvaluationController controller = loader.getController();
+            controller.setFormationData(f.getId_formation(), f.getTitre(), () -> {
+                refreshFormations();
+                refreshAvailableFormations();
+            });
+
+            Stage stage = new Stage();
+            stage.setTitle("Évaluations - " + f.getTitre());
+            stage.setScene(new Scene(root, 700, 800));
+            stage.initOwner(((Node) event.getSource()).getScene().getWindow());
+            stage.show();
+
+        } catch (IOException e) {
             showAlert(AlertType.ERROR, "Erreur", "Échec d'ouverture: " + e.getMessage());
         }
     }

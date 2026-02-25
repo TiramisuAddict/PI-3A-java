@@ -1,6 +1,6 @@
 package service.formation;
 
-import models.formation;
+import models.formation.formation;
 import utils.MyDB;
 
 import java.sql.Connection;

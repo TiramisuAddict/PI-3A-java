@@ -1,7 +1,7 @@
 package service.formation;
 
-import models.inscription_formation;
-import models.StatutInscription;
+import models.formation.inscription_formation;
+import models.formation.StatutInscription;
 import utils.MyDB;
 
 import java.sql.Connection;

@@ -1,4 +1,4 @@
-package models;
+package models.formation;
 
 public enum StatutInscription {
     EN_ATTENTE("En attente"),

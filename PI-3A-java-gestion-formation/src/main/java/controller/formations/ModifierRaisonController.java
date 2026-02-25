@@ -7,8 +7,8 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
 import javafx.stage.Stage;
-import models.inscription_formation;
-import models.StatutInscription;
+import models.formation.inscription_formation;
+import models.formation.StatutInscription;
 import service.formation.inscription_formationCRUD;
 
 import java.sql.SQLException;
