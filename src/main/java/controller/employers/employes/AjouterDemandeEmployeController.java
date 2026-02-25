@@ -15,10 +15,10 @@ import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.*;
 import javafx.scene.layout.VBox;
+import javafx.util.Callback;
 
 import java.io.IOException;
 import java.net.URL;
-import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.ResourceBundle;
 
@@ -61,7 +61,9 @@ public class AjouterDemandeEmployeController implements Initializable {
     private void initializeUI() {
         try {
             formHelper.initializeEmployeeComboBoxes(categorieCombo, typeDemandeCombo, prioriteCombo);
-            formHelper.setupDatePicker(dateCreationPicker);
+
+            // Setup date picker with validation (future dates only)
+            setupDatePickerWithValidation();
 
             typeDemandeCombo.valueProperty().addListener((observable, oldValue, newValue) -> {
                 if (newValue != null && !newValue.isEmpty()) {
@@ -75,6 +77,92 @@ public class AjouterDemandeEmployeController implements Initializable {
         } catch (Exception e) {
             System.err.println("Error initializing UI: " + e.getMessage());
             e.printStackTrace();
+        }
+    }
+
+    private void setupDatePickerWithValidation() {
+        if (dateCreationPicker == null) return;
+
+        // Date par défaut = aujourd'hui
+        dateCreationPicker.setValue(LocalDate.now());
+
+        Callback<DatePicker, DateCell> dayCellFactory = new Callback<DatePicker, DateCell>() {
+            @Override
+            public DateCell call(final DatePicker datePicker) {
+                return new DateCell() {
+                    @Override
+                    public void updateItem(LocalDate item, boolean empty) {
+                        super.updateItem(item, empty);
+
+                        if (item.isBefore(LocalDate.now())) {
+                            setDisable(true);
+                            setStyle("-fx-background-color: #ffc0cb; -fx-opacity: 0.6;"); // Rose clair pour dates passées
+
+                            setTooltip(new Tooltip("Les dates passées ne sont pas autorisées"));
+                        } else if (item.equals(LocalDate.now())) {
+                            setStyle("-fx-background-color: #90EE90; -fx-font-weight: bold;"); // Vert clair
+                            setTooltip(new Tooltip("Aujourd'hui"));
+                        }
+                    }
+                };
+            }
+        };
+
+        dateCreationPicker.setDayCellFactory(dayCellFactory);
+
+        dateCreationPicker.getEditor().textProperty().addListener((obs, oldVal, newVal) -> {
+            validateDateInput();
+        });
+
+        dateCreationPicker.valueProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal != null && newVal.isBefore(LocalDate.now())) {
+                Platform.runLater(() -> {
+                    dateCreationPicker.setValue(LocalDate.now());
+                    showDateError("La date ne peut pas être dans le passé. Date réinitialisée à aujourd'hui.");
+                });
+            } else {
+                clearDateError();
+            }
+        });
+
+        dateCreationPicker.setOnAction(event -> {
+            validateDateInput();
+        });
+    }
+
+    private void validateDateInput() {
+        if (dateCreationPicker == null) return;
+
+        LocalDate selectedDate = dateCreationPicker.getValue();
+
+        if (selectedDate == null) {
+            return; // Sera validé dans validateForm()
+        }
+
+        if (selectedDate.isBefore(LocalDate.now())) {
+            showDateError("La date doit être aujourd'hui ou une date future");
+            dateCreationPicker.setValue(LocalDate.now());
+        } else {
+            clearDateError();
+        }
+    }
+
+    private void showDateError(String message) {
+        if (dateError != null) {
+            dateError.setText(message);
+            dateError.setStyle("-fx-text-fill: #e74c3c;");
+        }
+        if (dateCreationPicker != null) {
+            dateCreationPicker.setStyle("-fx-border-color: #e74c3c; -fx-border-width: 2;");
+        }
+    }
+
+    private void clearDateError() {
+        if (dateError != null) {
+            dateError.setText("");
+        }
+        if (dateCreationPicker != null) {
+            dateCreationPicker.setStyle("");
         }
     }
 
@@ -110,7 +198,9 @@ public class AjouterDemandeEmployeController implements Initializable {
         }
         if (dateCreationPicker != null) {
             dateCreationPicker.valueProperty().addListener((o, ov, nv) -> {
-                if (nv != null) formHelper.clearFieldError(dateCreationPicker, dateError);
+                if (nv != null && !nv.isBefore(LocalDate.now())) {
+                    formHelper.clearFieldError(dateCreationPicker, dateError);
+                }
             });
         }
     }
@@ -242,40 +332,93 @@ public class AjouterDemandeEmployeController implements Initializable {
     private boolean validateForm() {
         boolean valid = true;
 
+        // Validation du titre
         if (titreField == null || titreField.getText() == null || titreField.getText().trim().isEmpty()) {
             if (titreError != null) titreError.setText("Le titre est obligatoire");
-            if (titreField != null) titreField.setStyle("-fx-border-color: red;");
+            if (titreField != null) titreField.setStyle("-fx-border-color: #e74c3c;");
             valid = false;
+        } else {
+            // Validation de la longueur du titre
+            String titre = titreField.getText().trim();
+            if (titre.length() < 3) {
+                if (titreError != null) titreError.setText("Le titre doit contenir au moins 3 caractères");
+                titreField.setStyle("-fx-border-color: #e74c3c;");
+                valid = false;
+            } else if (titre.length() > 100) {
+                if (titreError != null) titreError.setText("Le titre ne peut pas dépasser 100 caractères");
+                titreField.setStyle("-fx-border-color: #e74c3c;");
+                valid = false;
+            }
         }
 
+        // Validation de la catégorie
         if (categorieCombo == null || categorieCombo.getValue() == null) {
             if (categorieError != null) categorieError.setText("La catégorie est obligatoire");
-            if (categorieCombo != null) categorieCombo.setStyle("-fx-border-color: red;");
+            if (categorieCombo != null) categorieCombo.setStyle("-fx-border-color: #e74c3c;");
             valid = false;
         }
 
+        // Validation du type
         if (typeDemandeCombo == null || typeDemandeCombo.getValue() == null) {
             if (typeError != null) typeError.setText("Le type est obligatoire");
-            if (typeDemandeCombo != null) typeDemandeCombo.setStyle("-fx-border-color: red;");
+            if (typeDemandeCombo != null) typeDemandeCombo.setStyle("-fx-border-color: #e74c3c;");
             valid = false;
         }
 
+        // Validation de la priorité
         if (prioriteCombo == null || prioriteCombo.getValue() == null) {
             if (prioriteError != null) prioriteError.setText("La priorité est obligatoire");
-            if (prioriteCombo != null) prioriteCombo.setStyle("-fx-border-color: red;");
+            if (prioriteCombo != null) prioriteCombo.setStyle("-fx-border-color: #e74c3c;");
             valid = false;
         }
 
+        // Validation de la description
         if (descriptionArea == null || descriptionArea.getText() == null || descriptionArea.getText().trim().isEmpty()) {
             if (descriptionError != null) descriptionError.setText("La description est obligatoire");
-            if (descriptionArea != null) descriptionArea.setStyle("-fx-border-color: red;");
+            if (descriptionArea != null) descriptionArea.setStyle("-fx-border-color: #e74c3c;");
             valid = false;
+        } else {
+            // Validation de la longueur de la description
+            String description = descriptionArea.getText().trim();
+            if (description.length() < 10) {
+                if (descriptionError != null) descriptionError.setText("La description doit contenir au moins 10 caractères");
+                descriptionArea.setStyle("-fx-border-color: #e74c3c;");
+                valid = false;
+            } else if (description.length() > 2000) {
+                if (descriptionError != null) descriptionError.setText("La description ne peut pas dépasser 2000 caractères");
+                descriptionArea.setStyle("-fx-border-color: #e74c3c;");
+                valid = false;
+            }
         }
 
+        // ═══════════════════════════════════════════════════════════════════════════
+        // VALIDATION DE LA DATE - DOIT ÊTRE >= AUJOURD'HUI
+        // ═══════════════════════════════════════════════════════════════════════════
         if (dateCreationPicker == null || dateCreationPicker.getValue() == null) {
             if (dateError != null) dateError.setText("La date est obligatoire");
-            if (dateCreationPicker != null) dateCreationPicker.setStyle("-fx-border-color: red;");
+            if (dateCreationPicker != null) dateCreationPicker.setStyle("-fx-border-color: #e74c3c;");
             valid = false;
+        } else {
+            LocalDate selectedDate = dateCreationPicker.getValue();
+            LocalDate today = LocalDate.now();
+
+            if (selectedDate.isBefore(today)) {
+                if (dateError != null) {
+                    dateError.setText("⚠️ La date ne peut pas être dans le passé");
+                }
+                dateCreationPicker.setStyle("-fx-border-color: #e74c3c; -fx-border-width: 2;");
+                valid = false;
+            } else {
+                // Optionnel: Vérifier que la date n'est pas trop loin dans le futur (ex: max 1 an)
+                LocalDate maxDate = today.plusYears(1);
+                if (selectedDate.isAfter(maxDate)) {
+                    if (dateError != null) {
+                        dateError.setText("⚠️ La date ne peut pas dépasser 1 an dans le futur");
+                    }
+                    dateCreationPicker.setStyle("-fx-border-color: #e74c3c; -fx-border-width: 2;");
+                    valid = false;
+                }
+            }
         }
 
         if (formHelper != null && !formHelper.validateDynamicFields()) {
@@ -287,25 +430,46 @@ public class AjouterDemandeEmployeController implements Initializable {
 
     @FXML
     private void reinitialiserFormulaire() {
-        if (titreField != null) titreField.clear();
-        if (descriptionArea != null) descriptionArea.clear();
-        if (categorieCombo != null) categorieCombo.setValue(null);
+        if (titreField != null) {
+            titreField.clear();
+            titreField.setStyle("");
+        }
+        if (descriptionArea != null) {
+            descriptionArea.clear();
+            descriptionArea.setStyle("");
+        }
+        if (categorieCombo != null) {
+            categorieCombo.setValue(null);
+            categorieCombo.setStyle("");
+        }
         if (typeDemandeCombo != null) {
             typeDemandeCombo.setValue(null);
             typeDemandeCombo.getItems().clear();
+            typeDemandeCombo.setStyle("");
         }
-        if (prioriteCombo != null) prioriteCombo.setValue("NORMALE");
-        if (dateCreationPicker != null) dateCreationPicker.setValue(LocalDate.now());
+        if (prioriteCombo != null) {
+            prioriteCombo.setValue("NORMALE");
+            prioriteCombo.setStyle("");
+        }
+        if (dateCreationPicker != null) {
+            dateCreationPicker.setValue(LocalDate.now());
+            dateCreationPicker.setStyle("");
+        }
+
+        clearAllErrors();
 
         if (formHelper != null) {
             formHelper.updateDynamicFields(null, dynamicFieldsContainer, detailsPane);
-            formHelper.clearFieldError(titreField, titreError);
-            formHelper.clearFieldError(categorieCombo, categorieError);
-            formHelper.clearFieldError(typeDemandeCombo, typeError);
-            formHelper.clearFieldError(prioriteCombo, prioriteError);
-            formHelper.clearFieldError(descriptionArea, descriptionError);
-            formHelper.clearFieldError(dateCreationPicker, dateError);
         }
+    }
+
+    private void clearAllErrors() {
+        if (titreError != null) titreError.setText("");
+        if (categorieError != null) categorieError.setText("");
+        if (typeError != null) typeError.setText("");
+        if (prioriteError != null) prioriteError.setText("");
+        if (descriptionError != null) descriptionError.setText("");
+        if (dateError != null) dateError.setText("");
     }
 
     @FXML
