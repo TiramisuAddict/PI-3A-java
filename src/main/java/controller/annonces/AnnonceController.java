@@ -22,11 +22,20 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.util.Duration;
 import service.CommentaireCRUD;
+import service.EventImageCRUD;
 import service.LikeCRUD;
 import service.PostCRUD;
+import entity.EventImage;
 
+import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.sql.SQLException;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.stage.FileChooser;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -65,8 +74,12 @@ public class AnnonceController {
     private PostCRUD postCRUD = new PostCRUD();
     private CommentaireCRUD commentaireCRUD = new CommentaireCRUD();
     private LikeCRUD likeCRUD = new LikeCRUD();
+    private EventImageCRUD eventImageCRUD = new EventImageCRUD();
     private Post selectedPost = null;
     private String currentFilter = "ALL";
+    private HBox imageGalleryContainer = null;
+    private static final int MAX_PHOTOS = 10;
+    private static final String IMAGES_DIR = "src/main/resources/images/events/";
 
     @FXML
     public void initialize() {
@@ -82,10 +95,162 @@ public class AnnonceController {
             }
         });
 
+        buildImageUploadSection();
         addValidationListeners();
         refreshPosts();
         loadCommentsByPost();
         loadStatistiques();
+    }
+
+    private void buildImageUploadSection() {
+        // Create images directory if it doesn't exist
+        try {
+            Files.createDirectories(Paths.get(IMAGES_DIR));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        VBox imageSection = new VBox(10);
+        imageSection.setStyle("-fx-border-color: -color-border-muted; -fx-border-width: 1 0 0 0; -fx-padding: 15 0 0 0;");
+
+        Label imageLabel = new Label("Photos de l'événement (max " + MAX_PHOTOS + ")");
+        imageLabel.setStyle("-fx-font-weight: 600; -fx-text-fill: -color-fg-default;");
+
+        Button btnUpload = new Button("+ Ajouter des photos");
+        btnUpload.setStyle("-fx-background-color: -color-base-0; -fx-text-fill: -color-fg-default; " +
+                "-fx-border-color: -color-border-muted; -fx-border-width: 1; -fx-border-radius: 6; " +
+                "-fx-background-radius: 6; -fx-padding: 8 16; -fx-cursor: hand; -fx-font-weight: 600;");
+        btnUpload.setOnAction(e -> handleUploadImages());
+
+        imageGalleryContainer = new HBox(10);
+        imageGalleryContainer.setStyle("-fx-padding: 5 0;");
+
+        imageSection.getChildren().addAll(imageLabel, btnUpload, imageGalleryContainer);
+        eventFieldsContainer.getChildren().add(imageSection);
+    }
+
+    private void handleUploadImages() {
+        // Need a post ID — save first if creating
+        int targetPostId = -1;
+        if (selectedPost != null) {
+            targetPostId = selectedPost.getIdPost();
+        } else {
+            // Creating new post: save it first, then upload photos
+            if (!validateForm()) return;
+            Post post = new Post();
+            populatePostFromForm(post);
+            post.setDateCreation(LocalDateTime.now());
+            post.setUtilisateurId(1);
+            try {
+                postCRUD.ajouter(post);
+                // Get the newly inserted post (last one)
+                List<Post> all = postCRUD.afficher();
+                selectedPost = all.get(all.size() - 1);
+                targetPostId = selectedPost.getIdPost();
+                // Switch form to edit mode
+                formTitle.setText("Modifier l'Annonce");
+                btnSave.setVisible(false);
+                btnSave.setManaged(false);
+                btnUpdate.setVisible(true);
+                btnUpdate.setManaged(true);
+                refreshPosts();
+            } catch (SQLException e) {
+                showError("Erreur", "Sauvegardez d'abord l'annonce avant d'ajouter des photos.");
+                return;
+            }
+        }
+
+        try {
+            int current = eventImageCRUD.countByPost(targetPostId);
+            if (current >= MAX_PHOTOS) {
+                showError("Limite atteinte", "Maximum " + MAX_PHOTOS + " photos par événement.");
+                return;
+            }
+
+            FileChooser fileChooser = new FileChooser();
+            fileChooser.setTitle("Sélectionner des photos");
+            fileChooser.getExtensionFilters().add(
+                    new FileChooser.ExtensionFilter("Images", "*.png", "*.jpg", "*.jpeg", "*.gif")
+            );
+            fileChooser.setInitialDirectory(new File(System.getProperty("user.home")));
+
+            List<File> files = fileChooser.showOpenMultipleDialog(eventFieldsContainer.getScene().getWindow());
+            if (files == null || files.isEmpty()) return;
+
+            int added = 0;
+            for (File file : files) {
+                if (current + added >= MAX_PHOTOS) break;
+
+                String fileName = targetPostId + "_" + System.currentTimeMillis() + "_" + file.getName();
+                java.nio.file.Path dest = Paths.get(IMAGES_DIR + fileName);
+                Files.copy(file.toPath(), dest, StandardCopyOption.REPLACE_EXISTING);
+
+                EventImage img = new EventImage(targetPostId, IMAGES_DIR + fileName, current + added + 1);
+                eventImageCRUD.ajouter(img);
+                added++;
+            }
+
+            refreshImageGallery(targetPostId);
+            showSuccess("Succès", added + " photo(s) ajoutée(s).");
+        } catch (Exception e) {
+            showError("Erreur", "Impossible d'ajouter les photos: " + e.getMessage());
+        }
+    }
+
+    private void refreshImageGallery(int postId) {
+        if (imageGalleryContainer == null) return;
+        imageGalleryContainer.getChildren().clear();
+
+        try {
+            List<EventImage> images = eventImageCRUD.getByPost(postId);
+            for (EventImage img : images) {
+                StackPane thumb = new StackPane();
+                thumb.setPrefSize(90, 90);
+                thumb.setMaxSize(90, 90);
+
+                try {
+                    File f = new File(img.getImagePath());
+                    Image image = new Image(f.toURI().toString(), 90, 90, true, true);
+                    ImageView iv = new ImageView(image);
+                    iv.setFitWidth(90);
+                    iv.setFitHeight(90);
+                    iv.setPreserveRatio(false);
+                    iv.setStyle("-fx-background-radius: 8;");
+                    thumb.getChildren().add(iv);
+                } catch (Exception e) {
+                    Label placeholder = new Label("?");
+                    placeholder.setStyle("-fx-text-fill: #94a3b8;");
+                    thumb.getChildren().add(placeholder);
+                }
+
+                // Delete button on hover
+                Button btnDelete = new Button("✕");
+                btnDelete.setStyle("-fx-background-color: rgba(239,68,68,0.85); -fx-text-fill: white; " +
+                        "-fx-background-radius: 10; -fx-font-size: 10px; -fx-padding: 2 5; -fx-cursor: hand;");
+                btnDelete.setVisible(false);
+                StackPane.setAlignment(btnDelete, Pos.TOP_RIGHT);
+
+                int imageId = img.getIdImage();
+                thumb.setOnMouseEntered(e -> btnDelete.setVisible(true));
+                thumb.setOnMouseExited(e -> btnDelete.setVisible(false));
+                btnDelete.setOnAction(e -> {
+                    try {
+                        new File(img.getImagePath()).delete();
+                        eventImageCRUD.supprimer(imageId);
+                        refreshImageGallery(postId);
+                    } catch (SQLException ex) {
+                        showError("Erreur", "Impossible de supprimer la photo.");
+                    }
+                });
+
+                thumb.setStyle("-fx-background-color: #f1f5f9; -fx-background-radius: 8; " +
+                        "-fx-border-color: -color-border-muted; -fx-border-width: 1; -fx-border-radius: 8;");
+                thumb.getChildren().add(btnDelete);
+                imageGalleryContainer.getChildren().add(thumb);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 
     @FXML
@@ -278,14 +443,13 @@ public class AnnonceController {
 
         HBox badges = new HBox(8);
         Label statusBadge = new Label(post.isActive() ? "Actif" : "Inactif");
-        statusBadge.setStyle(post.isActive() ?
-                "-fx-background-color: #d1fae5; -fx-text-fill: #10b981; -fx-padding: 4 12; -fx-background-radius: 12; -fx-font-weight: 600; -fx-font-size: 12px;" :
-                "-fx-background-color: #fee2e2; -fx-text-fill: #ef4444; -fx-padding: 4 12; -fx-background-radius: 12; -fx-font-weight: 600; -fx-font-size: 12px;");
+        String badgeActiveStyle =(post.isActive() ? "-fx-background-color: #d1fae5; -fx-text-fill: #10b981; " : "-fx-background-color: #fee2e2; -fx-text-fill: #ef4444; ") + "-fx-padding: 4 12; -fx-background-radius: 12; -fx-font-weight: 600; -fx-font-size: 12px;";
+        statusBadge.setStyle(badgeActiveStyle);
 
         Label typeBadge = new Label(post.getTypePost() == 1 ? "Annonce" : "Événement");
-        typeBadge.setStyle(post.getTypePost() == 1 ?
-                "-fx-background-color: #e0e7ff; -fx-text-fill: #6366f1; -fx-padding: 4 12; -fx-background-radius: 12; -fx-font-weight: 600; -fx-font-size: 12px;" :
-                "-fx-background-color: #fed7aa; -fx-text-fill: #ea580c; -fx-padding: 4 12; -fx-background-radius: 12; -fx-font-weight: 600; -fx-font-size: 12px;");
+
+        String badgeTypeStyle = ( post.getTypePost() == 1 ?  "-fx-background-color: #e0e7ff; -fx-text-fill: #6366f1;" :  "-fx-background-color: #fed7aa; -fx-text-fill: #ea580c;") +"-fx-padding: 4 12; -fx-background-radius: 12; -fx-font-weight: 600; -fx-font-size: 12px;";
+        typeBadge.setStyle (badgeTypeStyle);
 
         badges.getChildren().addAll(statusBadge, typeBadge);
         textInfo.getChildren().addAll(titleLabel, contentLabel, badges);
@@ -376,6 +540,10 @@ public class AnnonceController {
         btnUpdate.setManaged(true);
         formContainer.setVisible(true);
         formContainer.setManaged(true);
+
+        if (post.getTypePost() == 2) {
+            refreshImageGallery(post.getIdPost());
+        }
     }
 
     @FXML
@@ -458,6 +626,7 @@ public class AnnonceController {
     private void handleCancelForm() {
         clearForm();
         clearErrors();
+        if (imageGalleryContainer != null) imageGalleryContainer.getChildren().clear();
         formContainer.setVisible(false);
         formContainer.setManaged(false);
         selectedPost = null;

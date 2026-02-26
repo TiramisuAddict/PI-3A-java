@@ -9,6 +9,7 @@ import java.util.List;
 
 public class PostCRUD implements InterfaceCRUD<Post> {
 
+    public static final String SELECT_FROM_POST = "SELECT * FROM post";
     Connection conn;
 
     public PostCRUD() {
@@ -86,10 +87,9 @@ public class PostCRUD implements InterfaceCRUD<Post> {
     public List<Post> afficher() throws SQLException {
 
         List<Post> posts = new ArrayList<>();
-        String req = "SELECT * FROM post";
 
         Statement st = conn.createStatement();
-        ResultSet rs = st.executeQuery(req);
+        ResultSet rs = st.executeQuery(SELECT_FROM_POST);
 
         while (rs.next()) {
 
