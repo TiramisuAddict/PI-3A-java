@@ -188,7 +188,7 @@ public class entrepriseCRUD implements InterfaceCRUD<entreprise> {
                     + "Email : " + e.getE_mail() + "\n"
                     + "Mot de passe : " + motDePasse + "\n\n"
                     + "Veuillez changer votre mot de passe après la première connexion.\n"
-                    + "Cordialement,\nL'équipe Admin.";
+                    + "Cordialement,\n L'équipe Admin.";
             serviceEmail.envoyer(e.getE_mail(), sujet, corps);
         } catch (SQLException ex) {
             conn.rollback();

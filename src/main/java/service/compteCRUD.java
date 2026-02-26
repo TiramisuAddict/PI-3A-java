@@ -20,7 +20,8 @@ public class compteCRUD implements InterfaceCRUD<compte> {
 
         try (PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setString(1, c.getE_mail());
-            ps.setString(2, c.getPassword());
+            String hashed = hachageMotDePasse.hashPassword(c.getPassword());
+            ps.setString(2, hashed);
             ps.setInt(3, c.getId_employe());
             ps.executeUpdate();
 

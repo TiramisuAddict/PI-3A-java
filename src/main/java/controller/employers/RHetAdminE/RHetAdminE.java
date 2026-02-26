@@ -10,6 +10,8 @@ import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.scene.Parent;
+import javafx.scene.Scene;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.image.Image;
@@ -17,6 +19,7 @@ import javafx.scene.image.ImageView;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Circle;
+import javafx.stage.Stage;
 import javafx.util.Duration;
 
 import java.io.File;
@@ -103,6 +106,31 @@ public class RHetAdminE implements Initializable {
         Label lbl = new Label(initials);
         lbl.setStyle("-fx-text-fill: white;-fx-font-weight: bold;-fx-font-size: 15px;");
         avatarSidebar.getChildren().add(lbl);
+    }
+    @FXML
+    private void handleDeconnexion() {
+        try {
+            session.setEmploye(null);
+            session.setCompte(null);
+            session.setAdmin(null);
+
+            Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+            alert.setTitle("Déconnexion");
+            alert.setHeaderText(null);
+            alert.setContentText("Vous voulez déconnecter?");
+            alert.showAndWait();
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/emp/Login.fxml"));
+            Parent root = loader.load();
+            Stage loginStage = new Stage();
+            loginStage.setTitle("Connexion");
+            loginStage.setScene(new Scene(root));
+            loginStage.show();
+            Stage currentStage = (Stage) sidebar.getScene().getWindow();
+            currentStage.close();
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
     @FXML private VBox userCard;
     @FXML

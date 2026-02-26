@@ -56,7 +56,7 @@
                                         </VBox>
                                     </children>
                                 </HBox>
-                                <Button fx:id="btnDeconnexion" text="Déconnecter" maxWidth="Infinity" prefHeight="28.0" style="-fx-background-color: rgba(255,255,255,0.25);-fx-text-fill: white;-fx-font-size: 10px;-fx-background-radius: 6;-fx-cursor: hand;" />
+                                <Button fx:id="btnDeconnexion" text="Déconnecter" onAction="#handleDeconnexion" maxWidth="Infinity" prefHeight="28.0" style="-fx-background-color: rgba(255,255,255,0.25);-fx-text-fill: white;-fx-font-size: 10px;-fx-background-radius: 6;-fx-cursor: hand;" />
                             </children>
                         </VBox>
                         <!-- HOME -->
