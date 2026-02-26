@@ -83,13 +83,121 @@ public class FormationsController {
     private final inscription_formationCRUD inscriptionService = new inscription_formationCRUD();
     private final EvaluationCRUD evaluationService = new EvaluationCRUD();
 
+    // Listes complètes pour la recherche/filtrage
+    private List<formation> allFormations = new java.util.ArrayList<>();
+    private List<formation> allAvailableFormations = new java.util.ArrayList<>();
+
 
     @FXML
     private void initialize() {
         // Configurer les onglets selon le rôle
         configureTabsByRole();
+
+        // Charger toutes les formations
+        try {
+            allFormations = formationService.afficher();
+            allAvailableFormations = new java.util.ArrayList<>(allFormations);
+        } catch (Exception e) {
+            System.err.println("Erreur lors du chargement des formations: " + e.getMessage());
+        }
+
+        // Initialiser les ComboBox avec les lieux
+        loadLocationsForFilters();
+
+        // Ajouter les écouteurs pour la recherche et le tri - Onglet RH
+        if (txtSearch != null) {
+            txtSearch.textProperty().addListener((observable, oldValue, newValue) -> filterFormations());
+        }
+        if (filterLieu != null) {
+            filterLieu.valueProperty().addListener((observable, oldValue, newValue) -> filterFormations());
+        }
+
+        // Ajouter les écouteurs pour la recherche et le tri - Onglet Employé
+        if (txtSearchEmploye != null) {
+            txtSearchEmploye.textProperty().addListener((observable, oldValue, newValue) -> filterAvailableFormations());
+        }
+        if (filterLieuEmploye != null) {
+            filterLieuEmploye.valueProperty().addListener((observable, oldValue, newValue) -> filterAvailableFormations());
+        }
+
         refreshFormations();
         refreshAvailableFormations();
+    }
+
+    /**
+     * Charger tous les lieux disponibles dans les ComboBox de filtrage
+     */
+    private void loadLocationsForFilters() {
+        try {
+            List<formation> formations = formationService.afficher();
+            java.util.Set<String> lieux = new java.util.LinkedHashSet<>();
+
+            for (formation f : formations) {
+                if (f.getLieu() != null && !f.getLieu().isEmpty()) {
+                    lieux.add(f.getLieu());
+                }
+            }
+
+            if (filterLieu != null) {
+                filterLieu.getItems().clear();
+                filterLieu.getItems().addAll(lieux);
+            }
+
+            if (filterLieuEmploye != null) {
+                filterLieuEmploye.getItems().clear();
+                filterLieuEmploye.getItems().addAll(lieux);
+            }
+        } catch (SQLException e) {
+            System.err.println("Erreur lors du chargement des lieux: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Filtrer les formations RH par titre/organisme et lieu
+     */
+    private void filterFormations() {
+        String searchText = txtSearch != null ? txtSearch.getText().toLowerCase() : "";
+        String selectedLieu = filterLieu != null ? filterLieu.getValue() : null;
+
+        List<formation> filtered = allFormations.stream()
+                .filter(f -> {
+                    // Filtre par texte de recherche (titre ou organisme)
+                    boolean matchesSearch = f.getTitre().toLowerCase().contains(searchText) ||
+                                          f.getOrganisme().toLowerCase().contains(searchText);
+
+                    // Filtre par lieu
+                    boolean matchesLieu = selectedLieu == null ||
+                                        (f.getLieu() != null && f.getLieu().equals(selectedLieu));
+
+                    return matchesSearch && matchesLieu;
+                })
+                .toList();
+
+        renderFormations(filtered);
+    }
+
+    /**
+     * Filtrer les formations disponibles pour les employés par titre/organisme et lieu
+     */
+    private void filterAvailableFormations() {
+        String searchText = txtSearchEmploye != null ? txtSearchEmploye.getText().toLowerCase() : "";
+        String selectedLieu = filterLieuEmploye != null ? filterLieuEmploye.getValue() : null;
+
+        List<formation> filtered = allAvailableFormations.stream()
+                .filter(f -> {
+                    // Filtre par texte de recherche (titre ou organisme)
+                    boolean matchesSearch = f.getTitre().toLowerCase().contains(searchText) ||
+                                          f.getOrganisme().toLowerCase().contains(searchText);
+
+                    // Filtre par lieu
+                    boolean matchesLieu = selectedLieu == null ||
+                                        (f.getLieu() != null && f.getLieu().equals(selectedLieu));
+
+                    return matchesSearch && matchesLieu;
+                })
+                .toList();
+
+        renderAvailableFormations(filtered);
     }
 
     /**
@@ -200,9 +308,10 @@ public class FormationsController {
 
     private void refreshFormations() {
         try {
-            List<formation> formations = formationService.afficher(); // te5o donner mel base
-            renderFormations(formations);
-            updateStats(formations);
+            allFormations = formationService.afficher(); // Mettre à jour la liste complète
+            loadLocationsForFilters(); // Recharger les lieux de filtrage
+            filterFormations(); // Appliquer les filtres actuels
+            updateStats(allFormations);
         } catch (Exception e) {
             showAlert(AlertType.ERROR, "Erreur", "Echec du chargement: " + e.getMessage());
         }
@@ -403,8 +512,9 @@ public class FormationsController {
      */
     private void refreshAvailableFormations() {
         try {
-            List<formation> formations = formationService.afficher();
-            renderAvailableFormations(formations);
+            allAvailableFormations = formationService.afficher(); // Mettre à jour la liste complète
+            loadLocationsForFilters(); // Recharger les lieux de filtrage
+            filterAvailableFormations(); // Appliquer les filtres actuels
         } catch (Exception e) {
             showAlert(AlertType.ERROR, "Erreur", "Echec du chargement: " + e.getMessage());
         }
