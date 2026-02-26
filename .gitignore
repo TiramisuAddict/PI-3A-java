@@ -4,3 +4,7 @@ target/
 .mvn/
 tokens/
 src/main/resources/credentials.apps.googleusercontent.com.json
+
+# Environment variables - NEVER commit this file
+.env
+

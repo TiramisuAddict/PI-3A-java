@@ -38,7 +38,12 @@
                         </VBox>
 
                         <VBox spacing="6">
-                            <Label text="Description" style="-fx-font-weight: 600; -fx-text-fill: #475569;"/>
+                            <HBox alignment="CENTER_LEFT" spacing="8">
+                                <Label text="Description" style="-fx-font-weight: 600; -fx-text-fill: #475569;"/>
+                                <Region HBox.hgrow="ALWAYS"/>
+                                <Button fx:id="btnAIDescription" text="✨ Générer (Gemini)"
+                                        style="-fx-background-color: linear-gradient(to right, #4285F4, #34A853); -fx-text-fill: white; -fx-background-radius: 6; -fx-padding: 4 10; -fx-cursor: hand; -fx-font-size: 10px; -fx-font-weight: 600;"/>
+                            </HBox>
                             <TextArea fx:id="descArea" promptText="Décrivez les détails de la tâche..."
                                       wrapText="true" prefRowCount="3"
                                       style="-fx-background-radius: 8; -fx-border-radius: 8; -fx-border-color: #E2E8F0;"/>
@@ -88,7 +93,12 @@
 
                         <HBox spacing="16">
                             <VBox spacing="6" HBox.hgrow="ALWAYS">
-                                <Label text="🎯 Priorité" style="-fx-font-weight: 600; -fx-text-fill: #475569;"/>
+                                <HBox alignment="CENTER_LEFT" spacing="8">
+                                    <Label text="🎯 Priorité" style="-fx-font-weight: 600; -fx-text-fill: #475569;"/>
+                                    <Region HBox.hgrow="ALWAYS"/>
+                                    <Button fx:id="btnAIPriority" text="✨ Suggérer"
+                                            style="-fx-background-color: linear-gradient(to right, #4285F4, #34A853); -fx-text-fill: white; -fx-background-radius: 6; -fx-padding: 4 10; -fx-cursor: hand; -fx-font-size: 10px; -fx-font-weight: 600;"/>
+                                </HBox>
                                 <ComboBox fx:id="priorityBox" maxWidth="Infinity" promptText="Priorité"
                                           style="-fx-background-radius: 8;"/>
                             </VBox>

@@ -210,6 +210,10 @@ public class AjoutProjetController {
             showError("La date de début est obligatoire.");
             return;
         }
+        if (debut.isBefore(LocalDate.now())) {
+            showError("La date de début doit être aujourd'hui ou dans le futur.");
+            return;
+        }
 
         LocalDate finPrevue = finPrevuePicker.getValue();
         if (finPrevue != null && finPrevue.isBefore(debut)) {

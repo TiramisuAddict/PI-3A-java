@@ -6,12 +6,16 @@ import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.geometry.Side;
 import javafx.scene.control.*;
 import javafx.scene.input.*;
+import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
+import javafx.scene.layout.ColumnConstraints;
+import javafx.scene.layout.RowConstraints;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.fxml.FXMLLoader;
@@ -21,7 +25,11 @@ import javafx.scene.Scene;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.time.LocalDate;
+import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -32,6 +40,7 @@ import service.EmployeeCRUD;
 import service.Equipe_projet;
 import service.EmployeeCRUD.EmployeeInfo;
 import service.GoogleCalendarService;
+import service.OpenAIService;
 import Models.Projet;
 import Models.Tache;
 import Models.statut;
@@ -76,7 +85,8 @@ public class ProjetsController {
     @FXML private TextField taskSearchField;
     @FXML private Button btnRefreshTasks;
     @FXML private Button btnCreateTaskInline;
-    
+    @FXML private ComboBox<String> taskSortBox;
+
     // Kanban Board containers
     @FXML private HBox kanbanBoard;
     @FXML private VBox columnTodo;
@@ -114,12 +124,30 @@ public class ProjetsController {
     @FXML private Button btnGoogleCalendar;
     @FXML private Label calendarStatusLabel;
 
+    // Calendar Tab
+    @FXML private Label calendarTitle;
+    @FXML private Label calendarSubtitle;
+    @FXML private Button btnPrevMonth;
+    @FXML private Button btnNextMonth;
+    @FXML private Button btnToday;
+    @FXML private Label currentMonthLabel;
+    @FXML private ComboBox<Projet> calendarProjectFilter;
+    @FXML private VBox calendarContainer;
+    @FXML private HBox calendarDaysHeader;
+    @FXML private GridPane calendarGrid;
+    @FXML private Label calendarInfoLabel;
+
+    // Calendar state
+    private YearMonth currentYearMonth = YearMonth.now();
+    private Projet calendarSelectedProject = null;
+
 
     private final ProjetCRUD projetCRUD = new ProjetCRUD();
     private final TacheCRUD tacheCRUD = new TacheCRUD();
     private final EmployeeCRUD employeeCRUD = new EmployeeCRUD();
     private final Equipe_projet equipeCRUD = new Equipe_projet();
     private final GoogleCalendarService calendarService = GoogleCalendarService.getInstance();
+    private final OpenAIService openAIService = OpenAIService.getInstance();
 
     private final ObservableList<Projet> masterProjects = FXCollections.observableArrayList();
     private final ObservableList<Projet> filteredProjects = FXCollections.observableArrayList();
@@ -200,8 +228,17 @@ public class ProjetsController {
         btnRefreshTasks.setOnAction(e -> loadTasksForSelectedProject());
         taskSearchField.textProperty().addListener((obs, o, n) -> applyTaskFilters());
 
+        if (taskSortBox != null) {
+            taskSortBox.getItems().setAll("Toutes les tâches", "Mes tâches");
+            taskSortBox.setValue("Toutes les tâches");
+            taskSortBox.valueProperty().addListener((obs, o, n) -> applyTaskFilters());
+        }
+
         // Setup Kanban board
         setupTasksTable();
+
+        // Setup Calendar tab
+        setupCalendarTab();
 
         // initial state
         setDetailsEnabled(false);
@@ -344,6 +381,7 @@ public class ProjetsController {
             if (type == btnYes) {
                 // Clear session
                 UserSession.getInstance().clearSession();
+                disconnectGoogleCalendar();
 
                 // Show login prompt
                 showLoginPrompt();
@@ -360,6 +398,10 @@ public class ProjetsController {
 
                 // Refresh team list to apply new role permissions
                 loadProjectTeam();
+
+                // Update calendar - refresh project filter and calendar grid for new role
+                updateCalendarProjectFilter();
+                refreshCalendar();
 
                 // Update calendar status
                 updateCalendarStatusDisplay();
@@ -470,19 +512,33 @@ public class ProjetsController {
         setupColumnDragDrop(blockedTasksContainer, statut_t.BLOCQUEE);
         setupColumnDragDrop(doneTasksContainer, statut_t.TERMINEE);
         
-        // Setup "Add task" buttons at bottom of columns
+        // Setup "Add task" buttons at bottom of columns (except DONE)
         UserSession session = UserSession.getInstance();
         boolean canManage = session.canManageTasks();
         
         if (canManage) {
+            if (todoAddCard != null) {
+                todoAddCard.setVisible(true);
+                todoAddCard.setManaged(true);
+            }
+            if (inProgressAddCard != null) {
+                inProgressAddCard.setVisible(true);
+                inProgressAddCard.setManaged(true);
+            }
+            if (blockedAddCard != null) {
+                blockedAddCard.setVisible(true);
+                blockedAddCard.setManaged(true);
+            }
+
             setupAddCardButton(todoAddCard, statut_t.A_FAIRE);
             setupAddCardButton(inProgressAddCard, statut_t.EN_COURS);
             setupAddCardButton(blockedAddCard, statut_t.BLOCQUEE);
+            // Hide add button for DONE column - tasks can't be added directly as completed
         } else {
             // Hide add buttons for employees
-            if (todoAddCard != null) todoAddCard.setVisible(false);
-            if (inProgressAddCard != null) inProgressAddCard.setVisible(false);
-            if (blockedAddCard != null) blockedAddCard.setVisible(false);
+            if (todoAddCard != null) { todoAddCard.setVisible(false); todoAddCard.setManaged(false); }
+            if (inProgressAddCard != null) { inProgressAddCard.setVisible(false); inProgressAddCard.setManaged(false); }
+            if (blockedAddCard != null) { blockedAddCard.setVisible(false); blockedAddCard.setManaged(false); }
         }
     }
     
@@ -504,7 +560,7 @@ public class ProjetsController {
         container.setOnDragEntered(event -> {
             if (event.getGestureSource() != container && event.getDragboard().hasString()) {
                 // Smooth highlight effect
-                container.setStyle("-fx-padding: 8 12 12 12; -fx-background-color: " + highlightColor + "; -fx-background-radius: 8; -fx-border-color: " + getColumnAccentColor(targetStatus) + "; -fx-border-width: 2; -fx-border-style: dashed; -fx-border-radius: 8;");
+                container.setStyle("-fx-padding: 8 12 12 12; -fx-background-color: " + highlightColor + "; -fx-background-radius: 8; -fx-border-color: " + getColumnAccentColor(targetStatus) + "; -fx-border-width: 2; -fx-border-style: dashed; -fx-border-radius: 10;");
             }
             event.consume();
         });
@@ -679,12 +735,32 @@ public class ProjetsController {
         // Priority indicator - left border stripe
         String priorityColor = getPriorityColor(task.getPriority_tache());
 
+        // Header with title and 3-dot menu
+        HBox headerRow = new HBox(10);
+        headerRow.setAlignment(Pos.CENTER_LEFT);
+
         // Title
         Label titleLabel = new Label(task.getTitre());
-        titleLabel.setStyle("-fx-font-weight: 600; -fx-font-size: 14px; -fx-text-fill: #1E293B; -fx-font-family: 'Segoe UI', sans-serif;");
+        titleLabel.setStyle("-fx-font-weight: 700; -fx-font-size: 14px; -fx-text-fill: #0F172A; -fx-font-family: 'Segoe UI', sans-serif;");
         titleLabel.setWrapText(true);
-        titleLabel.setMaxWidth(250);
-        
+        titleLabel.setMaxWidth(210);
+
+        // Spacer
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        // 3-dot menu button
+        Button moreButton = new Button("⋮");
+        moreButton.setStyle("-fx-background-color: transparent; -fx-text-fill: #94A3B8; -fx-font-size: 16px; -fx-cursor: hand; -fx-padding: 0; -fx-min-width: 24; -fx-min-height: 24;");
+        moreButton.setOnMouseEntered(e -> moreButton.setStyle("-fx-background-color: #F1F5F9; -fx-text-fill: #1E293B; -fx-font-size: 16px; -fx-cursor: hand; -fx-padding: 0; -fx-min-width: 24; -fx-min-height: 24; -fx-background-radius: 4;"));
+        moreButton.setOnMouseExited(e -> moreButton.setStyle("-fx-background-color: transparent; -fx-text-fill: #94A3B8; -fx-font-size: 16px; -fx-cursor: hand; -fx-padding: 0; -fx-min-width: 24; -fx-min-height: 24;"));
+
+        // Create and bind context menu to button
+        ContextMenu contextMenu = createTaskContextMenu(task);
+        moreButton.setOnAction(e -> contextMenu.show(moreButton, Side.BOTTOM, 0, 0));
+
+        headerRow.getChildren().addAll(titleLabel, spacer, moreButton);
+
         // Description (truncated)
         String desc = task.getDescription();
         if (desc != null && !desc.isEmpty()) {
@@ -699,15 +775,15 @@ public class ProjetsController {
         HBox tagsRow = new HBox(8);
         tagsRow.setAlignment(Pos.CENTER_LEFT);
         
-        // Priority badge
+        // Priority badge with glow effect
         Label priorityBadge = new Label(getPriorityLabel(task.getPriority_tache()));
-        priorityBadge.setStyle(getKanbanPriorityBadgeStyle(task.getPriority_tache()));
+        priorityBadge.setStyle(getKanbanPriorityBadgeStyle(task.getPriority_tache()) + "; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 4, 0, 0, 1);");
         tagsRow.getChildren().add(priorityBadge);
         
         // Due date if exists
         if (task.getDate_limite() != null) {
             Label dueDateLabel = new Label("📅 " + formatDate(task.getDate_limite()));
-            dueDateLabel.setStyle(getDueDateStyle(task.getDate_limite()));
+            dueDateLabel.setStyle(getDueDateStyle(task.getDate_limite()) + "; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.08), 3, 0, 0, 1);");
             tagsRow.getChildren().add(dueDateLabel);
         }
 
@@ -719,19 +795,19 @@ public class ProjetsController {
         String employeeName = getEmployeeNameById(task.getId_employe());
         String initials = getInitials(employeeName);
         Label avatar = new Label(initials);
-        avatar.setStyle("-fx-background-color: " + getAvatarColor(task.getId_employe()) + "; -fx-text-fill: white; -fx-font-size: 10px; -fx-font-weight: 700; -fx-padding: 5 7; -fx-background-radius: 50; -fx-font-family: 'Segoe UI', sans-serif;");
+        avatar.setStyle("-fx-background-color: " + getAvatarColor(task.getId_employe()) + "; -fx-text-fill: white; -fx-font-size: 10px; -fx-font-weight: 700; -fx-padding: 5 7; -fx-background-radius: 50; -fx-font-family: 'Segoe UI', sans-serif; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 4, 0, 0, 2);");
         avatar.setTooltip(new Tooltip(employeeName));
         bottomRow.getChildren().add(avatar);
 
         // Employee name
         Label nameLabel = new Label(employeeName);
-        nameLabel.setStyle("-fx-text-fill: #64748B; -fx-font-size: 12px; -fx-font-family: 'Segoe UI', sans-serif;");
+        nameLabel.setStyle("-fx-text-fill: #475569; -fx-font-size: 12px; -fx-font-weight: 500; -fx-font-family: 'Segoe UI', sans-serif;");
         bottomRow.getChildren().add(nameLabel);
 
         // Spacer
-        Region spacer = new Region();
-        HBox.setHgrow(spacer, Priority.ALWAYS);
-        bottomRow.getChildren().add(spacer);
+        Region spacer2 = new Region();
+        HBox.setHgrow(spacer2, Priority.ALWAYS);
+        bottomRow.getChildren().add(spacer2);
 
         // Progress indicator
         if (task.getProgression() > 0) {
@@ -741,17 +817,17 @@ public class ProjetsController {
             ProgressBar miniProgress = new ProgressBar(task.getProgression() / 100.0);
             miniProgress.setPrefWidth(50);
             miniProgress.setPrefHeight(6);
-            miniProgress.setStyle("-fx-accent: " + getProgressColor(task.getProgression()) + ";");
-            
+            miniProgress.setStyle("-fx-accent: " + getProgressColor(task.getProgression()) + "; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 4, 0, 0, 1);");
+
             Label progressLabel = new Label(task.getProgression() + "%");
-            progressLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #64748B; -fx-font-family: 'Segoe UI', sans-serif;");
+            progressLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #64748B; -fx-font-weight: 600; -fx-font-family: 'Segoe UI', sans-serif;");
 
             progressBox.getChildren().addAll(miniProgress, progressLabel);
             bottomRow.getChildren().add(progressBox);
         }
         
         // Assemble card with priority stripe on left
-        card.getChildren().addFirst(titleLabel);
+        card.getChildren().add(0, headerRow);
         card.getChildren().addAll(tagsRow, bottomRow);
         
         // Apply left border for priority indicator
@@ -769,12 +845,7 @@ public class ProjetsController {
             }
         });
         
-        // Right-click context menu
-        ContextMenu contextMenu = createTaskContextMenu(task);
-        card.setOnContextMenuRequested(event -> {
-            contextMenu.show(card, event.getScreenX(), event.getScreenY());
-        });
-        
+
         return card;
     }
     
@@ -873,12 +944,13 @@ public class ProjetsController {
         
         VBox content = new VBox(16);
         content.setPadding(new Insets(24));
-        content.setStyle("-fx-background-color: white;");
-        content.setPrefWidth(420);
+        content.setStyle("-fx-background-color: #F8FAFC;");
+        content.setPrefWidth(480);
 
-        // Title with priority color bar
+        // Title section with priority color bar
         HBox titleRow = new HBox(12);
         titleRow.setAlignment(Pos.CENTER_LEFT);
+        titleRow.setStyle("-fx-padding: 16; -fx-background-color: white; -fx-background-radius: 12; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.06), 8, 0, 0, 2);");
 
         VBox priorityIndicator = new VBox();
         priorityIndicator.setPrefWidth(4);
@@ -886,73 +958,91 @@ public class ProjetsController {
         priorityIndicator.setStyle("-fx-background-color: " + getPriorityColor(task.getPriority_tache()) + "; -fx-background-radius: 2;");
 
         Label title = new Label(task.getTitre());
-        title.setStyle("-fx-font-size: 20px; -fx-font-weight: 700; -fx-text-fill: #1E293B; -fx-font-family: 'Segoe UI', sans-serif;");
+        title.setStyle("-fx-font-size: 20px; -fx-font-weight: 700; -fx-text-fill: #0F172A; -fx-font-family: 'Segoe UI', sans-serif;");
         title.setWrapText(true);
         titleRow.getChildren().addAll(priorityIndicator, title);
 
-        // Status and priority badges
+        // Status and priority badges with glow
         HBox badgesRow = new HBox(10);
         badgesRow.setAlignment(Pos.CENTER_LEFT);
 
         Label statusBadge = new Label(getStatusEmoji(task.getStatut_tache()) + " " + prettyEnum(task.getStatut_tache()));
-        statusBadge.setStyle(getKanbanStatusBadgeStyle(task.getStatut_tache()));
-        
+        statusBadge.setStyle(getKanbanStatusBadgeStyle(task.getStatut_tache()) + "; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 6, 0, 0, 2);");
+
         Label priorityBadge = new Label(getPriorityLabel(task.getPriority_tache()));
-        priorityBadge.setStyle(getKanbanPriorityBadgeStyle(task.getPriority_tache()));
+        priorityBadge.setStyle(getKanbanPriorityBadgeStyle(task.getPriority_tache()) + "; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 6, 0, 0, 2);");
 
         badgesRow.getChildren().addAll(statusBadge, priorityBadge);
 
-        // Description
+        // Description Section
         VBox descBox = new VBox(6);
-        Label descTitle = new Label("Description");
-        descTitle.setStyle("-fx-font-weight: 600; -fx-text-fill: #64748B; -fx-font-size: 12px; -fx-font-family: 'Segoe UI', sans-serif;");
-        Label descContent = new Label(task.getDescription() != null && !task.getDescription().isEmpty() ? task.getDescription() : "Aucune description");
-        descContent.setStyle("-fx-text-fill: #334155; -fx-font-size: 14px; -fx-font-family: 'Segoe UI', sans-serif;");
+        descBox.setStyle("-fx-padding: 14; -fx-background-color: white; -fx-background-radius: 10; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.04), 6, 0, 0, 1);");
+        Label descTitle = new Label("📝 Description");
+        descTitle.setStyle("-fx-font-weight: 700; -fx-text-fill: #0F172A; -fx-font-size: 13px; -fx-font-family: 'Segoe UI', sans-serif;");
+        Label descContent = new Label(task.getDescription() != null && !task.getDescription().isEmpty() ? task.getDescription() : "Aucune description fournie");
+        descContent.setStyle("-fx-text-fill: #475569; -fx-font-size: 14px; -fx-font-family: 'Segoe UI', sans-serif;");
         descContent.setWrapText(true);
         descBox.getChildren().addAll(descTitle, descContent);
         
-        // Assignee
-        HBox assigneeRow = new HBox(10);
-        assigneeRow.setAlignment(Pos.CENTER_LEFT);
+        // Assignee Section
+        HBox assigneeBox = new HBox(10);
+        assigneeBox.setAlignment(Pos.CENTER_LEFT);
+        assigneeBox.setStyle("-fx-padding: 14; -fx-background-color: white; -fx-background-radius: 10; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.04), 6, 0, 0, 1);");
+
+        Label assigneeTitle = new Label("👤 Assigné à");
+        assigneeTitle.setStyle("-fx-font-weight: 700; -fx-text-fill: #0F172A; -fx-font-size: 13px; -fx-font-family: 'Segoe UI', sans-serif;");
+
         String employeeName = getEmployeeNameById(task.getId_employe());
         Label avatar = new Label(getInitials(employeeName));
-        avatar.setStyle("-fx-background-color: " + getAvatarColor(task.getId_employe()) + "; -fx-text-fill: white; -fx-font-size: 11px; -fx-font-weight: 700; -fx-padding: 6 8; -fx-background-radius: 50; -fx-font-family: 'Segoe UI', sans-serif;");
-        Label assigneeName = new Label(employeeName);
-        assigneeName.setStyle("-fx-text-fill: #334155; -fx-font-size: 14px; -fx-font-family: 'Segoe UI', sans-serif;");
-        assigneeRow.getChildren().addAll(new Label("Assigné à:") {{ setStyle("-fx-text-fill: #64748B; -fx-font-size: 12px; -fx-font-family: 'Segoe UI', sans-serif;"); }}, avatar, assigneeName);
+        avatar.setStyle("-fx-background-color: " + getAvatarColor(task.getId_employe()) + "; -fx-text-fill: white; -fx-font-size: 12px; -fx-font-weight: 700; -fx-padding: 7 9; -fx-background-radius: 50; -fx-font-family: 'Segoe UI', sans-serif; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 5, 0, 0, 2);");
 
-        // Dates
-        HBox datesRow = new HBox(30);
+        Label assigneeName = new Label(employeeName);
+        assigneeName.setStyle("-fx-text-fill: #475569; -fx-font-size: 14px; -fx-font-weight: 600; -fx-font-family: 'Segoe UI', sans-serif;");
+
+        VBox assigneeContent = new VBox(4);
+        assigneeContent.getChildren().addAll(assigneeTitle, new HBox(8, avatar, assigneeName) {{ setAlignment(Pos.CENTER_LEFT); }});
+        assigneeBox.getChildren().add(assigneeContent);
+
+        // Dates Section
+        HBox datesBox = new HBox(15);
+        datesBox.setStyle("-fx-padding: 14; -fx-background-color: white; -fx-background-radius: 10; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.04), 6, 0, 0, 1);");
+
         VBox startDate = new VBox(4);
         startDate.getChildren().addAll(
-            new Label("Date début") {{ setStyle("-fx-font-weight: 600; -fx-text-fill: #64748B; -fx-font-size: 12px; -fx-font-family: 'Segoe UI', sans-serif;"); }},
-            new Label(task.getDate_deb() != null ? task.getDate_deb().toString() : "Non défini") {{ setStyle("-fx-text-fill: #334155; -fx-font-size: 14px; -fx-font-family: 'Segoe UI', sans-serif;"); }}
+            new Label("📅 Date début") {{ setStyle("-fx-font-weight: 700; -fx-text-fill: #0F172A; -fx-font-size: 12px; -fx-font-family: 'Segoe UI', sans-serif;"); }},
+            new Label(task.getDate_deb() != null ? task.getDate_deb().toString() : "Non défini") {{ setStyle("-fx-text-fill: #475569; -fx-font-size: 13px; -fx-font-family: 'Segoe UI', sans-serif;"); }}
         );
+
         VBox endDate = new VBox(4);
         endDate.getChildren().addAll(
-            new Label("Date limite") {{ setStyle("-fx-font-weight: 600; -fx-text-fill: #64748B; -fx-font-size: 12px; -fx-font-family: 'Segoe UI', sans-serif;"); }},
-            new Label(task.getDate_limite() != null ? task.getDate_limite().toString() : "Non défini") {{ setStyle("-fx-text-fill: #334155; -fx-font-size: 14px; -fx-font-family: 'Segoe UI', sans-serif;"); }}
+            new Label("⏰ Date limite") {{ setStyle("-fx-font-weight: 700; -fx-text-fill: #0F172A; -fx-font-size: 12px; -fx-font-family: 'Segoe UI', sans-serif;"); }},
+            new Label(task.getDate_limite() != null ? task.getDate_limite().toString() : "Non défini") {{ setStyle("-fx-text-fill: #475569; -fx-font-size: 13px; -fx-font-family: 'Segoe UI', sans-serif;"); }}
         );
-        datesRow.getChildren().addAll(startDate, endDate);
-        
-        // Progress
-        VBox progressBox = new VBox(8);
-        Label progressTitle = new Label("Progression: " + task.getProgression() + "%");
-        progressTitle.setStyle("-fx-font-weight: 600; -fx-text-fill: #334155; -fx-font-size: 14px; -fx-font-family: 'Segoe UI', sans-serif;");
+
+        datesBox.getChildren().addAll(startDate, endDate);
+
+        // Progress Section - Prominent and Separate
+        VBox progressSection = new VBox(10);
+        progressSection.setStyle("-fx-padding: 16; -fx-background-color: white; -fx-background-radius: 10; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.04), 6, 0, 0, 1); -fx-border-color: #E0E7FF; -fx-border-width: 2; -fx-border-radius: 10;");
+
+        Label progressLabel = new Label("📊 Progression: " + task.getProgression() + "%");
+        progressLabel.setStyle("-fx-font-weight: 700; -fx-text-fill: #0F172A; -fx-font-size: 14px; -fx-font-family: 'Segoe UI', sans-serif;");
+
         ProgressBar progressBar = new ProgressBar(task.getProgression() / 100.0);
-        progressBar.setPrefWidth(370);
-        progressBar.setPrefHeight(8);
-        progressBar.setStyle("-fx-accent: " + getProgressColor(task.getProgression()) + ";");
-        progressBox.getChildren().addAll(progressTitle, progressBar);
-        
-        // For employees, add progress slider
+        progressBar.setPrefWidth(430);
+        progressBar.setPrefHeight(10);
+        progressBar.setStyle("-fx-accent: " + getProgressColor(task.getProgression()) + "; -fx-control-inner-background: #E2E8F0; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 4, 0, 0, 1);");
+
+        progressSection.getChildren().addAll(progressLabel, progressBar);
+
+        // For employees, add progress slider and update button
         UserSession session = UserSession.getInstance();
         if (session.isEmployee() && task.getId_employe() == session.getUserId()) {
             Separator sep = new Separator();
             sep.setStyle("-fx-background-color: #E2E8F0;");
 
             Label updateLabel = new Label("Mettre à jour la progression:");
-            updateLabel.setStyle("-fx-font-weight: 600; -fx-text-fill: #334155; -fx-font-family: 'Segoe UI', sans-serif;");
+            updateLabel.setStyle("-fx-font-weight: 600; -fx-text-fill: #475569; -fx-font-family: 'Segoe UI', sans-serif;");
 
             Slider progressSlider = new Slider(0, 100, task.getProgression());
             progressSlider.setShowTickLabels(true);
@@ -961,37 +1051,43 @@ public class ProjetsController {
             progressSlider.setBlockIncrement(10);
             progressSlider.setStyle("-fx-control-inner-background: #E2E8F0;");
 
+            HBox buttonBox = new HBox(10);
+            buttonBox.setAlignment(Pos.CENTER_RIGHT);
+
             Button updateBtn = new Button("💾 Enregistrer");
-            updateBtn.setStyle("-fx-background-color: #6366F1; -fx-text-fill: white; -fx-background-radius: 8; -fx-cursor: hand; -fx-padding: 10 20; -fx-font-family: 'Segoe UI', sans-serif;");
+            updateBtn.setStyle("-fx-background-color: #6366F1; -fx-text-fill: white; -fx-background-radius: 8; -fx-cursor: hand; -fx-padding: 10 20; -fx-font-family: 'Segoe UI', sans-serif; -fx-font-weight: 600; -fx-effect: dropshadow(gaussian, rgba(99,102,241,0.3), 6, 0, 0, 2);");
+            updateBtn.setOnMouseEntered(e -> updateBtn.setStyle("-fx-background-color: #4F46E5; -fx-text-fill: white; -fx-background-radius: 8; -fx-cursor: hand; -fx-padding: 10 20; -fx-font-family: 'Segoe UI', sans-serif; -fx-font-weight: 600; -fx-effect: dropshadow(gaussian, rgba(99,102,241,0.4), 8, 0, 0, 3);"));
+            updateBtn.setOnMouseExited(e -> updateBtn.setStyle("-fx-background-color: #6366F1; -fx-text-fill: white; -fx-background-radius: 8; -fx-cursor: hand; -fx-padding: 10 20; -fx-font-family: 'Segoe UI', sans-serif; -fx-font-weight: 600; -fx-effect: dropshadow(gaussian, rgba(99,102,241,0.3), 6, 0, 0, 2);"));
             updateBtn.setOnAction(e -> {
                 int newProgress = (int) progressSlider.getValue();
                 updateTaskProgressInline(task, newProgress);
                 dialog.close();
             });
             
-            content.getChildren().addAll(sep, updateLabel, progressSlider, updateBtn);
+            buttonBox.getChildren().add(updateBtn);
+            progressSection.getChildren().addAll(sep, updateLabel, progressSlider, buttonBox);
         }
         
-        content.getChildren().addAll(titleRow, badgesRow, new Separator() {{ setStyle("-fx-background-color: #E2E8F0;"); }}, descBox, assigneeRow, datesRow, progressBox);
+        content.getChildren().addAll(titleRow, badgesRow, descBox, assigneeBox, datesBox, progressSection);
 
         dialog.getDialogPane().setContent(content);
         dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
-        dialog.getDialogPane().setStyle("-fx-background-color: white;");
+        dialog.getDialogPane().setStyle("-fx-background-color: #F8FAFC;");
         dialog.showAndWait();
     }
     
     // ===== Kanban Styling Methods =====
     
     private String getTaskCardStyle(Tache task) {
-        return "-fx-background-color: white; -fx-background-radius: 10; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.06), 8, 0, 0, 2);";
+        return "-fx-background-color: white; -fx-background-radius: 10; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.08), 10, 0, 0, 3);";
     }
     
     private String getTaskCardHoverStyle(Tache task) {
-        return "-fx-background-color: #FAFAFA; -fx-background-radius: 10; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.12), 12, 0, 0, 4);";
+        return "-fx-background-color: #FAFAFA; -fx-background-radius: 10; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 15, 0, 0, 5);";
     }
 
     private String getTaskCardDraggingStyle(Tache task) {
-        return "-fx-background-color: white; -fx-background-radius: 10; -fx-effect: dropshadow(gaussian, rgba(99,102,241,0.3), 15, 0, 0, 5);";
+        return "-fx-background-color: white; -fx-background-radius: 10; -fx-effect: dropshadow(gaussian, rgba(99,102,241,0.35), 18, 0, 0, 6);";
     }
     
     private String getPriorityBarStyle(priority p) {
@@ -1095,7 +1191,20 @@ public class ProjetsController {
         // Apply search filter
         String searchText = taskSearchField.getText() != null ? taskSearchField.getText().toLowerCase().trim() : "";
         
-        for (Tache task : masterTasks) {
+        // Copy and optionally filter by "My tasks"
+        List<Tache> tasksToRender = new java.util.ArrayList<>(masterTasks);
+        UserSession session = UserSession.getInstance();
+
+        if (taskSortBox != null && "Mes tâches".equals(taskSortBox.getValue())) {
+            // Filter to show only my tasks
+            tasksToRender = tasksToRender.stream()
+                    .filter(t -> t.getId_employe() == session.getUserId())
+                    .collect(Collectors.toList());
+        }
+        // Sort by task ID (default order)
+        tasksToRender.sort(Comparator.comparingInt(Tache::getId_tache));
+
+        for (Tache task : tasksToRender) {
             // Apply search filter
             if (!searchText.isEmpty()) {
                 String title = task.getTitre() != null ? task.getTitre().toLowerCase() : "";
@@ -1104,9 +1213,9 @@ public class ProjetsController {
                     continue;
                 }
             }
-            
+
             VBox card = createTaskCard(task);
-            
+
             switch (task.getStatut_tache()) {
                 case A_FAIRE:
                     todoTasksContainer.getChildren().add(card);
@@ -1176,6 +1285,7 @@ public class ProjetsController {
 
             AjoutTacheController c = loader.getController();
             c.setProjectId(selectedProject.getProjet_id());
+            c.setProjectName(selectedProject.getNom()); // For AI features
             c.setOnSaved(this::loadTasksForSelectedProject);
             c.loadEmployeesForProject();
             c.setDefaultStatus(defaultStatus);
@@ -1705,6 +1815,7 @@ public class ProjetsController {
 
             AjoutTacheController c = loader.getController();
             c.setProjectId(selectedProject.getProjet_id());
+            c.setProjectName(selectedProject.getNom()); // For AI features
             c.setOnSaved(this::loadTasksForSelectedProject);
             c.loadEmployeesForProject();
 
@@ -1730,19 +1841,14 @@ public class ProjetsController {
 
         try {
             List<Tache> allTasks = tacheCRUD.afficher();
-            UserSession session = UserSession.getInstance();
 
             // Filter tasks for the selected project
             List<Tache> projectTasks = allTasks.stream()
                     .filter(t -> t.getId_projet() == selectedProject.getProjet_id())
                     .collect(Collectors.toList());
 
-            // For employees, only show their assigned tasks
-            if (session.isEmployee()) {
-                projectTasks = projectTasks.stream()
-                        .filter(t -> t.getId_employe() == session.getUserId())
-                        .collect(Collectors.toList());
-            }
+            // NOTE: Don't filter by employee here - let employees see all project tasks
+            // The filtering by "Mes tâches" is done in populateKanbanBoard via the sort dropdown
 
             masterTasks.setAll(projectTasks);
             applyTaskFilters();
@@ -2162,6 +2268,550 @@ public class ProjetsController {
         alert.setHeaderText(title);
         alert.setContentText(message);
         alert.showAndWait();
+    }
+
+    // ===================== CALENDAR TAB =====================
+
+    /**
+     * Setup the Calendar tab
+     */
+    private void setupCalendarTab() {
+        if (calendarGrid == null) return;
+
+        // Setup navigation buttons
+        if (btnPrevMonth != null) {
+            btnPrevMonth.setOnAction(e -> {
+                currentYearMonth = currentYearMonth.minusMonths(1);
+                refreshCalendar();
+            });
+        }
+
+        if (btnNextMonth != null) {
+            btnNextMonth.setOnAction(e -> {
+                currentYearMonth = currentYearMonth.plusMonths(1);
+                refreshCalendar();
+            });
+        }
+
+        if (btnToday != null) {
+            btnToday.setOnAction(e -> {
+                currentYearMonth = YearMonth.now();
+                refreshCalendar();
+            });
+        }
+
+        // Setup project filter
+        if (calendarProjectFilter != null) {
+            calendarProjectFilter.setCellFactory(lv -> new ListCell<>() {
+                @Override
+                protected void updateItem(Projet item, boolean empty) {
+                    super.updateItem(item, empty);
+                    if (empty || item == null) {
+                        setText("Tous les projets");
+                    } else {
+                        setText("📁 " + item.getNom());
+                    }
+                }
+            });
+            calendarProjectFilter.setButtonCell(new ListCell<>() {
+                @Override
+                protected void updateItem(Projet item, boolean empty) {
+                    super.updateItem(item, empty);
+                    if (empty || item == null) {
+                        setText("Tous les projets");
+                    } else {
+                        setText("📁 " + item.getNom());
+                    }
+                }
+            });
+
+            calendarProjectFilter.valueProperty().addListener((obs, oldVal, newVal) -> {
+                calendarSelectedProject = newVal;
+                refreshCalendar();
+            });
+        }
+
+        // Setup days header
+        setupCalendarDaysHeader();
+
+        // Initial render
+        refreshCalendar();
+    }
+
+    /**
+     * Setup the days of week header
+     */
+    private void setupCalendarDaysHeader() {
+        if (calendarDaysHeader == null) return;
+
+        calendarDaysHeader.getChildren().clear();
+        String[] days = {"Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"};
+
+        for (String day : days) {
+            Label dayLabel = new Label(day);
+            dayLabel.setStyle("-fx-font-weight: 700; -fx-text-fill: #64748B; -fx-font-size: 12px; -fx-font-family: 'Segoe UI', sans-serif;");
+            dayLabel.setPrefWidth(150);
+            dayLabel.setMaxWidth(Double.MAX_VALUE);
+            dayLabel.setAlignment(Pos.CENTER);
+            HBox.setHgrow(dayLabel, Priority.ALWAYS);
+            calendarDaysHeader.getChildren().add(dayLabel);
+        }
+    }
+
+    /**
+     * Refresh the calendar view
+     */
+    private void refreshCalendar() {
+        if (calendarGrid == null) return;
+
+        // Update month label
+        if (currentMonthLabel != null) {
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.FRENCH);
+            String monthText = currentYearMonth.format(formatter);
+            currentMonthLabel.setText(monthText.substring(0, 1).toUpperCase() + monthText.substring(1));
+        }
+
+        // Clear grid
+        calendarGrid.getChildren().clear();
+        calendarGrid.getColumnConstraints().clear();
+        calendarGrid.getRowConstraints().clear();
+
+        // Setup column constraints (7 days)
+        for (int i = 0; i < 7; i++) {
+            ColumnConstraints col = new ColumnConstraints();
+            col.setPercentWidth(100.0 / 7);
+            col.setHgrow(Priority.ALWAYS);
+            calendarGrid.getColumnConstraints().add(col);
+        }
+
+        // Get first day of month and calculate starting position
+        LocalDate firstOfMonth = currentYearMonth.atDay(1);
+        int dayOfWeek = firstOfMonth.getDayOfWeek().getValue(); // Monday = 1, Sunday = 7
+        int daysInMonth = currentYearMonth.lengthOfMonth();
+
+        // Calculate rows needed
+        int totalCells = (dayOfWeek - 1) + daysInMonth;
+        int rows = (int) Math.ceil(totalCells / 7.0);
+
+        // Setup row constraints
+        for (int i = 0; i < rows; i++) {
+            RowConstraints row = new RowConstraints();
+            row.setVgrow(Priority.ALWAYS);
+            row.setMinHeight(100);
+            calendarGrid.getRowConstraints().add(row);
+        }
+
+        // Load tasks for calendar
+        List<Tache> calendarTasks = loadTasksForCalendar();
+
+        // Fill in the calendar
+        int day = 1;
+        LocalDate today = LocalDate.now();
+
+        for (int row = 0; row < rows; row++) {
+            for (int col = 0; col < 7; col++) {
+                int cellIndex = row * 7 + col;
+
+                if (cellIndex < dayOfWeek - 1 || day > daysInMonth) {
+                    // Empty cell (before first day or after last day)
+                    VBox emptyCell = createEmptyCalendarCell();
+                    calendarGrid.add(emptyCell, col, row);
+                } else {
+                    // Day cell
+                    LocalDate cellDate = currentYearMonth.atDay(day);
+                    boolean isToday = cellDate.equals(today);
+                    boolean isPast = cellDate.isBefore(today);
+
+                    // Get tasks for this day
+                    List<Tache> dayTasks = calendarTasks.stream()
+                            .filter(t -> cellDate.equals(t.getDate_limite()) || cellDate.equals(t.getDate_deb()))
+                            .collect(Collectors.toList());
+
+                    VBox dayCell = createCalendarDayCell(day, isToday, isPast, dayTasks, cellDate);
+                    calendarGrid.add(dayCell, col, row);
+
+                    day++;
+                }
+            }
+        }
+    }
+
+    /**
+     * Update the project filter in calendar - call this only when needed (role change, initial load)
+     */
+    private void updateCalendarProjectFilter() {
+        if (calendarProjectFilter == null) return;
+
+        // Save current selection
+        Projet currentSelection = calendarProjectFilter.getValue();
+
+        try {
+            List<Projet> projects = projetCRUD.afficher();
+            UserSession session = UserSession.getInstance();
+
+            // Filter for employees
+            if (session.isEmployee()) {
+                List<Integer> myProjectIds = equipeCRUD.getProjectIdsForEmployee(session.getUserId());
+                projects = projects.stream()
+                        .filter(p -> myProjectIds.contains(p.getProjet_id()))
+                        .collect(Collectors.toList());
+            }
+
+            // Add null option at the beginning for "All projects"
+            calendarProjectFilter.getItems().clear();
+            calendarProjectFilter.getItems().add(null);
+            calendarProjectFilter.getItems().addAll(projects);
+
+            // Restore selection if it still exists in the list
+            if (currentSelection != null) {
+                for (Projet p : projects) {
+                    if (p.getProjet_id() == currentSelection.getProjet_id()) {
+                        calendarProjectFilter.setValue(p);
+                        calendarSelectedProject = p;
+                        break;
+                    }
+                }
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Load tasks for the calendar view
+     */
+    private List<Tache> loadTasksForCalendar() {
+        try {
+            List<Tache> allTasks = tacheCRUD.afficher();
+            UserSession session = UserSession.getInstance();
+
+            // For employees, first filter to only show tasks from projects they belong to
+            if (session.isEmployee()) {
+                List<Integer> myProjectIds = equipeCRUD.getProjectIdsForEmployee(session.getUserId());
+                allTasks = allTasks.stream()
+                        .filter(t -> myProjectIds.contains(t.getId_projet()))
+                        .collect(Collectors.toList());
+            }
+
+            // Filter by project if selected
+            if (calendarSelectedProject != null) {
+                final int selectedProjectId = calendarSelectedProject.getProjet_id();
+                allTasks = allTasks.stream()
+                        .filter(t -> t.getId_projet() == selectedProjectId)
+                        .collect(Collectors.toList());
+            }
+
+            return allTasks;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return List.of();
+        }
+    }
+
+    /**
+     * Create an empty calendar cell
+     */
+    private VBox createEmptyCalendarCell() {
+        VBox cell = new VBox();
+        cell.setStyle("-fx-background-color: #F1F5F9;");
+        return cell;
+    }
+
+    /**
+     * Create a calendar day cell
+     */
+    private VBox createCalendarDayCell(int day, boolean isToday, boolean isPast, List<Tache> tasks, LocalDate cellDate) {
+        VBox cell = new VBox(4);
+        cell.setPadding(new Insets(6));
+        cell.setStyle(getDayCellStyle(isToday, isPast));
+
+        // Day number header
+        HBox header = new HBox();
+        header.setAlignment(Pos.CENTER_LEFT);
+
+        Label dayLabel = new Label(String.valueOf(day));
+        String dayStyle = "-fx-font-size: 13px; -fx-font-weight: 600; -fx-font-family: 'Segoe UI', sans-serif;";
+        if (isToday) {
+            dayStyle += "-fx-text-fill: white; -fx-background-color: #6366F1; -fx-padding: 2 8; -fx-background-radius: 50;";
+        } else if (isPast) {
+            dayStyle += "-fx-text-fill: #94A3B8;";
+        } else {
+            dayStyle += "-fx-text-fill: #1E293B;";
+        }
+        dayLabel.setStyle(dayStyle);
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        header.getChildren().add(dayLabel);
+        header.getChildren().add(spacer);
+
+        // Add task button (only for today and future, and ONLY for managers/responsables)
+        UserSession session = UserSession.getInstance();
+        if (!isPast && session.canManageProjects()) {
+            Button addBtn = new Button("+");
+            addBtn.setStyle("-fx-background-color: transparent; -fx-text-fill: #94A3B8; -fx-font-size: 14px; -fx-cursor: hand; -fx-padding: 0 4; -fx-min-width: 20;");
+            addBtn.setOnMouseEntered(e -> addBtn.setStyle("-fx-background-color: #6366F1; -fx-text-fill: white; -fx-font-size: 14px; -fx-cursor: hand; -fx-padding: 0 4; -fx-min-width: 20; -fx-background-radius: 4;"));
+            addBtn.setOnMouseExited(e -> addBtn.setStyle("-fx-background-color: transparent; -fx-text-fill: #94A3B8; -fx-font-size: 14px; -fx-cursor: hand; -fx-padding: 0 4; -fx-min-width: 20;"));
+            addBtn.setOnAction(e -> openAddTaskForDate(cellDate));
+            header.getChildren().add(addBtn);
+        }
+
+        cell.getChildren().add(header);
+
+        // Tasks container with scroll
+        VBox tasksContainer = new VBox(3);
+        tasksContainer.setStyle("-fx-padding: 2 0 0 0;");
+
+        // Show up to 3 tasks, then show "+X more"
+        int shown = 0;
+        for (Tache task : tasks) {
+            if (shown < 3) {
+                HBox taskChip = createCalendarTaskChip(task);
+                tasksContainer.getChildren().add(taskChip);
+                shown++;
+            }
+        }
+
+        if (tasks.size() > 3) {
+            Label moreLabel = new Label("+" + (tasks.size() - 3) + " autres");
+            moreLabel.setStyle("-fx-text-fill: #64748B; -fx-font-size: 10px; -fx-cursor: hand;");
+            moreLabel.setOnMouseClicked(e -> showAllTasksForDay(cellDate, tasks));
+            tasksContainer.getChildren().add(moreLabel);
+        }
+
+        cell.getChildren().add(tasksContainer);
+        VBox.setVgrow(tasksContainer, Priority.ALWAYS);
+
+        return cell;
+    }
+
+    /**
+     * Get the style for a day cell
+     */
+    private String getDayCellStyle(boolean isToday, boolean isPast) {
+        String base = "-fx-background-radius: 0;";
+        if (isToday) {
+            return base + "-fx-background-color: #EEF2FF; -fx-border-color: #6366F1; -fx-border-width: 2;";
+        } else if (isPast) {
+            return base + "-fx-background-color: #F8FAFC;";
+        }
+        return base + "-fx-background-color: white;";
+    }
+
+    /**
+     * Create a task chip for the calendar
+     */
+    private HBox createCalendarTaskChip(Tache task) {
+        HBox chip = new HBox(4);
+        chip.setAlignment(Pos.CENTER_LEFT);
+        chip.setPadding(new Insets(3, 6, 3, 6));
+        chip.setStyle(getCalendarTaskChipStyle(task.getPriority_tache()));
+        chip.setCursor(javafx.scene.Cursor.HAND);
+
+        // Status indicator
+        Label statusDot = new Label(getStatusEmoji(task.getStatut_tache()));
+        statusDot.setStyle("-fx-font-size: 8px;");
+
+        // Task title
+        Label titleLabel = new Label(truncateText(task.getTitre(), 15));
+        titleLabel.setStyle("-fx-font-size: 10px; -fx-text-fill: #1E293B; -fx-font-family: 'Segoe UI', sans-serif;");
+
+        chip.getChildren().addAll(statusDot, titleLabel);
+
+        // Click to show details
+        chip.setOnMouseClicked(e -> showTaskDetailsPopup(task));
+
+        // Hover effect
+        String baseStyle = getCalendarTaskChipStyle(task.getPriority_tache());
+        chip.setOnMouseEntered(e -> chip.setStyle(baseStyle + "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 4, 0, 0, 1);"));
+        chip.setOnMouseExited(e -> chip.setStyle(baseStyle));
+
+        return chip;
+    }
+
+    /**
+     * Get the style for a calendar task chip based on priority
+     */
+    private String getCalendarTaskChipStyle(priority p) {
+        String base = "-fx-background-radius: 4; -fx-cursor: hand;";
+        if (p == null) return base + "-fx-background-color: #F1F5F9;";
+        return switch (p) {
+            case HAUTE -> base + "-fx-background-color: #FEE2E2;";
+            case MOYENNE -> base + "-fx-background-color: #FEF3C7;";
+            case BASSE -> base + "-fx-background-color: #DCFCE7;";
+        };
+    }
+
+    /**
+     * Truncate text to a maximum length
+     */
+    private String truncateText(String text, int maxLength) {
+        if (text == null) return "";
+        if (text.length() <= maxLength) return text;
+        return text.substring(0, maxLength - 2) + "..";
+    }
+
+    /**
+     * Open add task modal for a specific date
+     */
+    private void openAddTaskForDate(LocalDate date) {
+        // First check if we have a project selected
+        Projet projectToUse = calendarSelectedProject;
+
+        if (projectToUse == null) {
+            // Ask user to select a project
+            List<Projet> availableProjects = new java.util.ArrayList<>();
+            try {
+                availableProjects = projetCRUD.afficher();
+                UserSession session = UserSession.getInstance();
+                if (session.isEmployee()) {
+                    List<Integer> myProjectIds = equipeCRUD.getProjectIdsForEmployee(session.getUserId());
+                    availableProjects = availableProjects.stream()
+                            .filter(p -> myProjectIds.contains(p.getProjet_id()))
+                            .collect(Collectors.toList());
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+
+            if (availableProjects.isEmpty()) {
+                showError("Aucun projet", "Vous n'avez aucun projet disponible.");
+                return;
+            }
+
+            // Show project selection dialog with proper ComboBox
+            Dialog<Projet> dialog = new Dialog<>();
+            dialog.setTitle("Sélectionner un projet");
+            dialog.setHeaderText("📁 Choisissez un projet pour la nouvelle tâche");
+
+            // Create content
+            VBox content = new VBox(12);
+            content.setPadding(new Insets(20));
+            content.setStyle("-fx-background-color: #F8FAFC;");
+
+            Label label = new Label("Projet:");
+            label.setStyle("-fx-font-weight: 600; -fx-text-fill: #475569;");
+
+            ComboBox<Projet> projectCombo = new ComboBox<>();
+            projectCombo.getItems().addAll(availableProjects);
+            projectCombo.setPrefWidth(300);
+            projectCombo.setStyle("-fx-background-radius: 8;");
+
+            // Set cell factory to display project names
+            projectCombo.setCellFactory(lv -> new ListCell<>() {
+                @Override
+                protected void updateItem(Projet item, boolean empty) {
+                    super.updateItem(item, empty);
+                    setText(empty || item == null ? null : "📁 " + item.getNom());
+                }
+            });
+            projectCombo.setButtonCell(new ListCell<>() {
+                @Override
+                protected void updateItem(Projet item, boolean empty) {
+                    super.updateItem(item, empty);
+                    setText(empty || item == null ? "Sélectionner un projet..." : "📁 " + item.getNom());
+                }
+            });
+
+            // Select first by default
+            if (!availableProjects.isEmpty()) {
+                projectCombo.setValue(availableProjects.get(0));
+            }
+
+            content.getChildren().addAll(label, projectCombo);
+
+            dialog.getDialogPane().setContent(content);
+            dialog.getDialogPane().getButtonTypes().addAll(
+                    new ButtonType("✅ Confirmer", ButtonBar.ButtonData.OK_DONE),
+                    new ButtonType("Annuler", ButtonBar.ButtonData.CANCEL_CLOSE)
+            );
+            dialog.getDialogPane().setStyle("-fx-background-color: #F8FAFC;");
+
+            dialog.setResultConverter(buttonType -> {
+                if (buttonType.getButtonData() == ButtonBar.ButtonData.OK_DONE) {
+                    return projectCombo.getValue();
+                }
+                return null;
+            });
+
+            Optional<Projet> result = dialog.showAndWait();
+            if (result.isEmpty() || result.get() == null) return;
+            projectToUse = result.get();
+        }
+
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/AjoutTache.fxml"));
+            Parent root = loader.load();
+
+            AjoutTacheController c = loader.getController();
+            c.setProjectId(projectToUse.getProjet_id());
+            c.setProjectName(projectToUse.getNom()); // For AI features
+            c.setOnSaved(this::refreshCalendar);
+            c.loadEmployeesForProject();
+            c.setDefaultStartDate(date);
+            c.setDefaultEndDate(date);
+
+            Stage modal = new Stage();
+            modal.initModality(Modality.APPLICATION_MODAL);
+            modal.setTitle("Nouvelle tâche - " + date.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
+            modal.setScene(new Scene(root));
+            modal.showAndWait();
+
+        } catch (IOException ex) {
+            ex.printStackTrace();
+            showError("Erreur", "Impossible d'ouvrir le formulaire de tâche: " + ex.getMessage());
+        }
+    }
+
+    /**
+     * Show all tasks for a specific day in a popup
+     */
+    private void showAllTasksForDay(LocalDate date, List<Tache> tasks) {
+        Dialog<Void> dialog = new Dialog<>();
+        dialog.setTitle("Tâches du " + date.format(DateTimeFormatter.ofPattern("dd MMMM yyyy", Locale.FRENCH)));
+        dialog.setHeaderText(null);
+
+        VBox content = new VBox(10);
+        content.setPadding(new Insets(20));
+        content.setStyle("-fx-background-color: #F8FAFC;");
+        content.setPrefWidth(400);
+
+        Label titleLabel = new Label("📅 " + tasks.size() + " tâche(s) pour cette date");
+        titleLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: 700; -fx-text-fill: #1E293B;");
+        content.getChildren().add(titleLabel);
+
+        for (Tache task : tasks) {
+            HBox taskRow = new HBox(10);
+            taskRow.setAlignment(Pos.CENTER_LEFT);
+            taskRow.setPadding(new Insets(10));
+            taskRow.setStyle("-fx-background-color: white; -fx-background-radius: 8; -fx-cursor: hand;");
+
+            Label statusLabel = new Label(getStatusEmoji(task.getStatut_tache()));
+            Label nameLabel = new Label(task.getTitre());
+            nameLabel.setStyle("-fx-font-weight: 600; -fx-text-fill: #1E293B;");
+
+            Label priorityLabel = new Label(getPriorityLabel(task.getPriority_tache()));
+            priorityLabel.setStyle(getKanbanPriorityBadgeStyle(task.getPriority_tache()));
+
+            Region spacer = new Region();
+            HBox.setHgrow(spacer, Priority.ALWAYS);
+
+            taskRow.getChildren().addAll(statusLabel, nameLabel, spacer, priorityLabel);
+
+            taskRow.setOnMouseClicked(e -> {
+                dialog.close();
+                showTaskDetailsPopup(task);
+            });
+
+            content.getChildren().add(taskRow);
+        }
+
+        dialog.getDialogPane().setContent(content);
+        dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
+        dialog.getDialogPane().setStyle("-fx-background-color: #F8FAFC;");
+        dialog.showAndWait();
     }
 
 }

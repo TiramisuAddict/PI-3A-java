@@ -1,5 +1,6 @@
 package controller.projets;
 
+import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.geometry.Insets;
@@ -19,6 +20,7 @@ import service.Equipe_projet;
 import service.WorkloadBalancingAPI;
 import service.WorkloadBalancingAPI.WorkloadAnalysisResult;
 import service.WorkloadBalancingAPI.EmployeeWorkload;
+import service.OpenAIService;
 
 import java.net.URL;
 import java.sql.SQLException;
@@ -52,7 +54,12 @@ public class AjoutTacheController implements Initializable {
     @FXML private Button btnApplySuggestion;
     @FXML private Button btnViewWorkload;
 
+    // AI buttons (will be created dynamically if not in FXML)
+    @FXML private Button btnAIDescription;
+    @FXML private Button btnAIPriority;
+
     private int projectId;
+    private String projectName = "Projet";
     private Runnable onSaved;
     private Tache tacheToEdit = null; // For edit mode
 
@@ -60,10 +67,14 @@ public class AjoutTacheController implements Initializable {
     private final WorkloadBalancingAPI workloadAPI = new WorkloadBalancingAPI();
     private WorkloadAnalysisResult currentAnalysis = null;
 
+    // OpenAI Service
+    private final OpenAIService openAIService = OpenAIService.getInstance();
+
     private final TacheCRUD tacheCRUD = new TacheCRUD();
     private final Equipe_projet groupeProjetCRUD = new Equipe_projet();
 
     public void setProjectId(int projectId) { this.projectId = projectId; }
+    public void setProjectName(String name) { this.projectName = name; }
     public void setOnSaved(Runnable onSaved) { this.onSaved = onSaved; }
 
     @Override
@@ -82,6 +93,14 @@ public class AjoutTacheController implements Initializable {
         btnClose.setOnAction(this::close);
         btnCancel.setOnAction(this::close);
         btnSave.setOnAction(e -> save());
+
+        // Setup AI buttons if they exist in FXML
+        if (btnAIDescription != null) {
+            btnAIDescription.setOnAction(e -> generateAIDescription());
+        }
+        if (btnAIPriority != null) {
+            btnAIPriority.setOnAction(e -> suggestAIPriority());
+        }
 
         // Hide info label initially
         if (infoLabel != null) {
@@ -204,6 +223,24 @@ public class AjoutTacheController implements Initializable {
     }
 
     /**
+     * Set default start date for new task (used by Calendar view)
+     */
+    public void setDefaultStartDate(LocalDate date) {
+        if (date != null && startPicker != null) {
+            startPicker.setValue(date);
+        }
+    }
+
+    /**
+     * Set default end/due date for new task (used by Calendar view)
+     */
+    public void setDefaultEndDate(LocalDate date) {
+        if (date != null && duePicker != null) {
+            duePicker.setValue(date);
+        }
+    }
+
+    /**
      * Set a task to edit. Call this after loadEmployeesForProject()
      */
     public void setTacheToEdit(Tache t) {
@@ -256,6 +293,10 @@ public class AjoutTacheController implements Initializable {
         }
 
         LocalDate debut = startPicker.getValue();
+        if (debut != null && debut.isBefore(LocalDate.now())) {
+            showInfo("La date de début ne peut pas être dans le passé.");
+            return;
+        }
         LocalDate limite = duePicker.getValue();
         if (debut != null && limite != null && limite.isBefore(debut)) {
             showInfo("La date limite doit être >= date début.");
@@ -330,6 +371,100 @@ public class AjoutTacheController implements Initializable {
             s = (Stage) btnCancel.getScene().getWindow();
         }
         s.close();
+    }
+
+    // ===================== AI FEATURES =====================
+
+    /**
+     * Generate task description using OpenAI
+     */
+    private void generateAIDescription() {
+        String title = titleField.getText();
+        if (title == null || title.trim().isEmpty()) {
+            showInfo("⚠️ Veuillez d'abord entrer un titre pour la tâche.");
+            return;
+        }
+
+        if (!openAIService.isConfigured()) {
+            showAPIKeyDialog();
+            return;
+        }
+
+        showInfo("🤖 Génération de la description en cours...");
+
+        // Run in background thread
+        new Thread(() -> {
+            try {
+                String description = openAIService.generateTaskDescription(title.trim(), projectName);
+                Platform.runLater(() -> {
+                    descArea.setText(description);
+                    showInfo("✅ Description générée par l'IA!");
+                });
+            } catch (Exception ex) {
+                Platform.runLater(() -> showInfo("❌ Erreur: " + ex.getMessage()));
+            }
+        }).start();
+    }
+
+    /**
+     * Suggest priority using OpenAI
+     */
+    private void suggestAIPriority() {
+        String title = titleField.getText();
+        if (title == null || title.trim().isEmpty()) {
+            showInfo("⚠️ Veuillez d'abord entrer un titre pour la tâche.");
+            return;
+        }
+
+        if (!openAIService.isConfigured()) {
+            showAPIKeyDialog();
+            return;
+        }
+
+        showInfo("🤖 Analyse de la priorité en cours...");
+
+        // Run in background thread
+        new Thread(() -> {
+            try {
+                String description = descArea.getText();
+                priority suggestedPriority = openAIService.suggestPriority(title.trim(), description);
+                Platform.runLater(() -> {
+                    priorityBox.setValue(suggestedPriority);
+                    String emoji = switch (suggestedPriority) {
+                        case HAUTE -> "🔴";
+                        case MOYENNE -> "🟡";
+                        case BASSE -> "🟢";
+                    };
+                    showInfo("✅ Priorité suggérée: " + emoji + " " + suggestedPriority);
+                });
+            } catch (Exception ex) {
+                Platform.runLater(() -> showInfo("❌ Erreur: " + ex.getMessage()));
+            }
+        }).start();
+    }
+
+    /**
+     * Show dialog to configure API key for Google Gemini (FREE)
+     */
+    private void showAPIKeyDialog() {
+        Alert infoAlert = new Alert(Alert.AlertType.INFORMATION);
+        infoAlert.setTitle("Configuration IA - Google Gemini (GRATUIT)");
+        infoAlert.setHeaderText("🤖 Fonctionnalités IA - 100% GRATUIT");
+        infoAlert.setContentText(OpenAIService.getApiKeyInstructions());
+        infoAlert.showAndWait();
+
+        TextInputDialog dialog = new TextInputDialog();
+        dialog.setTitle("Clé API Gemini");
+        dialog.setHeaderText("🔑 Entrez votre clé API Gemini");
+        dialog.setContentText("Clé API:");
+        dialog.getEditor().setPromptText("AIza...");
+
+        dialog.showAndWait().ifPresent(apiKey -> {
+            if (apiKey != null && !apiKey.trim().isEmpty()) {
+                openAIService.setApiKey(apiKey.trim());
+                showInfo("✅ Clé API Gemini configurée!");
+            }
+        });
     }
 
     // Helper record for employee display in ComboBox
