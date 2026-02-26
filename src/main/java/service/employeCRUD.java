@@ -1,5 +1,7 @@
 package service;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import entities.*;
 import utils.MyDB;
 
@@ -10,17 +12,20 @@ import java.util.List;
 public class employeCRUD {
     private Connection conn;
     private compteCRUD compteCRUD;
+    private competence_employeCRUD competenceCRUD;
 
     public employeCRUD() {
         try {
             conn = MyDB.getInstance().getConn();
             compteCRUD = new compteCRUD();
+            competenceCRUD = new competence_employeCRUD();
         } catch (SQLException e) {
             System.err.println(e.getMessage());
         }
     }
+
     public int add(employe employe) throws SQLException {
-        String sql = "insert into employé(nom, prenom, e_mail, telephone, poste, role, date_embauche,image_profil, id_entreprise) values(?, ?, ?, ?, ?, ?, ?, ?,?)";
+        String sql = "insert into employé(nom, prenom, e_mail, telephone, poste, role, date_embauche,image_profil, id_entreprise, cv_data, cv_nom) values(?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?)";
         PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
         ps.setString(1, employe.getNom());
         ps.setString(2, employe.getPrenom());
@@ -35,9 +40,15 @@ public class employeCRUD {
         }
         ps.setString(8, employe.DEFAULT_IMAGE);
         ps.setInt(9, employe.getIdEntreprise());
+        ps.setBytes(10, employe.getCv_data());
+        ps.setString(11, employe.getCv_nom());
         ps.executeUpdate();
+        if (employe.hasCv() && employe.getCv_data() != null) {
+            extraireCompetencesCV(employe);
+        }
         ResultSet rs = ps.getGeneratedKeys();
         rs.next();
+
         int idEmploye = rs.getInt(1);
         employe.setId_employé(idEmploye);
         String motDePasse = generationMotDePasse.generer();
@@ -52,6 +63,7 @@ public class employeCRUD {
 
         serviceEmail.envoyer(employe.getE_mail(), sujet, corps);
         return idEmploye;
+
     }
 
     public List<employe> afficher(int idEntreprise) throws SQLException {
@@ -67,7 +79,7 @@ public class employeCRUD {
         return employes;
     }
     public void modifier(employe employe) throws SQLException {
-        String sql = "update employé set nom=?, prenom=?,e_mail=?, telephone=?, poste=?, role=?, date_embauche=?,image_profil=? where id_employe=?";
+        String sql = "update employé set nom=?, prenom=?,e_mail=?, telephone=?, poste=?, role=?, date_embauche=?,image_profil=?, cv_data=?, cv_nom=?  where id_employe=?";
         PreparedStatement ps = conn.prepareStatement(sql);
         ps.setString(1, employe.getNom());
         ps.setString(2, employe.getPrenom());
@@ -85,8 +97,13 @@ public class employeCRUD {
         } else {
             ps.setNull(8, Types.VARCHAR);
         }
-        ps.setInt(9, employe.getId_employé());
+        ps.setBytes(9, employe.getCv_data());
+        ps.setString(10, employe.getCv_nom());
+        ps.setInt(11, employe.getId_employé());
         ps.executeUpdate();
+        if (employe.hasCv() && employe.getCv_data() != null) {
+            extraireCompetencesCV(employe);
+        }
     }
     public void supprimer(int id) throws SQLException {
         try {
@@ -120,6 +137,8 @@ public class employeCRUD {
         }
         e.setImageProfil(rs.getString("image_profil"));
         e.setIdEntreprise(rs.getInt("id_entreprise"));
+        e.setCv_data(rs.getBytes("cv_data"));
+        e.setCv_nom(rs.getString("cv_nom"));
 
         return e;
     }
@@ -132,5 +151,102 @@ public class employeCRUD {
             return creerEmployeDepuisResultSet(rs);
         }
         return null;
+    }
+    private void extraireCompetencesCV(employe e) {
+        competence_employeCRUD crud = this.competenceCRUD;
+
+        Thread thread = new Thread(() -> {
+            try {
+                String jsonResult = extract_CV_data.extraireDepuisCV(e.getCv_data());
+                jsonResult = reparerJSON(jsonResult);
+                Gson gson = new Gson();
+                JsonObject root = gson.fromJson(jsonResult, JsonObject.class);
+
+                String skills = root.has("skills") ? gson.toJson(root.get("skills")) : "[]";
+                String formations = root.has("formations") ? gson.toJson(root.get("formations")) : "[]";
+                String experience = root.has("experience") ? gson.toJson(root.get("experience")) : "[]";
+
+                competences_employe comp = new competences_employe(e.getId_employé(), skills, formations, experience);
+
+                crud.ajouter(comp);
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+        });
+        thread.setDaemon(true);
+        thread.start();
+    }
+    private String reparerJSON(String json) {
+        if (json == null || json.isEmpty()) return "{}";
+
+        int accolades = 0;
+        int crochets = 0;
+        boolean dansString = false;
+        boolean escape = false;
+
+        for (int i = 0; i < json.length(); i++) {
+            char c = json.charAt(i);
+
+            if (escape) {
+                escape = false;
+                continue;
+            }
+
+            if (c == '\\') {
+                escape = true;
+                continue;
+            }
+
+            if (c == '"') {
+                dansString = !dansString;
+                continue;
+            }
+
+            if (!dansString) {
+                if (c == '{') accolades++;
+                else if (c == '}') accolades--;
+                else if (c == '[') crochets++;
+                else if (c == ']') crochets--;
+            }
+        }
+
+        StringBuilder sb = new StringBuilder(json);
+        if (dansString) {
+            sb.append('"');
+        }
+        String temp = sb.toString().trim();
+        while (temp.endsWith(",") || temp.endsWith(":")) {
+            temp = temp.substring(0, temp.length() - 1).trim();
+        }
+        if (temp.matches(".*,\\s*\"[^\"]*\"\\s*$")) {
+            temp = temp.substring(0, temp.lastIndexOf(",")).trim();
+        }
+
+        sb = new StringBuilder(temp);
+        accolades = 0;
+        crochets = 0;
+        dansString = false;
+        escape = false;
+
+        for (int i = 0; i < sb.length(); i++) {
+            char c = sb.charAt(i);
+            if (escape) { escape = false; continue; }
+            if (c == '\\') { escape = true; continue; }
+            if (c == '"') { dansString = !dansString; continue; }
+            if (!dansString) {
+                if (c == '{') accolades++;
+                else if (c == '}') accolades--;
+                else if (c == '[') crochets++;
+                else if (c == ']') crochets--;
+            }
+        }
+        for (int i = 0; i < crochets; i++) {
+            sb.append(']');
+        }
+        for (int i = 0; i < accolades; i++) {
+            sb.append('}');
+        }
+
+        return sb.toString();
     }
 }

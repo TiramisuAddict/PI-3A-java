@@ -4,6 +4,7 @@ public class session {
     private static compte currentCompte;
     private static administrateur_systeme currentAdmin;
     private static employe currentEmploye;
+    private static visiteur visiteur;
 
     // Compte
     public static void setCompte(compte c) {
@@ -33,9 +34,13 @@ public class session {
         }
         return -1;
     }
+    public static visiteur getVisiteur() { return visiteur; }
+    public static void setVisiteur(visiteur v) { visiteur = v; }
+
     public static void logout() {
         currentCompte = null;
         currentAdmin = null;
         currentEmploye = null;
+        visiteur = null;
     }
 }

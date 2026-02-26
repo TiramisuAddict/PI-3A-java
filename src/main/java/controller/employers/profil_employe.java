@@ -314,7 +314,31 @@ public class profil_employe implements Initializable {
     }
     @FXML
     private void changerMotDePasse() {
+        try {
+            javafx.fxml.FXMLLoader loader = new javafx.fxml.FXMLLoader(
+                    getClass().getResource("/emp/changer_mot_de_passe.fxml"));
+            VBox content = loader.load();
 
+            javafx.scene.Scene scene = new javafx.scene.Scene(content);
+
+            // Appliquer le même thème que l'application principale
+            scene.getStylesheets().addAll(
+                    avatarContainer.getScene().getStylesheets()
+            );
+
+            javafx.stage.Stage dialog = new javafx.stage.Stage();
+            dialog.setTitle("Changer le mot de passe");
+            dialog.initModality(javafx.stage.Modality.APPLICATION_MODAL);
+            dialog.initOwner(avatarContainer.getScene().getWindow());
+            dialog.setScene(scene);
+            dialog.setResizable(false);
+            dialog.centerOnScreen();
+            dialog.showAndWait();
+
+        } catch (Exception e) {
+            afficherErreur("Erreur", "Impossible d'ouvrir la fenêtre : " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     private void styliserBadgeRole(Label badge, role r) {

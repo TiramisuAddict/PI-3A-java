@@ -6,7 +6,7 @@ import utils.MyDB;
 import java.sql.*;
 import java.util.List;
 
-public class compteCRUD implements InterfaceCRUD<compte> {
+public class compteCRUD  {
 
     private Connection conn;
 
@@ -14,7 +14,6 @@ public class compteCRUD implements InterfaceCRUD<compte> {
         conn = MyDB.getInstance().getConn();
     }
 
-    @Override
     public void ajouter(compte c) throws SQLException {
         String sql = "INSERT INTO compte(e_mail, mot_de_passe, id_employe) VALUES (?, ?, ?)";
 
@@ -33,17 +32,21 @@ public class compteCRUD implements InterfaceCRUD<compte> {
         }
     }
 
-    @Override
     public List<compte> afficher() throws SQLException {
         return List.of();
     }
 
-    @Override
-    public void modifier(compte compte) throws SQLException {
-
+    public void modifierMotDePasse(int idCompte, String nouveauMotDePasseHashe) throws SQLException {
+        String sql = "UPDATE compte SET mot_de_passe = ? WHERE id_compte = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, nouveauMotDePasseHashe);
+            ps.setInt(2, idCompte);
+            int rows = ps.executeUpdate();
+            if (rows == 0) {
+                throw new SQLException("Aucun compte trouvé avec l'id " + idCompte);
+            }
+        }
     }
-
-    @Override
     public void supprimer(int idEmploye) throws SQLException {
         String sql = "DELETE FROM compte WHERE id_employe = ?";
         PreparedStatement ps = conn.prepareStatement(sql);
@@ -74,7 +77,7 @@ public class compteCRUD implements InterfaceCRUD<compte> {
 
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, email);
-            ps.setString(2, password);
+            ps.setString(2, hachageMotDePasse.hashPassword(password));
 
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {

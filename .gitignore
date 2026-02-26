@@ -1,3 +1,7 @@
+# API Keys
+src/main/resources/config.properties
+config.properties
+*.env
 target/
 .idea/
 *.iml

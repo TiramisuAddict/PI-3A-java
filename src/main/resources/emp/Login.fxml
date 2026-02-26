@@ -72,19 +72,19 @@
                                 <Font size="11.0"/>
                             </font>
                         </Label>
-                        <VBox alignment="CENTER" spacing="6">
-                            <Label text="Vous souhaitez postuler ou avez-vous déjà postulé ?" textFill="#000000">
+                        <HBox alignment="CENTER" spacing="6">
+                            <Label text="Vous souhaitez postuler à un offre ?" textFill="#000000">
                                 <font>
                                     <Font size="11.0"/>
                                 </font>
                             </Label>
 
-                            <Hyperlink text="Accéder à l’espace candidat" alignment="CENTER" underline="false" style="-fx-text-fill: #4A5DEF;">
+                               <Hyperlink text="créer un compte" alignment="CENTER" underline="false" onAction="#openCompteVisiteur" style="-fx-text-fill: #4A5DEF;">
                                 <font>
                                     <Font size="11.0"/>
                                 </font>
                             </Hyperlink>
-                        </VBox>
+                        </HBox>
 
                     </children>
                 </VBox>

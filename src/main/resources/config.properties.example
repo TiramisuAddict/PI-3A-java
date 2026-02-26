@@ -1,0 +1,4 @@
+# API Configuration
+# Copiez ce fichier en config.properties et mettez votre clé
+huggingface.api.token=VOTRE_CLE_ICI
+huggingface.api.url=https://router.huggingface.co/v1/chat/completions

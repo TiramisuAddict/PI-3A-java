@@ -12,10 +12,12 @@ public class employe {
     private role role;
     private LocalDate date_embauche;
     private String imageProfil;
+    private String cv_nom;
+    private byte[] cv_data;
     public static int idEntreprise;
     public static final String DEFAULT_IMAGE = "/icons/user.png";
     public employe(){}
-    public employe(String nom, String prenom, String e_mail, int telephone, String poste, role role, LocalDate date_embauche) {
+    public employe(String nom, String prenom, String e_mail, int telephone, String poste, role role, LocalDate date_embauche,String cvNom, byte[] cvData) {
         this.nom=nom;
         this.prenom=prenom;
         this.e_mail=e_mail;
@@ -23,6 +25,8 @@ public class employe {
         this.poste=poste;
         this.role=role;
         this.date_embauche=date_embauche;
+        this.cv_nom=cvNom;
+        this.cv_data=cvData;
     }
 
     public int getId_employé() {
@@ -96,6 +100,14 @@ public class employe {
     public String getImageProfil() { return imageProfil; }
 
     public void setImageProfil(String imageProfil) { this.imageProfil = imageProfil; }
+    public byte[] getCv_data() { return cv_data; }
+    public void setCv_data(byte[] cv_data) { this.cv_data = cv_data; }
+
+    public String getCv_nom() { return cv_nom; }
+    public void setCv_nom(String cv_nom) { this.cv_nom = cv_nom; }
+    public boolean hasCv() {
+        return cv_data != null && cv_data.length > 0;
+    }
 
     public static void setIdEntreprise(int idEntreprise) {
         employe.idEntreprise = idEntreprise;
@@ -112,5 +124,6 @@ public class employe {
         }
         return DEFAULT_IMAGE;
     }
+
 
 }
