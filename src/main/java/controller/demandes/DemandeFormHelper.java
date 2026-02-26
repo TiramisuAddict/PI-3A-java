@@ -1,5 +1,6 @@
 package controller.demandes;
 
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -18,7 +19,7 @@ public class DemandeFormHelper {
 
     private Map<String, Control> dynamicFields = new LinkedHashMap<>();
     private Map<String, Label> dynamicErrorLabels = new LinkedHashMap<>();
-    private Set<String> locationFieldKeys = new HashSet<>(); // Track which fields are location fields
+    private Set<String> locationFieldKeys = new HashSet<>();
 
     // Define categories and their types
     private static final Map<String, List<String>> CATEGORY_TYPES = new LinkedHashMap<>();
@@ -516,7 +517,9 @@ public class DemandeFormHelper {
         return control;
     }
 
-    // Create location field with map button - stores TextField in dynamicFields
+    /**
+     * Create location field with map button - uses callback pattern
+     */
     private HBox createLocationField(FieldDefinition field) {
         HBox locationBox = new HBox(10);
         locationBox.setAlignment(Pos.CENTER_LEFT);
@@ -525,41 +528,52 @@ public class DemandeFormHelper {
 
         TextField locationField = new TextField();
         locationField.setPromptText("Cliquez sur 📍 pour sélectionner une adresse");
+        locationField.setEditable(false); // Read-only, must use map
         locationField.setMaxWidth(Double.MAX_VALUE);
         locationField.setPrefWidth(350);
+        locationField.setStyle("-fx-background-color: #f8f9fa;");
         HBox.setHgrow(locationField, Priority.ALWAYS);
 
         Button mapButton = new Button("📍 Carte");
-        mapButton.setStyle("-fx-background-color: #3498db; -fx-text-fill: white; -fx-cursor: hand; -fx-font-weight: bold; -fx-padding: 8 15;");
+        mapButton.setStyle("-fx-background-color: #3498db; -fx-text-fill: white; " +
+                "-fx-cursor: hand; -fx-font-weight: bold; -fx-padding: 8 15; -fx-background-radius: 6;");
         mapButton.setMinWidth(100);
 
+        // Use callback pattern for MapPickerDialog
         mapButton.setOnAction(e -> {
             MapPickerDialog dialog = new MapPickerDialog();
-            String currentAddress = locationField.getText();
+            dialog.show(result -> {
+                // This callback is called when user selects a location
+                if (result != null) {
+                    Platform.runLater(() -> {
+                        locationField.setText(result.cityName);
+                        // Store lat/lon in userData for later use
+                        locationField.setUserData(new double[]{result.lat, result.lon});
+                        locationField.setStyle("-fx-background-color: #f8f9fa; -fx-border-color: #27ae60; -fx-border-width: 2;");
+                        System.out.println("📍 Location selected: " + result.cityName +
+                                " (Lat: " + result.lat + ", Lon: " + result.lon + ")");
 
-            Optional<MapPickerDialog.LocationResult> result;
-            if (currentAddress != null && !currentAddress.isEmpty()) {
-                result = dialog.showAndWait(currentAddress);
-            } else {
-                result = dialog.showAndWait();
-            }
-
-            result.ifPresent(location -> {
-                locationField.setText(location.getAddress());
-                locationField.setUserData(location);
-                System.out.println("Location selected: " + location.getAddress());
+                        // Clear error if any
+                        Label errorLabel = dynamicErrorLabels.get(field.key);
+                        if (errorLabel != null) {
+                            errorLabel.setText("");
+                        }
+                    });
+                }
             });
         });
 
         // Hover effects
         mapButton.setOnMouseEntered(e ->
-                mapButton.setStyle("-fx-background-color: #2980b9; -fx-text-fill: white; -fx-cursor: hand; -fx-font-weight: bold; -fx-padding: 8 15;"));
+                mapButton.setStyle("-fx-background-color: #2980b9; -fx-text-fill: white; " +
+                        "-fx-cursor: hand; -fx-font-weight: bold; -fx-padding: 8 15; -fx-background-radius: 6;"));
         mapButton.setOnMouseExited(e ->
-                mapButton.setStyle("-fx-background-color: #3498db; -fx-text-fill: white; -fx-cursor: hand; -fx-font-weight: bold; -fx-padding: 8 15;"));
+                mapButton.setStyle("-fx-background-color: #3498db; -fx-text-fill: white; " +
+                        "-fx-cursor: hand; -fx-font-weight: bold; -fx-padding: 8 15; -fx-background-radius: 6;"));
 
         locationBox.getChildren().addAll(locationField, mapButton);
 
-        // Store the TextField (which IS a Control) in dynamicFields
+        // Store the TextField in dynamicFields
         dynamicFields.put(field.key, locationField);
         locationFieldKeys.add(field.key);
 
@@ -782,7 +796,8 @@ public class DemandeFormHelper {
 
         for (Map.Entry<String, Control> entry : dynamicFields.entrySet()) {
             String key = entry.getKey();
-            String value = getFieldValue(entry.getValue());
+            Control control = entry.getValue();
+            String value = getFieldValue(control);
 
             if (value != null && !value.isEmpty()) {
                 if (!first) {
@@ -791,6 +806,17 @@ public class DemandeFormHelper {
                 json.append("\"").append(escapeJson(key)).append("\":\"")
                         .append(escapeJson(value)).append("\"");
                 first = false;
+
+                // If it's a location field, also save lat/lon
+                if (locationFieldKeys.contains(key) && control instanceof TextField) {
+                    TextField locationField = (TextField) control;
+                    Object userData = locationField.getUserData();
+                    if (userData instanceof double[]) {
+                        double[] coords = (double[]) userData;
+                        json.append(",\"").append(escapeJson(key + "Lat")).append("\":").append(coords[0]);
+                        json.append(",\"").append(escapeJson(key + "Lon")).append("\":").append(coords[1]);
+                    }
+                }
             }
         }
 
@@ -827,7 +853,13 @@ public class DemandeFormHelper {
                 int colonIndex = pair.indexOf(':');
                 if (colonIndex > 0) {
                     String key = removeQuotes(pair.substring(0, colonIndex).trim());
-                    String value = removeQuotes(pair.substring(colonIndex + 1).trim());
+                    String value = pair.substring(colonIndex + 1).trim();
+
+                    // Handle numeric values (lat/lon)
+                    if (value.startsWith("\"") && value.endsWith("\"")) {
+                        value = removeQuotes(value);
+                    }
+
                     key = unescapeJson(key);
                     value = unescapeJson(value);
                     result.put(key, value);

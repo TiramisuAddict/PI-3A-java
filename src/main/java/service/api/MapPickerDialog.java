@@ -1,523 +1,448 @@
 package service.api;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import javafx.application.Platform;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Cursor;
 import javafx.scene.Scene;
-import javafx.scene.control.*;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.TextField;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Circle;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
 
-import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.util.HashMap;
+import java.util.Map;
 
+/**
+ * Pure JavaFX map picker — no WebView!
+ * Downloads OSM tiles directly as JavaFX Images.
+ * Free, no API key needed.
+ */
 public class MapPickerDialog {
 
-    private Stage dialogStage;
-    private TextField searchField;
-    private ListView<LocationResult> resultsListView;
-    private TextField selectedAddressField;
-    private TextField latitudeField;
-    private TextField longitudeField;
-    private Label statusLabel;
-
-    private LocationResult selectedLocation;
-    private boolean confirmed = false;
-    private final OkHttpClient httpClient;
-
-    public MapPickerDialog() {
-        this.httpClient = new OkHttpClient.Builder()
-                .connectTimeout(15, TimeUnit.SECONDS)
-                .readTimeout(15, TimeUnit.SECONDS)
-                .build();
-    }
-
-    public Optional<LocationResult> showAndWait() {
-        return showAndWait(null);
-    }
-
-    public Optional<LocationResult> showAndWait(String initialAddress) {
-        createDialog();
-
-        if (initialAddress != null && !initialAddress.isEmpty()) {
-            searchField.setText(initialAddress);
-            // Auto search after dialog shows
-            Platform.runLater(() -> {
-                try {
-                    Thread.sleep(300);
-                } catch (InterruptedException ignored) {}
-                Platform.runLater(this::searchLocation);
-            });
+    public static class LocationResult {
+        public String cityName;
+        public double lat;
+        public double lon;
+        public LocationResult(String cityName, double lat, double lon) {
+            this.cityName = cityName;
+            this.lat = lat;
+            this.lon = lon;
         }
-
-        dialogStage.showAndWait();
-
-        if (confirmed && selectedLocation != null) {
-            return Optional.of(selectedLocation);
-        }
-        return Optional.empty();
     }
 
-    private void createDialog() {
-        dialogStage = new Stage();
-        dialogStage.initModality(Modality.APPLICATION_MODAL);
-        dialogStage.setTitle("📍 Sélectionner une adresse");
-        dialogStage.setWidth(700);
-        dialogStage.setHeight(600);
-        dialogStage.setMinWidth(600);
-        dialogStage.setMinHeight(500);
-
-        VBox root = new VBox(15);
-        root.setPadding(new Insets(20));
-        root.setStyle("-fx-background-color: linear-gradient(to bottom, #f8f9fa, #e9ecef);");
-
-        // Header
-        VBox headerBox = createHeader();
-
-        // Search section
-        VBox searchSection = createSearchSection();
-
-        // Results section
-        VBox resultsSection = createResultsSection();
-
-        // Selected address section
-        VBox selectedSection = createSelectedSection();
-
-        // Buttons
-        HBox buttonBox = createButtonBar();
-
-        root.getChildren().addAll(headerBox, searchSection, resultsSection, selectedSection, buttonBox);
-        VBox.setVgrow(resultsSection, Priority.ALWAYS);
-
-        Scene scene = new Scene(root);
-        dialogStage.setScene(scene);
+    public interface LocationCallback {
+        void onLocationSelected(LocationResult result);
     }
 
-    private VBox createHeader() {
-        VBox headerBox = new VBox(5);
-        headerBox.setAlignment(Pos.CENTER);
-        headerBox.setPadding(new Insets(0, 0, 10, 0));
+    // ── Map state ────────────────────────────────────────────────
+    private int zoom = 4;
+    private double centerLat = 34.0;
+    private double centerLon = 9.0;
+    private static final int TILE_SIZE = 256;
+    private static final int MAP_W = 700;
+    private static final int MAP_H = 420;
 
-        Label titleLabel = new Label("🗺️ Recherche d'adresse");
-        titleLabel.setStyle("-fx-font-size: 22; -fx-font-weight: bold; -fx-text-fill: #2c3e50;");
+    private Pane mapPane;
+    private Label infoLabel;
+    private Button confirmBtn;
+    private LocationCallback callback;
+    private Stage stage;
 
-        Label subtitleLabel = new Label("Recherchez une adresse et sélectionnez dans les résultats");
-        subtitleLabel.setStyle("-fx-text-fill: #7f8c8d; -fx-font-size: 13;");
+    private double selectedLat = 0, selectedLon = 0;
+    private String selectedCity = null;
 
-        headerBox.getChildren().addAll(titleLabel, subtitleLabel);
-        return headerBox;
-    }
+    // Tile cache to avoid re-downloading
+    private final Map<String, Image> tileCache = new HashMap<>();
 
-    private VBox createSearchSection() {
-        VBox searchSection = new VBox(10);
-        searchSection.setPadding(new Insets(15));
-        searchSection.setStyle("-fx-background-color: white; -fx-background-radius: 10; " +
-                "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 10, 0, 0, 2);");
+    // Drag state
+    private double dragStartX, dragStartY;
+    private double dragStartLon, dragStartLat;
 
-        Label searchLabel = new Label("🔍 Rechercher une adresse");
-        searchLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 14; -fx-text-fill: #2c3e50;");
+    public void show(LocationCallback callback) {
+        this.callback = callback;
 
-        HBox searchBox = new HBox(10);
-        searchBox.setAlignment(Pos.CENTER_LEFT);
+        stage = new Stage();
+        stage.initModality(Modality.APPLICATION_MODAL);
+        stage.setTitle("Choisir une destination");
+        stage.setResizable(false);
 
-        searchField = new TextField();
-        searchField.setPromptText("Ex: ESPRIT Tunis, Avenue Habib Bourguiba, Rue de la Liberté...");
-        searchField.setStyle("-fx-font-size: 14; -fx-padding: 12; -fx-background-radius: 8;");
-        HBox.setHgrow(searchField, Priority.ALWAYS);
+        // ── Header ───────────────────────────────────────────────
+        Label title = new Label("Cliquez sur la carte pour choisir votre destination");
+        title.setStyle("-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #4A5DEF;");
+        Label hint = new Label("Faites glisser pour naviguer • Molette pour zoomer");
+        hint.setStyle("-fx-font-size: 11px; -fx-text-fill: #888;");
+        VBox header = new VBox(3, title, hint);
+        header.setPadding(new Insets(12, 15, 12, 15));
+        header.setStyle("-fx-background-color: #F0F5FF; -fx-border-color: #C0E0FF;" +
+                "-fx-border-width: 0 0 1 0;");
 
-        Button searchBtn = new Button("🔍 Rechercher");
-        searchBtn.setStyle("-fx-background-color: #3498db; -fx-text-fill: white; -fx-font-weight: bold; " +
-                "-fx-padding: 12 25; -fx-background-radius: 8; -fx-cursor: hand;");
-        searchBtn.setOnAction(e -> searchLocation());
+        // ── Search bar ───────────────────────────────────────────
+        TextField searchField = new TextField();
+        searchField.setPromptText("Rechercher une ville...");
+        searchField.setPrefWidth(300);
+        searchField.setStyle("-fx-background-radius: 20; -fx-border-radius: 20;" +
+                "-fx-background-color: white; -fx-border-color: #DDD; -fx-padding: 8 15;");
 
-        // Enter key triggers search
-        searchField.setOnAction(e -> searchLocation());
+        Button searchBtn = new Button("Rechercher");
+        searchBtn.setStyle("-fx-background-color: #4A5DEF; -fx-text-fill: white;" +
+                "-fx-background-radius: 20; -fx-padding: 8 18; -fx-cursor: hand;");
+        searchBtn.setOnAction(e -> searchCity(searchField.getText()));
+        searchField.setOnAction(e -> searchCity(searchField.getText()));
 
-        // Hover effect
-        searchBtn.setOnMouseEntered(e -> searchBtn.setStyle("-fx-background-color: #2980b9; -fx-text-fill: white; " +
-                "-fx-font-weight: bold; -fx-padding: 12 25; -fx-background-radius: 8; -fx-cursor: hand;"));
-        searchBtn.setOnMouseExited(e -> searchBtn.setStyle("-fx-background-color: #3498db; -fx-text-fill: white; " +
-                "-fx-font-weight: bold; -fx-padding: 12 25; -fx-background-radius: 8; -fx-cursor: hand;"));
+        HBox searchBar = new HBox(8, searchField, searchBtn);
+        searchBar.setAlignment(Pos.CENTER_LEFT);
+        searchBar.setPadding(new Insets(8, 15, 8, 15));
+        searchBar.setStyle("-fx-background-color: white;");
 
-        searchBox.getChildren().addAll(searchField, searchBtn);
+        // ── Map pane ─────────────────────────────────────────────
+        mapPane = new Pane();
+        mapPane.setPrefSize(MAP_W, MAP_H);
+        mapPane.setStyle("-fx-background-color: #AAD3DF; -fx-cursor: crosshair;");
+        mapPane.setClip(new javafx.scene.shape.Rectangle(MAP_W, MAP_H));
 
-        statusLabel = new Label("Entrez une adresse pour commencer la recherche");
-        statusLabel.setStyle("-fx-text-fill: #95a5a6; -fx-font-size: 12;");
+        // ── Zoom buttons ─────────────────────────────────────────
+        Button zoomIn  = zoomButton("+");
+        Button zoomOut = zoomButton("−");
+        zoomIn.setOnAction(e  -> { if (zoom < 17) { zoom++; renderTiles(); } });
+        zoomOut.setOnAction(e -> { if (zoom > 2)  { zoom--; renderTiles(); } });
+        VBox zoomBox = new VBox(4, zoomIn, zoomOut);
+        zoomBox.setStyle("-fx-padding: 8; -fx-background-color: white;" +
+                "-fx-background-radius: 8; -fx-effect: dropshadow(gaussian,rgba(0,0,0,0.2),6,0,0,2);");
+        zoomBox.setTranslateX(10);
+        zoomBox.setTranslateY(10);
 
-        searchSection.getChildren().addAll(searchLabel, searchBox, statusLabel);
-        return searchSection;
-    }
+        // ── Info label on map ─────────────────────────────────────
+        infoLabel = new Label("Cliquez pour choisir un lieu");
+        infoLabel.setStyle("-fx-background-color: white; -fx-text-fill: #444;" +
+                "-fx-padding: 6 14; -fx-background-radius: 20;" +
+                "-fx-effect: dropshadow(gaussian,rgba(0,0,0,0.2),6,0,0,2);" +
+                "-fx-font-size: 12px; -fx-font-weight: bold;");
+        infoLabel.setTranslateX(MAP_W / 2.0 - 120);
+        infoLabel.setTranslateY(10);
 
-    private VBox createResultsSection() {
-        VBox resultsSection = new VBox(10);
-        resultsSection.setPadding(new Insets(15));
-        resultsSection.setStyle("-fx-background-color: white; -fx-background-radius: 10; " +
-                "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 10, 0, 0, 2);");
+        mapPane.getChildren().addAll(zoomBox, infoLabel);
 
-        Label resultsLabel = new Label("📋 Résultats de recherche");
-        resultsLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 14; -fx-text-fill: #2c3e50;");
-
-        resultsListView = new ListView<>();
-        resultsListView.setPrefHeight(200);
-        resultsListView.setStyle("-fx-background-radius: 8; -fx-border-radius: 8; -fx-border-color: #e0e0e0;");
-        resultsListView.setPlaceholder(new Label("🔍 Les résultats apparaîtront ici"));
-        VBox.setVgrow(resultsListView, Priority.ALWAYS);
-
-        // Custom cell factory
-        resultsListView.setCellFactory(lv -> new ListCell<LocationResult>() {
-            @Override
-            protected void updateItem(LocationResult item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || item == null) {
-                    setText(null);
-                    setGraphic(null);
-                    setStyle("");
-                } else {
-                    VBox cellBox = new VBox(5);
-                    cellBox.setPadding(new Insets(10));
-
-                    Label addressLabel = new Label("📍 " + item.getShortAddress());
-                    addressLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: #2c3e50; -fx-font-size: 13;");
-                    addressLabel.setWrapText(true);
-
-                    Label typeLabel = new Label("🏷️ " + item.getType());
-                    typeLabel.setStyle("-fx-text-fill: #3498db; -fx-font-size: 11;");
-
-                    Label coordsLabel = new Label("🌐 " + item.getCoordinates());
-                    coordsLabel.setStyle("-fx-text-fill: #95a5a6; -fx-font-size: 10; -fx-font-family: monospace;");
-
-                    cellBox.getChildren().addAll(addressLabel, typeLabel, coordsLabel);
-                    setGraphic(cellBox);
-
-                    // Selection style
-                    if (isSelected()) {
-                        setStyle("-fx-background-color: #ebf5fb; -fx-background-radius: 8;");
-                    } else {
-                        setStyle("-fx-background-color: transparent;");
-                    }
-                }
+        // ── Map interactions ──────────────────────────────────────
+        // Click to pick location
+        mapPane.setOnMouseClicked(e -> {
+            if (e.isStillSincePress()) {
+                double[] latLon = pixelToLatLon(e.getX(), e.getY());
+                reverseGeocode(latLon[0], latLon[1]);
             }
         });
 
-        // Selection listener
-        resultsListView.getSelectionModel().selectedItemProperty().addListener((obs, old, newVal) -> {
-            if (newVal != null) {
-                selectedLocation = newVal;
-                selectedAddressField.setText(newVal.getAddress());
-                latitudeField.setText(String.format("%.6f", newVal.getLatitude()));
-                longitudeField.setText(String.format("%.6f", newVal.getLongitude()));
-                statusLabel.setText("✅ Adresse sélectionnée");
-                statusLabel.setStyle("-fx-text-fill: #27ae60; -fx-font-weight: bold; -fx-font-size: 12;");
+        // Drag to pan
+        mapPane.setOnMousePressed(e -> {
+            dragStartX   = e.getX();
+            dragStartY   = e.getY();
+            dragStartLon = centerLon;
+            dragStartLat = centerLat;
+            mapPane.setCursor(Cursor.CLOSED_HAND);
+        });
+
+        mapPane.setOnMouseDragged(e -> {
+            double dx = e.getX() - dragStartX;
+            double dy = e.getY() - dragStartY;
+            double tilesX = dx / TILE_SIZE;
+            double tilesY = dy / TILE_SIZE;
+            int n = (int) Math.pow(2, zoom);
+            centerLon = dragStartLon - tilesX * 360.0 / n;
+            double yTile = latToTileY(dragStartLat, zoom) - tilesY;
+            centerLat = tileYToLat(yTile, zoom);
+            renderTiles();
+        });
+
+        mapPane.setOnMouseReleased(e -> mapPane.setCursor(Cursor.CROSSHAIR));
+
+        // Scroll to zoom
+        mapPane.setOnScroll(e -> {
+            if (e.getDeltaY() > 0 && zoom < 17) zoom++;
+            else if (e.getDeltaY() < 0 && zoom > 2) zoom--;
+            renderTiles();
+        });
+
+        // ── Info + confirm row ────────────────────────────────────
+        confirmBtn = new Button("✓  Confirmer cette destination");
+        confirmBtn.setStyle("-fx-background-color: #4A5DEF; -fx-text-fill: white;" +
+                "-fx-font-weight: bold; -fx-background-radius: 25;" +
+                "-fx-padding: 10 30; -fx-cursor: hand; -fx-font-size: 13px;");
+        confirmBtn.setDisable(true);
+        confirmBtn.setOnAction(e -> {
+            if (selectedCity != null) {
+                callback.onLocationSelected(
+                        new LocationResult(selectedCity, selectedLat, selectedLon));
+                stage.close();
             }
         });
 
-        resultsSection.getChildren().addAll(resultsLabel, resultsListView);
-        return resultsSection;
+        Button cancelBtn = new Button("Annuler");
+        cancelBtn.setStyle("-fx-background-color: #888; -fx-text-fill: white;" +
+                "-fx-background-radius: 25; -fx-padding: 10 25; -fx-cursor: hand;");
+        cancelBtn.setOnAction(e -> stage.close());
+
+        HBox footer = new HBox(12, cancelBtn, confirmBtn);
+        footer.setAlignment(Pos.CENTER_RIGHT);
+        footer.setPadding(new Insets(12, 15, 12, 15));
+        footer.setStyle("-fx-background-color: #F8F8F8; -fx-border-color: #E0E0E0;" +
+                "-fx-border-width: 1 0 0 0;");
+
+        // ── Assemble ──────────────────────────────────────────────
+        VBox root = new VBox(header, searchBar, mapPane, footer);
+        Scene scene = new Scene(root, MAP_W, MAP_H + 170);
+        stage.setScene(scene);
+
+        // Render tiles after showing
+        stage.setOnShown(e -> renderTiles());
+        stage.show();
     }
 
-    private VBox createSelectedSection() {
-        VBox selectedSection = new VBox(10);
-        selectedSection.setPadding(new Insets(15));
-        selectedSection.setStyle("-fx-background-color: white; -fx-background-radius: 10; " +
-                "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 10, 0, 0, 2);");
+    // ── Tile rendering ───────────────────────────────────────────
+    private void renderTiles() {
+        // Remove old tile images (keep zoom buttons and info label)
+        mapPane.getChildren().removeIf(n -> n instanceof ImageView);
 
-        Label selectedLabel = new Label("✅ Adresse sélectionnée");
-        selectedLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 14; -fx-text-fill: #27ae60;");
+        int n = (int) Math.pow(2, zoom);
 
-        selectedAddressField = new TextField();
-        selectedAddressField.setPromptText("Sélectionnez une adresse dans les résultats ci-dessus ou tapez manuellement");
-        selectedAddressField.setStyle("-fx-font-size: 13; -fx-padding: 10; -fx-background-radius: 8;");
+        // Center tile
+        double centerTileX = lonToTileX(centerLon, zoom);
+        double centerTileY = latToTileY(centerLat, zoom);
 
-        HBox coordsBox = new HBox(15);
-        coordsBox.setAlignment(Pos.CENTER_LEFT);
+        // How many tiles fit on screen
+        int tilesX = (int) Math.ceil((double) MAP_W / TILE_SIZE) + 2;
+        int tilesY = (int) Math.ceil((double) MAP_H / TILE_SIZE) + 2;
 
-        Label latLabel = new Label("Latitude:");
-        latLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: #555;");
-        latitudeField = new TextField("--");
-        latitudeField.setPrefWidth(130);
-        latitudeField.setEditable(false);
-        latitudeField.setStyle("-fx-background-color: #f5f5f5; -fx-font-family: monospace; -fx-background-radius: 5;");
+        int startTileX = (int) Math.floor(centerTileX) - tilesX / 2;
+        int startTileY = (int) Math.floor(centerTileY) - tilesY / 2;
 
-        Label lngLabel = new Label("Longitude:");
-        lngLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: #555;");
-        longitudeField = new TextField("--");
-        longitudeField.setPrefWidth(130);
-        longitudeField.setEditable(false);
-        longitudeField.setStyle("-fx-background-color: #f5f5f5; -fx-font-family: monospace; -fx-background-radius: 5;");
+        // Pixel offset of top-left tile
+        double offsetX = MAP_W / 2.0 - (centerTileX - startTileX) * TILE_SIZE;
+        double offsetY = MAP_H / 2.0 - (centerTileY - startTileY) * TILE_SIZE;
 
-        Region spacer = new Region();
-        HBox.setHgrow(spacer, Priority.ALWAYS);
+        for (int tx = 0; tx <= tilesX; tx++) {
+            for (int ty = 0; ty <= tilesY; ty++) {
+                int tileX = ((startTileX + tx) % n + n) % n;
+                int tileY = startTileY + ty;
+                if (tileY < 0 || tileY >= n) continue;
 
-        // Open in browser button
-        Button openMapBtn = new Button("🌐 Voir sur Google Maps");
-        openMapBtn.setStyle("-fx-background-color: #9b59b6; -fx-text-fill: white; -fx-padding: 8 15; " +
-                "-fx-background-radius: 5; -fx-cursor: hand;");
-        openMapBtn.setOnAction(e -> openInGoogleMaps());
+                double px = offsetX + tx * TILE_SIZE;
+                double py = offsetY + ty * TILE_SIZE;
 
-        coordsBox.getChildren().addAll(latLabel, latitudeField, lngLabel, longitudeField, spacer, openMapBtn);
+                loadTile(tileX, tileY, zoom, px, py);
+            }
+        }
 
-        selectedSection.getChildren().addAll(selectedLabel, selectedAddressField, coordsBox);
-        return selectedSection;
+        // Re-add marker if location selected
+        if (selectedCity != null) {
+            addMarker(selectedLat, selectedLon);
+        }
     }
 
-    private HBox createButtonBar() {
-        HBox buttonBox = new HBox(15);
-        buttonBox.setAlignment(Pos.CENTER_RIGHT);
-        buttonBox.setPadding(new Insets(10, 0, 0, 0));
+    private final HttpClient httpClient = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.ALWAYS).build();
 
-        Button cancelBtn = new Button("❌ Annuler");
-        cancelBtn.setPrefWidth(120);
-        cancelBtn.setStyle("-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-padding: 12 20; " +
-                "-fx-background-radius: 8; -fx-cursor: hand; -fx-font-weight: bold;");
-        cancelBtn.setOnAction(e -> {
-            confirmed = false;
-            dialogStage.close();
-        });
+    private void loadTile(int tileX, int tileY, int z, double px, double py) {
+        String key = z + "/" + tileX + "/" + tileY;
 
-        Button confirmBtn = new Button("✅ Confirmer");
-        confirmBtn.setPrefWidth(150);
-        confirmBtn.setStyle("-fx-background-color: #27ae60; -fx-text-fill: white; -fx-padding: 12 20; " +
-                "-fx-background-radius: 8; -fx-cursor: hand; -fx-font-weight: bold;");
-        confirmBtn.setOnAction(e -> confirmSelection());
+        ImageView iv = new ImageView();
+        iv.setFitWidth(TILE_SIZE);
+        iv.setFitHeight(TILE_SIZE);
+        iv.setLayoutX(px);
+        iv.setLayoutY(py);
+        iv.setSmooth(true);
+        mapPane.getChildren().add(0, iv); // add behind controls
 
-        // Hover effects
-        cancelBtn.setOnMouseEntered(e -> cancelBtn.setStyle("-fx-background-color: #c0392b; -fx-text-fill: white; " +
-                "-fx-padding: 12 20; -fx-background-radius: 8; -fx-cursor: hand; -fx-font-weight: bold;"));
-        cancelBtn.setOnMouseExited(e -> cancelBtn.setStyle("-fx-background-color: #e74c3c; -fx-text-fill: white; " +
-                "-fx-padding: 12 20; -fx-background-radius: 8; -fx-cursor: hand; -fx-font-weight: bold;"));
-
-        confirmBtn.setOnMouseEntered(e -> confirmBtn.setStyle("-fx-background-color: #1e8449; -fx-text-fill: white; " +
-                "-fx-padding: 12 20; -fx-background-radius: 8; -fx-cursor: hand; -fx-font-weight: bold;"));
-        confirmBtn.setOnMouseExited(e -> confirmBtn.setStyle("-fx-background-color: #27ae60; -fx-text-fill: white; " +
-                "-fx-padding: 12 20; -fx-background-radius: 8; -fx-cursor: hand; -fx-font-weight: bold;"));
-
-        buttonBox.getChildren().addAll(cancelBtn, confirmBtn);
-        return buttonBox;
-    }
-
-    private void searchLocation() {
-        String query = searchField.getText().trim();
-        if (query.isEmpty()) {
-            statusLabel.setText("⚠️ Veuillez entrer une adresse à rechercher");
-            statusLabel.setStyle("-fx-text-fill: #e74c3c; -fx-font-size: 12;");
+        if (tileCache.containsKey(key)) {
+            iv.setImage(tileCache.get(key));
             return;
         }
 
-        statusLabel.setText("🔍 Recherche en cours...");
-        statusLabel.setStyle("-fx-text-fill: #3498db; -fx-font-size: 12;");
-        resultsListView.setItems(FXCollections.observableArrayList());
-
-        CompletableFuture.supplyAsync(() -> {
+        // Download tile in background
+        new Thread(() -> {
             try {
-                String encodedQuery = java.net.URLEncoder.encode(query, java.nio.charset.StandardCharsets.UTF_8);
-                String url = "https://nominatim.openstreetmap.org/search?format=json&q=" +
-                        encodedQuery + "&limit=10&addressdetails=1";
-
-                Request request = new Request.Builder()
-                        .url(url)
-                        .addHeader("Accept-Language", "fr")
-                        .addHeader("User-Agent", "JavaFX-LocationPicker/1.0")
-                        .build();
-
-                try (Response response = httpClient.newCall(request).execute()) {
-                    if (response.isSuccessful() && response.body() != null) {
-                        String jsonData = response.body().string();
-                        return parseResults(jsonData);
-                    }
+                String url = "https://tile.openstreetmap.org/" + z + "/" + tileX + "/" + tileY + ".png";
+                HttpRequest req = HttpRequest.newBuilder()
+                        .uri(URI.create(url))
+                        .header("User-Agent", "MomentumHRApp/1.0 (educational)")
+                        .GET().build();
+                HttpResponse<byte[]> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofByteArray());
+                if (resp.statusCode() == 200) {
+                    Image img = new Image(new java.io.ByteArrayInputStream(resp.body()));
+                    tileCache.put(key, img);
+                    Platform.runLater(() -> iv.setImage(img));
                 }
             } catch (Exception e) {
-                System.out.println("Search error: " + e.getMessage());
-                e.printStackTrace();
+                // Tile failed — leave gray
             }
-            return FXCollections.<LocationResult>observableArrayList();
-        }).thenAccept(results -> {
-            Platform.runLater(() -> {
-                resultsListView.setItems(results);
-                if (results.isEmpty()) {
-                    statusLabel.setText("❌ Aucun résultat trouvé. Essayez avec d'autres termes.");
-                    statusLabel.setStyle("-fx-text-fill: #e74c3c; -fx-font-size: 12;");
-                } else {
-                    statusLabel.setText("✅ " + results.size() + " résultat(s) trouvé(s) - Cliquez pour sélectionner");
-                    statusLabel.setStyle("-fx-text-fill: #27ae60; -fx-font-size: 12;");
-                }
-            });
-        });
+        }).start();
     }
 
-    private ObservableList<LocationResult> parseResults(String jsonData) {
-        ObservableList<LocationResult> results = FXCollections.observableArrayList();
+    // ── Marker ───────────────────────────────────────────────────
+    private void addMarker(double lat, double lon) {
+        mapPane.getChildren().removeIf(n -> "marker".equals(n.getUserData()));
 
-        try {
-            JsonArray jsonArray = JsonParser.parseString(jsonData).getAsJsonArray();
+        double[] px = latLonToPixel(lat, lon);
 
-            for (int i = 0; i < jsonArray.size(); i++) {
-                JsonObject obj = jsonArray.get(i).getAsJsonObject();
+        // Drop pin shape
+        Circle circle = new Circle(10, Color.web("#4A5DEF"));
+        circle.setStroke(Color.WHITE);
+        circle.setStrokeWidth(3);
+        circle.setEffect(new javafx.scene.effect.DropShadow(8, Color.rgb(0, 0, 0, 0.4)));
+        circle.setLayoutX(px[0]);
+        circle.setLayoutY(px[1]);
+        circle.setUserData("marker");
 
-                String displayName = obj.has("display_name") ? obj.get("display_name").getAsString() : "Unknown";
-                double lat = Double.parseDouble(obj.get("lat").getAsString());
-                double lon = Double.parseDouble(obj.get("lon").getAsString());
-                String type = obj.has("type") ? formatType(obj.get("type").getAsString()) : "Lieu";
-
-                results.add(new LocationResult(displayName, lat, lon, type));
-            }
-        } catch (Exception e) {
-            System.out.println("Parse error: " + e.getMessage());
-        }
-
-        return results;
+        mapPane.getChildren().add(circle);
     }
 
-    private String formatType(String type) {
-        if (type == null) return "Lieu";
+    // ── Reverse geocoding ────────────────────────────────────────
+    private void reverseGeocode(double lat, double lon) {
+        infoLabel.setText("Recherche en cours...");
+        infoLabel.setStyle(infoLabel.getStyle());
 
-        switch (type.toLowerCase()) {
-            case "city": return "🏙️ Ville";
-            case "town": return "🏘️ Commune";
-            case "village": return "🏡 Village";
-            case "suburb": return "🏘️ Quartier";
-            case "neighbourhood": return "📍 Voisinage";
-            case "road": case "street": return "🛣️ Rue";
-            case "building": return "🏢 Bâtiment";
-            case "house": return "🏠 Maison";
-            case "school": case "university": return "🎓 Établissement scolaire";
-            case "hospital": return "🏥 Hôpital";
-            case "restaurant": return "🍽️ Restaurant";
-            case "cafe": return "☕ Café";
-            case "shop": case "store": return "🏪 Commerce";
-            case "park": return "🌳 Parc";
-            case "station": return "🚉 Station";
-            case "airport": return "✈️ Aéroport";
-            case "hotel": return "🏨 Hôtel";
-            case "bank": return "🏦 Banque";
-            case "pharmacy": return "💊 Pharmacie";
-            case "mosque": return "🕌 Mosquée";
-            case "church": return "⛪ Église";
-            default: return "📍 " + capitalize(type);
-        }
-    }
-
-    private String capitalize(String str) {
-        if (str == null || str.isEmpty()) return str;
-        return str.substring(0, 1).toUpperCase() + str.substring(1).toLowerCase();
-    }
-
-    private void confirmSelection() {
-        String address = selectedAddressField.getText().trim();
-
-        if (address.isEmpty()) {
-            statusLabel.setText("⚠️ Veuillez sélectionner ou entrer une adresse");
-            statusLabel.setStyle("-fx-text-fill: #e74c3c; -fx-font-weight: bold; -fx-font-size: 12;");
-            selectedAddressField.setStyle("-fx-font-size: 13; -fx-padding: 10; -fx-background-radius: 8; " +
-                    "-fx-border-color: #e74c3c; -fx-border-width: 2;");
-            return;
-        }
-
-        // If user typed manually without selecting
-        if (selectedLocation == null || !selectedLocation.getAddress().equals(address)) {
-            // Create a new location result with manual address
+        new Thread(() -> {
             try {
-                double lat = latitudeField.getText().equals("--") ? 0 : Double.parseDouble(latitudeField.getText());
-                double lng = longitudeField.getText().equals("--") ? 0 : Double.parseDouble(longitudeField.getText());
-                selectedLocation = new LocationResult(address, lat, lng, "Manuel");
-            } catch (NumberFormatException e) {
-                selectedLocation = new LocationResult(address, 0, 0, "Manuel");
-            }
-        }
+                String url = "https://nominatim.openstreetmap.org/reverse?lat=" + lat
+                        + "&lon=" + lon + "&format=json&accept-language=fr";
+                HttpClient client = HttpClient.newHttpClient();
+                HttpRequest req = HttpRequest.newBuilder()
+                        .uri(URI.create(url))
+                        .header("User-Agent", "MomentumHRApp/1.0")
+                        .GET().build();
+                HttpResponse<String> resp = client.send(req,
+                        HttpResponse.BodyHandlers.ofString());
 
-        confirmed = true;
-        dialogStage.close();
+                String body = resp.body();
+                String city = extractField(body, "city");
+                if (city == null) city = extractField(body, "town");
+                if (city == null) city = extractField(body, "village");
+                if (city == null) city = extractField(body, "municipality");
+                if (city == null) city = extractField(body, "county");
+                if (city == null) city = extractField(body, "state");
+                if (city == null) city = "Lieu inconnu";
+
+                final String finalCity = city;
+                Platform.runLater(() -> {
+                    selectedLat  = lat;
+                    selectedLon  = lon;
+                    selectedCity = finalCity;
+
+                    infoLabel.setText("Destination: " + finalCity);
+                    confirmBtn.setDisable(false);
+
+                    addMarker(lat, lon);
+                    centerLat = lat;
+                    centerLon = lon;
+                    renderTiles();
+                });
+            } catch (Exception e) {
+                Platform.runLater(() -> infoLabel.setText("Erreur reseau"));
+            }
+        }).start();
     }
 
-    private void openInGoogleMaps() {
-        try {
-            String lat = latitudeField.getText();
-            String lng = longitudeField.getText();
+    // ── City search ───────────────────────────────────────────────
+    private void searchCity(String query) {
+        if (query == null || query.trim().isEmpty()) return;
+        infoLabel.setText("Recherche: " + query + "...");
 
-            String url;
-            if (!lat.equals("--") && !lng.equals("--")) {
-                url = "https://www.google.com/maps?q=" + lat + "," + lng;
-            } else if (selectedAddressField.getText() != null && !selectedAddressField.getText().isEmpty()) {
-                String encoded = java.net.URLEncoder.encode(selectedAddressField.getText(),
-                        java.nio.charset.StandardCharsets.UTF_8);
-                url = "https://www.google.com/maps/search/" + encoded;
-            } else {
-                statusLabel.setText("⚠️ Sélectionnez d'abord une adresse");
-                statusLabel.setStyle("-fx-text-fill: #e74c3c; -fx-font-size: 12;");
-                return;
+        new Thread(() -> {
+            try {
+                String encoded = java.net.URLEncoder.encode(query.trim(), "UTF-8");
+                String url = "https://nominatim.openstreetmap.org/search?q=" + encoded
+                        + "&format=json&limit=1&accept-language=fr";
+                HttpClient client = HttpClient.newHttpClient();
+                HttpRequest req = HttpRequest.newBuilder()
+                        .uri(URI.create(url))
+                        .header("User-Agent", "MomentumHRApp/1.0")
+                        .GET().build();
+                HttpResponse<String> resp = client.send(req,
+                        HttpResponse.BodyHandlers.ofString());
+
+                String body = resp.body();
+                String latStr = extractField(body, "lat");
+                String lonStr = extractField(body, "lon");
+
+                if (latStr != null && lonStr != null) {
+                    double lat = Double.parseDouble(latStr);
+                    double lon = Double.parseDouble(lonStr);
+                    Platform.runLater(() -> {
+                        centerLat = lat;
+                        centerLon = lon;
+                        zoom = 10;
+                        renderTiles();
+                        reverseGeocode(lat, lon);
+                    });
+                } else {
+                    Platform.runLater(() -> infoLabel.setText("Ville non trouvee: " + query));
+                }
+            } catch (Exception e) {
+                Platform.runLater(() -> infoLabel.setText("Erreur de recherche"));
             }
-
-            java.awt.Desktop.getDesktop().browse(new java.net.URI(url));
-            statusLabel.setText("🌐 Ouverture dans Google Maps...");
-            statusLabel.setStyle("-fx-text-fill: #3498db; -fx-font-size: 12;");
-        } catch (Exception e) {
-            statusLabel.setText("❌ Impossible d'ouvrir le navigateur");
-            statusLabel.setStyle("-fx-text-fill: #e74c3c; -fx-font-size: 12;");
-        }
+        }).start();
     }
 
-    // ==================== LOCATION RESULT CLASS ====================
+    // ── Tile math ────────────────────────────────────────────────
+    private double lonToTileX(double lon, int z) {
+        return (lon + 180.0) / 360.0 * Math.pow(2, z);
+    }
 
-    public static class LocationResult {
-        private final String address;
-        private final double latitude;
-        private final double longitude;
-        private final String type;
+    private double latToTileY(double lat, int z) {
+        double latRad = Math.toRadians(lat);
+        return (1.0 - Math.log(Math.tan(latRad) + 1.0 / Math.cos(latRad)) / Math.PI)
+                / 2.0 * Math.pow(2, z);
+    }
 
-        public LocationResult(String address, double latitude, double longitude) {
-            this(address, latitude, longitude, "Lieu");
-        }
+    private double tileYToLat(double tileY, int z) {
+        double n = Math.PI - 2.0 * Math.PI * tileY / Math.pow(2, z);
+        return Math.toDegrees(Math.atan(Math.sinh(n)));
+    }
 
-        public LocationResult(String address, double latitude, double longitude, String type) {
-            this.address = address;
-            this.latitude = latitude;
-            this.longitude = longitude;
-            this.type = type;
-        }
+    private double[] pixelToLatLon(double px, double py) {
+        double centerTileX = lonToTileX(centerLon, zoom);
+        double centerTileY = latToTileY(centerLat, zoom);
+        double tileX = centerTileX + (px - MAP_W / 2.0) / TILE_SIZE;
+        double tileY = centerTileY + (py - MAP_H / 2.0) / TILE_SIZE;
+        double lon = tileX / Math.pow(2, zoom) * 360.0 - 180.0;
+        double lat = tileYToLat(tileY, zoom);
+        return new double[]{lat, lon};
+    }
 
-        public String getAddress() {
-            return address;
-        }
+    private double[] latLonToPixel(double lat, double lon) {
+        double centerTileX = lonToTileX(centerLon, zoom);
+        double centerTileY = latToTileY(centerLat, zoom);
+        double tileX = lonToTileX(lon, zoom);
+        double tileY = latToTileY(lat, zoom);
+        double px = MAP_W / 2.0 + (tileX - centerTileX) * TILE_SIZE;
+        double py = MAP_H / 2.0 + (tileY - centerTileY) * TILE_SIZE;
+        return new double[]{px, py};
+    }
 
-        public double getLatitude() {
-            return latitude;
-        }
+    // ── Helpers ───────────────────────────────────────────────────
+    private String extractField(String json, String key) {
+        String search = "\"" + key + "\":\"";
+        int idx = json.indexOf(search);
+        if (idx == -1) return null;
+        int start = idx + search.length();
+        int end = json.indexOf("\"", start);
+        return end > start ? json.substring(start, end) : null;
+    }
 
-        public double getLongitude() {
-            return longitude;
-        }
-
-        public String getType() {
-            return type;
-        }
-
-        public String getShortAddress() {
-            if (address == null) return "";
-            if (address.length() > 100) {
-                return address.substring(0, 97) + "...";
-            }
-            return address;
-        }
-
-        public String getCoordinates() {
-            if (latitude == 0 && longitude == 0) {
-                return "Non disponible";
-            }
-            return String.format("%.6f, %.6f", latitude, longitude);
-        }
-
-        @Override
-        public String toString() {
-            return address;
-        }
+    private Button zoomButton(String text) {
+        Button btn = new Button(text);
+        btn.setPrefSize(30, 30);
+        btn.setStyle("-fx-background-color: white; -fx-font-size: 16px; -fx-font-weight: bold;" +
+                "-fx-background-radius: 4; -fx-cursor: hand; -fx-border-color: #DDD;" +
+                "-fx-border-width: 1; -fx-text-fill: #333;");
+        return btn;
     }
 }

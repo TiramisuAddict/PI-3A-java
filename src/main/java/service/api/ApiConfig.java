@@ -7,7 +7,7 @@ public class ApiConfig {
     public static final String SMTP_PORT     = "587";
     public static final String SMTP_USERNAME = "dahen.baheeddine@gmail.com";
     public static final String SMTP_PASSWORD = "cbsg lpgb fwob xqdf";
-    public static final String SMTP_FROM_NAME = "RH - ESPRIT";
+    public static final String SMTP_FROM_NAME = "RH - Momentum";
 
     // ==================== OPEN WEATHER MAP ====================
     public static final String WEATHER_API_KEY   = "36f4b94b2bef44d5918cc09ffdcd3d6b";
@@ -26,7 +26,7 @@ public class ApiConfig {
     public static final int    DEFAULT_ZOOM      = 13;
 
     // ==================== COMPANY INFO ====================
-    public static final String COMPANY_NAME = "ESPRIT";
+    public static final String COMPANY_NAME = "Momentum";
     public static final String RH_EMAIL     = "dahen.baheeddine@gmail.com";
     public static final String ADMIN_EMAIL  = "dahen.baheeddine@gmail.com";
 }
