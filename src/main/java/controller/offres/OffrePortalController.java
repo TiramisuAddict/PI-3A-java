@@ -1,6 +1,6 @@
 package controller.offres;
 
-import entities.Offre;
+import entities.offres.Offre;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;

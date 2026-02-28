@@ -110,22 +110,22 @@
                             </graphic>
                         </Button>
                         <!-- Offres -->
-                        <Button fx:id="btnOffre" maxWidth="Infinity" onAction="#showOffres" styleClass="nav-button">
-                            <graphic>
-                                <HBox alignment="CENTER_LEFT" spacing="20">
-                                    <children>
-                                        <StackPane maxWidth="25" minWidth="25">
-                                            <ImageView fitHeight="22" fitWidth="22" preserveRatio="true">
-                                                <image>
-                                                    <Image url="@../../icons/share.png" />
-                                                </image>
-                                            </ImageView>
-                                        </StackPane>
-                                        <Label styleClass="nav-label" text="Offres d'emploi" />
-                                    </children>
-                                </HBox>
-                            </graphic>
-                        </Button>
+<!--&lt;!&ndash;                        <Button fx:id="btnOffre" maxWidth="Infinity" onAction="#showOffres" styleClass="nav-button">&ndash;&gt;-->
+<!--                            <graphic>-->
+<!--                                <HBox alignment="CENTER_LEFT" spacing="20">-->
+<!--                                    <children>-->
+<!--                                        <StackPane maxWidth="25" minWidth="25">-->
+<!--                                            <ImageView fitHeight="22" fitWidth="22" preserveRatio="true">-->
+<!--                                                <image>-->
+<!--                                                    <Image url="@../../icons/share.png" />-->
+<!--                                                </image>-->
+<!--                                            </ImageView>-->
+<!--                                        </StackPane>-->
+<!--                                        <Label styleClass="nav-label" text="Offres d'emploi" />-->
+<!--                                    </children>-->
+<!--                                </HBox>-->
+<!--                            </graphic>-->
+<!--                        </Button>-->
                     </children>
                 </VBox>
             </children>

@@ -1,7 +1,7 @@
 package controller.offres;
 
-import entities.Candidat;
-import entities.Offre;
+import entities.offres.Candidat;
+import entities.offres.Offre;
 import entities.employers.session;
 import entities.employers.visiteur;
 import javafx.fxml.FXML;

@@ -1,12 +1,11 @@
 package controller.offres;
 
-import entities.Candidat;
-import entities.Offre;
+import entities.offres.Candidat;
+import entities.offres.Offre;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.scene.chart.*;
-import javafx.scene.control.Label;
 import service.CandidatCRUD;
 import service.OffreCRUD;
 

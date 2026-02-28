@@ -1,9 +1,9 @@
 package controller.offres;
 
-import entities.CategorieOffre;
-import entities.EtatOffre;
-import entities.Offre;
-import entities.TypeContrat;
+import entities.offres.CategorieOffre;
+import entities.offres.EtatOffre;
+import entities.offres.Offre;
+import entities.offres.TypeContrat;
 import javafx.collections.FXCollections;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;

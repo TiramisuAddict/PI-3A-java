@@ -10,4 +10,9 @@ config.properties
 /src/main/resources/credentials.json
 /src/main/resources/config.properties
 /tokens/
+tokens/
+src/main/resources/credentials.apps.googleusercontent.com.json
+
+# Environment variables - NEVER commit this file
+.env
 

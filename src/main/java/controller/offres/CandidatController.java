@@ -1,7 +1,7 @@
 package controller.offres;
 
-import entities.Candidat;
-import entities.Offre;
+import entities.offres.Candidat;
+import entities.offres.Offre;
 import entities.employers.employe;
 import entities.employers.role;
 import entities.employers.session;

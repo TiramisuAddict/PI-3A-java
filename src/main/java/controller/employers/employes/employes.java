@@ -59,7 +59,7 @@ public class employes {
         btnFormation.getStyleClass().remove("nav-active");
         btnDemande.getStyleClass().remove("nav-active");
         btnProjet.getStyleClass().remove("nav-active");
-        btnOffre.getStyleClass().remove("nav-active");
+        //btnOffre.getStyleClass().remove("nav-active");
 
         activeBtn.getStyleClass().add("nav-active");
     }
@@ -86,8 +86,8 @@ public class employes {
         updateActiveButton(btnProjet);
     }
 
-    @FXML private void showOffres(ActionEvent event) {
+    /*@FXML private void showOffres(ActionEvent event) {
         loadView("offres/recrutement");
         updateActiveButton(btnOffre);
-    }
+    }*/
 }

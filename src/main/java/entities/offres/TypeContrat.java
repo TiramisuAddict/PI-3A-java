@@ -1,4 +1,4 @@
-package entities;
+package entities.offres;
 
 public enum TypeContrat {
     CDI("CDI"),

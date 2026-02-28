@@ -284,4 +284,81 @@ public class employeCRUD {
 
         return sb.toString();
     }
+
+    public record EmployeeInfo(int id, String nom, String prenom, String role) {
+        public String getFullName() {
+            return nom + " " + prenom;
+        }
+
+        @Override
+        public String toString() {
+            return nom + " " + prenom;
+        }
+    }
+    public EmployeeInfo getEmployeeInfoByEmail(String email) throws SQLException {
+        String sql = "SELECT id_employe, nom, prenom, role FROM employé WHERE e_mail = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, email);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return new EmployeeInfo(
+                            rs.getInt("id_employe"),
+                            rs.getString("nom"),
+                            rs.getString("prenom"),
+                            rs.getString("role")
+                    );
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Get all employees
+     */
+    public List<EmployeeInfo> getAllEmployees() throws SQLException {
+        String sql = "SELECT id_employe, nom, prenom, role FROM employé";
+        List<EmployeeInfo> employees = new ArrayList<>();
+        try (PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                employees.add(new EmployeeInfo(
+                        rs.getInt("id_employe"),
+                        rs.getString("nom"),
+                        rs.getString("prenom"),
+                        rs.getString("role")
+                ));
+            }
+        }
+        return employees;
+    }
+
+    /**
+     * Get employees by role
+     */
+    public List<EmployeeInfo> getEmployeesByRole(String role) throws SQLException {
+        String sql = "SELECT id_employe, nom, prenom, role FROM employé WHERE role = ?";
+        List<EmployeeInfo> employees = new ArrayList<>();
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, role);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    employees.add(new EmployeeInfo(
+                            rs.getInt("id_employe"),
+                            rs.getString("nom"),
+                            rs.getString("prenom"),
+                            rs.getString("role")
+                    ));
+                }
+            }
+        }
+        return employees;
+    }
+
+    /**
+     * Get employees with chef projet role (responsables)
+     */
+    public List<EmployeeInfo> getResponsables() throws SQLException {
+        return getEmployeesByRole("chef projet");
+    }
 }

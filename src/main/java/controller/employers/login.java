@@ -1,6 +1,5 @@
 package controller.employers;
 
-import entities.*;
 import entities.employers.*;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;

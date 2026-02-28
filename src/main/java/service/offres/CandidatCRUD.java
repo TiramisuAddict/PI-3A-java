@@ -1,6 +1,6 @@
 package service;
 
-import entities.Candidat;
+import entities.offres.Candidat;
 
 import java.sql.*;
 import java.util.ArrayList;

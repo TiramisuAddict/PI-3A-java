@@ -1,7 +1,7 @@
-import entities.CategorieOffre;
-import entities.EtatOffre;
-import entities.Offre;
-import entities.TypeContrat;
+import entities.offres.CategorieOffre;
+import entities.offres.EtatOffre;
+import entities.offres.Offre;
+import entities.offres.TypeContrat;
 import org.junit.jupiter.api.*;
 import service.OffreCRUD;
 

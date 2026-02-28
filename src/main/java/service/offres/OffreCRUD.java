@@ -1,14 +1,14 @@
 package service;
 
-import entities.CategorieOffre;
-import entities.EtatOffre;
-import entities.Offre;
+import entities.offres.CategorieOffre;
+import entities.offres.EtatOffre;
+import entities.offres.Offre;
 
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-import entities.TypeContrat;
+import entities.offres.TypeContrat;
 import utils.MyDB;
 
 public class OffreCRUD implements InterfaceCRUD <Offre>{

@@ -1,4 +1,4 @@
-package entities;
+package entities.offres;
 
 import java.sql.Date;
 
