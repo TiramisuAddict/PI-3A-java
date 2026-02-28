@@ -1,4 +1,4 @@
-package service;
+package service.offres;
 
 import entities.Candidat;
 
@@ -6,6 +6,7 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
+import service.InterfaceCRUD;
 import utils.MyDB;
 
 public class CandidatCRUD implements InterfaceCRUD<Candidat> {

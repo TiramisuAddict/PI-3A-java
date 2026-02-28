@@ -9,12 +9,8 @@ import javafx.fxml.Initializable;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.chart.*;
-import javafx.scene.control.ComboBox;
-import javafx.scene.control.Label;
-import javafx.scene.control.Tooltip;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.Priority;
-import javafx.scene.layout.VBox;
+import javafx.scene.control.*;
+import javafx.scene.layout.*;
 import javafx.scene.shape.Circle;
 import service.employers.entrepriseCRUD;
 
@@ -313,8 +309,6 @@ public class homeAdmin implements Initializable {
                         String.format("%s — %.0f%%", d.getName(), p));
                 Tooltip.install(d.getNode(), tip);
             }
-
-            // Légende
             legendePays.getChildren().add(
                     creerLegendItem(sorted.get(i).getKey(),
                             sorted.get(i).getValue(), total, color));

@@ -32,6 +32,6 @@ public class configLoader {
     }
 
     public static String getApiUrl() {
-        return get("huggingface.api.url");
+        return get("huggingface.api.url2");
     }
 }

@@ -42,6 +42,6 @@
     <Label fx:id="lblMessage" wrapText="true" style="-fx-font-size: 12px;"/>
     <HBox alignment="CENTER_RIGHT" spacing="12.0">
         <Region HBox.hgrow="ALWAYS"/>
-        <Button fx:id="btnConfirmer" text="Confirmer" onAction="#confirmerChangement" styleClass="accent" style="-fx-cursor: hand; -fx-font-weight: bold; -fx-font-size: 12px;" prefHeight="38.0" prefWidth="160.0"/>
+        <Button fx:id="btnConfirmer" text="Confirmer" onAction="#confirmerChangement" style="-fx-cursor: hand; -fx-font-weight: bold;-fx-background-color: #4A5DEF;-fx-text-fill:#e5e7eb;-fx-font-size: 12px;" prefHeight="38.0" prefWidth="160.0"/>
     </HBox>
 </VBox>

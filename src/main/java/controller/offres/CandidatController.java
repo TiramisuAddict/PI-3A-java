@@ -17,10 +17,10 @@ import javafx.scene.layout.VBox;
 import java.sql.Date;
 
 import javafx.stage.FileChooser;
-import service.CandidatCRUD;
-import service.GoogleMeetService;
-import service.MatchingService;
-import service.OffreCRUD;
+import service.offres.CandidatCRUD;
+import service.offres.GoogleMeetService;
+import service.offres.MatchingService;
+import service.offres.OffreCRUD;
 import service.employers.employeCRUD;
 import service.employers.visiteurCRUD;
 import utils.BadgeFactory;
@@ -243,7 +243,7 @@ public class CandidatController {
 
             // Load the candidates for the offer ID
             int idOffre = this.offreActuelle.getId();
-            List<Candidat> filteredList = new service.CandidatCRUD().afficher().stream()
+            List<Candidat> filteredList = new CandidatCRUD().afficher().stream()
                     .filter(c -> c.getIdOffre() == idOffre)
                     .toList();
 
@@ -295,8 +295,8 @@ public class CandidatController {
                 } else if (formattedScore < 0.2) c.setEtat("Refusé");
 
                 try {
-                    new service.CandidatCRUD().modifier(c);
-                    new service.CandidatCRUD().updateScore(c.getId(), formattedScore);
+                    new CandidatCRUD().modifier(c);
+                    new CandidatCRUD().updateScore(c.getId(), formattedScore);
                     System.out.println(c.getScore() + " - " + c.getEtat());
                 } catch (SQLException e) {
                     e.printStackTrace();

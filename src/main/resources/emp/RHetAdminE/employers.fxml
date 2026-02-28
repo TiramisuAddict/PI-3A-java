@@ -21,7 +21,7 @@
             fx:controller="controller.employers.RHetAdminE.EmployerController">
 
     <children>
-        <TabPane fx:id="tabPane" tabClosingPolicy="UNAVAILABLE" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+        <TabPane fx:id="tabPane" tabClosingPolicy="UNAVAILABLE" AnchorPane.bottomAnchor="0.0" stylesheets="@/customTheme.css" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
             <tabs>
                 <Tab fx:id="tabListe" text="Liste des employés">
                     <content>
@@ -38,26 +38,27 @@
                                         </VBox>
                                         <Button fx:id="btnAjouter" onAction="#ouvrirAjoutEmploye" styleClass="accent" text="+ Ajouter employé"/>
                                     </HBox>
-
                                     <FlowPane hgap="15.0" vgap="15.0">
                                         <padding><Insets top="-10.0"/></padding>
-                                        <VBox prefWidth="150.0" style="-fx-background-color: -color-bg-subtle;-fx-background-radius: 5;-fx-padding: 15;-fx-border-color: -color-border-muted;-fx-border-radius: 5;">
+                                        <VBox prefWidth="150.0" spacing="5" style="-fx-background-color: -color-bg-subtle;-fx-background-radius: 5;-fx-padding: 15;-fx-border-color: -color-border-muted;-fx-border-radius: 5;">
                                             <Label text="Total" textFill="#868686"/>
                                             <Label fx:id="lblTotalEmployes" style="-fx-font-size: 22; -fx-font-weight: bold;" text="0"/>
+                                            <Label fx:id="lblTotalSub" text="" style="-fx-font-size: 11px; -fx-text-fill: -color-fg-subtle;"/>
                                         </VBox>
-                                        <VBox prefWidth="150.0"
-                                              style="-fx-background-color: -color-bg-subtle;-fx-background-radius: 5;-fx-padding: 15;-fx-border-color: -color-border-muted;-fx-border-radius: 5;">
+                                        <VBox prefWidth="150.0" spacing="5" style="-fx-background-color: -color-bg-subtle;-fx-background-radius: 5;-fx-padding: 15;-fx-border-color: -color-border-muted;-fx-border-radius: 5;">
                                             <Label text="RH" textFill="#868686"/>
                                             <Label fx:id="lblTotalRH" style="-fx-font-size: 22; -fx-font-weight: bold;" text="0"/>
+                                            <Label fx:id="lblRHPct" text="" style="-fx-font-size: 11px; -fx-text-fill: -color-fg-subtle;"/>
                                         </VBox>
-                                        <VBox prefWidth="150.0"
-                                              style="-fx-background-color: -color-bg-subtle;-fx-background-radius: 5;-fx-padding: 15;-fx-border-color: -color-border-muted;-fx-border-radius: 5;">
+                                        <VBox prefWidth="150.0" spacing="5" style="-fx-background-color: -color-bg-subtle;-fx-background-radius: 5;-fx-padding: 15;-fx-border-color: -color-border-muted;-fx-border-radius: 5;">
                                             <Label text="Chefs projet" textFill="#868686"/>
                                             <Label fx:id="lblTotalChefs" style="-fx-font-size: 22; -fx-font-weight: bold;" text="0"/>
+                                            <Label fx:id="lblChefsPct" text="" style="-fx-font-size: 11px; -fx-text-fill: -color-fg-subtle;"/>
                                         </VBox>
-                                        <VBox prefWidth="150.0" style="-fx-background-color: -color-bg-subtle;-fx-background-radius: 5;-fx-padding: 15;-fx-border-color: -color-border-muted;-fx-border-radius: 5;">
+                                        <VBox prefWidth="150.0" spacing="5" style="-fx-background-color: -color-bg-subtle;-fx-background-radius: 5;-fx-padding: 15;-fx-border-color: -color-border-muted;-fx-border-radius: 5;">
                                             <Label text="Employés" textFill="#868686"/>
                                             <Label fx:id="lblTotalSimple" style="-fx-font-size: 22; -fx-font-weight: bold;" text="0"/>
+                                            <Label fx:id="lblSimplePct" text="" style="-fx-font-size: 11px; -fx-text-fill: -color-fg-subtle;"/>
                                         </VBox>
                                     </FlowPane>
 
@@ -77,9 +78,7 @@
                                 </children>
                             </VBox>
 
-                            <VBox fx:id="sidePanel" prefWidth="380.0" spacing="20.0"
-                                  visible="false" managed="false"
-                                  style="-fx-background-color: -color-bg-default;-fx-border-color: -color-border-muted;-fx-border-width: 0 0 0 1;">
+                            <VBox fx:id="sidePanel" prefWidth="380.0" spacing="20.0" visible="false" managed="false" style="-fx-background-color: -color-bg-default;-fx-border-color: -color-border-muted;-fx-border-width: 0 0 0 1;">
                                 <padding>
                                     <Insets bottom="25.0" left="25.0" right="25.0" top="25.0"/>
                                 </padding>
@@ -122,11 +121,9 @@
                                                 </VBox>
                                                 <VBox spacing="5.0">
                                                     <Label text="Date d'embauche" style="-fx-font-weight: bold;"/>
-                                                    <DatePicker fx:id="dateEmbauche" editable="false"
-                                                                maxWidth="Infinity"/>
+                                                    <DatePicker fx:id="dateEmbauche" editable="false" maxWidth="Infinity"/>
                                                 </VBox>
 
-                                                <Separator/>
                                                 <Separator/>
                                                 <VBox spacing="8.0">
                                                     <Label text="CV (PDF)" style="-fx-font-weight: bold;"/>
@@ -185,8 +182,7 @@
                                             <HBox spacing="25.0">
                                                 <VBox spacing="6.0" HBox.hgrow="ALWAYS">
                                                     <Label text="Email *" style="-fx-font-weight: bold;"/>
-                                                    <TextField fx:id="txtEmailAjout"
-                                                               promptText="email@entreprise.com"/>
+                                                    <TextField fx:id="txtEmailAjout" promptText="email@entreprise.com"/>
                                                 </VBox>
                                                 <VBox spacing="6.0" HBox.hgrow="ALWAYS">
                                                     <Label text="Téléphone *" style="-fx-font-weight: bold;"/>
@@ -196,8 +192,7 @@
                                             <HBox spacing="25.0">
                                                 <VBox spacing="6.0" HBox.hgrow="ALWAYS">
                                                     <Label text="Poste *" style="-fx-font-weight: bold;"/>
-                                                    <TextField fx:id="txtPosteAjout"
-                                                               promptText="Intitulé du poste"/>
+                                                    <TextField fx:id="txtPosteAjout" promptText="Intitulé du poste"/>
                                                 </VBox>
                                                 <VBox spacing="6.0" HBox.hgrow="ALWAYS">
                                                     <Label text="Rôle *" style="-fx-font-weight: bold;"/>
@@ -206,10 +201,8 @@
                                             </HBox>
                                             <HBox spacing="25.0">
                                                 <VBox spacing="6.0" HBox.hgrow="ALWAYS">
-                                                    <Label text="Date d'embauche"
-                                                           style="-fx-font-weight: bold;"/>
-                                                    <DatePicker fx:id="dateEmbaucheAjout" editable="false"
-                                                                maxWidth="Infinity"/>
+                                                    <Label text="Date d'embauche" style="-fx-font-weight: bold;"/>
+                                                    <DatePicker fx:id="dateEmbaucheAjout" editable="false" maxWidth="Infinity"/>
                                                 </VBox>
                                                 <VBox spacing="6.0" HBox.hgrow="ALWAYS">
                                                     <Label text="CV (PDF)" style="-fx-font-weight: bold;"/>

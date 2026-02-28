@@ -10,7 +10,7 @@ import javafx.scene.Parent;
 import javafx.scene.control.*;
 import javafx.scene.effect.GaussianBlur;
 import javafx.scene.layout.*;
-import service.OffreCRUD;
+import service.offres.OffreCRUD;
 
 import java.io.IOException;
 import java.sql.SQLException;

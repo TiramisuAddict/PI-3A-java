@@ -1,4 +1,4 @@
-package service;
+package service.offres;
 
 import entities.CategorieOffre;
 import entities.EtatOffre;
@@ -9,9 +9,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 import entities.TypeContrat;
+import service.InterfaceCRUD;
 import utils.MyDB;
 
-public class OffreCRUD implements InterfaceCRUD <Offre>{
+public class OffreCRUD implements InterfaceCRUD<Offre> {
 
     Connection conn;
 

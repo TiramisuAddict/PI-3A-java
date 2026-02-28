@@ -6,8 +6,8 @@ import javafx.scene.control.*;
 import javafx.scene.layout.*;
 
 import javafx.scene.shape.Circle;
-import service.CandidatCRUD;
-import service.OffreCRUD;
+import service.offres.CandidatCRUD;
+import service.offres.OffreCRUD;
 
 import java.sql.SQLException;
 

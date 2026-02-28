@@ -14,7 +14,7 @@ import javafx.scene.control.*;
 
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.*;
-import service.OffreCRUD;
+import service.offres.OffreCRUD;
 import utils.BadgeFactory;
 import utils.LayoutAnimator;
 

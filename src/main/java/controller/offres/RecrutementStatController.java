@@ -6,9 +6,8 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.scene.chart.*;
-import javafx.scene.control.Label;
-import service.CandidatCRUD;
-import service.OffreCRUD;
+import service.offres.CandidatCRUD;
+import service.offres.OffreCRUD;
 
 import java.sql.SQLException;
 import java.util.List;
