@@ -364,7 +364,7 @@ public class ProjetsController {
     }
 
     /**
-     * Handle logout - clear session and show login prompt again
+     * Handle logout - clear session and show  prompt again
      */
     private void handleLogout() {
         // Confirm logout
