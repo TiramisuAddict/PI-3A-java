@@ -1,4 +1,4 @@
-package entity;
+package entities;
 
 import java.sql.Date;
 
@@ -10,10 +10,11 @@ public class Offre {
     private Date dateLimite;
     private EtatOffre etat;
     private String description;
+    private CategorieOffre OffreCategorie;
 
     public Offre() {}
 
-    public Offre (Integer id, Integer idEmployer, String titrePoste, TypeContrat typeContrat, Date dateLimite, EtatOffre etat, String description) {
+    public Offre (Integer id, Integer idEmployer, String titrePoste, TypeContrat typeContrat, Date dateLimite, EtatOffre etat, String description, CategorieOffre OffreCategorie) {
         this.id = id;
         this.idEmployer = idEmployer;
         this.titrePoste = titrePoste;
@@ -21,15 +22,17 @@ public class Offre {
         this.dateLimite = dateLimite;
         this.etat = etat;
         this.description = description;
+        this.OffreCategorie = OffreCategorie;
     }
 
-    public Offre (Integer idEmployer, String titrePoste, TypeContrat typeContrat, Date dateLimite, EtatOffre etat, String description) {
+    public Offre (Integer idEmployer, String titrePoste, TypeContrat typeContrat, Date dateLimite, EtatOffre etat, String description, CategorieOffre OffreCategorie) {
         this.idEmployer = idEmployer;
         this.titrePoste = titrePoste;
         this.typeContrat = typeContrat;
         this.dateLimite = dateLimite;
         this.etat = etat;
         this.description = description;
+        this.OffreCategorie = OffreCategorie;
     }
 
     public Integer getId() {
@@ -58,6 +61,8 @@ public class Offre {
 
     public String getDescription() {return description;}
 
+    public CategorieOffre getOffreCategorie() {return OffreCategorie;}
+
     public void setId(Integer id) {
         this.id = id;
     }
@@ -84,6 +89,8 @@ public class Offre {
 
     public void setDescription(String description) {this.description = description;}
 
+    public void setOffreCategorie(CategorieOffre offreCategorie) {this.OffreCategorie = offreCategorie;}
+
     @Override
     public String toString() {
         return "Offre{" +
@@ -92,6 +99,7 @@ public class Offre {
                 ", typeContrat='" + typeContrat.getDisplayName() + '\'' +
                 ", dateLimite=" + dateLimite +
                 ", etat='" + etat.getDisplayName() + '\'' +
+                 ", OffreCategorie='" + OffreCategorie.getDisplayName() + '\'' +
                 '}';
     }
 }

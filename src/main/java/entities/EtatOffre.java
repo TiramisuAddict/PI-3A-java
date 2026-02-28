@@ -1,4 +1,4 @@
-package entity;
+package entities;
 
 public enum EtatOffre {
     OUVERT("Ouvert"),

@@ -1,20 +1,43 @@
 package controller.offres;
 
+import entities.employers.session;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
+import javafx.scene.Scene;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.Label;
 import javafx.scene.layout.StackPane;
+import javafx.stage.Stage;
+
 import java.io.IOException;
 
 public class MainFrontOfficeController {
 
     @FXML private StackPane contentArea;
-    @FXML private Button btnNavOffres, btnNavEntreprises, btnNavSuivi, btnNavContact;
+    @FXML private Button btnNavOffres, btnNavEntreprises, btnNavSuivi;
+    @FXML private Label lblUserInfo;
 
     @FXML
     public void initialize() {
+        // Display logged-in user's name
+        displayLoggedInUser();
+
         showOffres();
+    }
+
+    private void displayLoggedInUser() {
+        try {
+            // Get the current session visitor
+            entities.employers.visiteur visitor = session.getVisiteur();
+            if (visitor != null) {
+                String fullName = visitor.getPrenom() + " " + visitor.getNom();
+                lblUserInfo.setText("👤 " + fullName);
+            }
+        } catch (Exception e) {
+            lblUserInfo.setText("👤 Visiteur");
+        }
     }
 
     @FXML
@@ -25,8 +48,8 @@ public class MainFrontOfficeController {
 
     @FXML
     private void showEntreprises() {
-        //loadView("/view/front/entreprises_portal.fxml");
-        //updateActiveLink(btnNavEntreprises);
+        loadView("/offres/entreprises-portal.fxml");
+        updateActiveLink(btnNavEntreprises);
     }
 
     @FXML
@@ -36,14 +59,28 @@ public class MainFrontOfficeController {
     }
 
     @FXML
-    private void showContact() {
-        //loadView("/view/front/contact.fxml");
-        //updateActiveLink(btnNavContact);
-    }
+    private void handleDeonnexion() {
+        try {
+            session.logout();
 
-    @FXML
-    private void handleConnexion() {
-        System.out.println("Redirecting to Login...");
+            Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+            alert.setTitle("Déconnexion");
+            alert.setHeaderText(null);
+            alert.setContentText("Vous voulez déconnecter?");
+            alert.showAndWait();
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/emp/Login.fxml"));
+            Parent root = loader.load();
+            Stage loginStage = new Stage();
+            loginStage.setTitle("Connexion");
+            loginStage.setScene(new Scene(root));
+            loginStage.show();
+                // Fermer la fenêtre actuelle
+            Stage currentStage = (Stage) contentArea.getScene().getWindow();
+            currentStage.close();
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     private void loadView(String fxmlPath) {
@@ -61,7 +98,6 @@ public class MainFrontOfficeController {
         btnNavOffres.setStyle("-fx-text-fill: -color-fg-default; -fx-font-weight: normal;");
         btnNavEntreprises.setStyle("-fx-text-fill: -color-fg-default; -fx-font-weight: normal;");
         btnNavSuivi.setStyle("-fx-text-fill: -color-fg-default; -fx-font-weight: normal;");
-        btnNavContact.setStyle("-fx-text-fill: -color-fg-default; -fx-font-weight: normal;");
 
         // Highlight the active one
         activeBtn.setStyle("-fx-text-fill: -color-accent-fg; -fx-font-weight: bold; -fx-border-color: -color-accent-fg; -fx-border-width: 0 0 2 0;");

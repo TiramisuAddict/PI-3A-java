@@ -1,7 +1,9 @@
 package controller.offres;
 
-import entity.Candidat;
-import entity.Offre;
+import entities.Candidat;
+import entities.Offre;
+import entities.employers.session;
+import entities.employers.visiteur;
 import javafx.fxml.FXML;
 import javafx.scene.Node;
 import javafx.scene.control.*;
@@ -14,7 +16,6 @@ import utils.FilePickerUtil;
 import java.io.File;
 import java.nio.file.Files;
 import java.sql.SQLException;
-import java.util.regex.Pattern;
 
 public class CandidatureController {
 
@@ -24,7 +25,6 @@ public class CandidatureController {
     @FXML private WebView detailsWebView;
     private WebEngine descriptionEngine;
 
-    @FXML private TextField txtNom, txtPrenom, txtTel, txtEmail;
     @FXML private Button btnUploadCV, btnUploadLettre;
     @FXML private Label lblTrackingCode;
 
@@ -32,15 +32,15 @@ public class CandidatureController {
     private boolean cvUploaded = false;
     private boolean lettreUploaded = false;
     private int idOffreSelectionnee;
-    private Offre offreActuelle;
 
-    private static final Pattern EMAIL_REGEX = Pattern.compile("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
-    private static final Pattern NOM_REGEX = Pattern.compile("^[A-Za-zÀ-ÿ\\s'-]{2,}$");
+    private visiteur visiteurConnecte;
 
     @FXML
     public void initialize() {
         descriptionEngine = detailsWebView.getEngine();
         modifierVisibiliteVues(postulationFormView);
+
+        visiteurConnecte = session.getVisiteur();
     }
 
     private boolean isPostulationValide() {
@@ -49,30 +49,6 @@ public class CandidatureController {
         String errorStyle = "-fx-border-color: -color-danger-emphasis; -fx-border-width: 1; -fx-border-radius: 5;";
 
         resetStylesFormulaire();
-
-        // Validation Nom
-        if (txtNom.getText().trim().isEmpty() || !NOM_REGEX.matcher(txtNom.getText().trim()).matches()) {
-            txtNom.setStyle(errorStyle);
-            isValide = false;
-        }
-
-        // Validation Prénom
-        if (txtPrenom.getText().trim().isEmpty() || !NOM_REGEX.matcher(txtPrenom.getText().trim()).matches()) {
-            txtPrenom.setStyle(errorStyle);
-            isValide = false;
-        }
-
-        // Validation Email
-        if (txtEmail.getText().trim().isEmpty() || !EMAIL_REGEX.matcher(txtEmail.getText().trim()).matches()) {
-            txtEmail.setStyle(errorStyle);
-            isValide = false;
-        }
-
-        // Validation Téléphone (8 chiffres)
-        if (txtTel.getText().trim().length() != 8) {
-            txtTel.setStyle(errorStyle);
-            isValide = false;
-        }
 
         // Validation CV
         if (!cvUploaded) {
@@ -85,11 +61,6 @@ public class CandidatureController {
 
     private void resetStylesFormulaire() {
         String defaultBorder = "-fx-border-color: -color-border-default; -fx-border-width: 1; -fx-border-radius: 5;";
-
-        txtNom.setStyle(defaultBorder);
-        txtPrenom.setStyle(defaultBorder);
-        txtTel.setStyle(defaultBorder);
-        txtEmail.setStyle(defaultBorder);
 
         if (!cvUploaded) btnUploadCV.setStyle("");
         if (!lettreUploaded) btnUploadLettre.setStyle("");
@@ -105,11 +76,12 @@ public class CandidatureController {
             byte[] lettreBytes = (fileLettre != null) ? Files.readAllBytes(fileLettre.toPath()) : null;
 
             Candidat nouveauCandidat = new Candidat(
-                    trackingCode, txtNom.getText().trim(), txtPrenom.getText().trim(),
-                    txtEmail.getText().trim(), txtTel.getText().trim(), fileCV.getName(),
+                    trackingCode,
+                    fileCV.getName(),
                     cvBytes, (fileLettre != null ? fileLettre.getName() : ""),
                     lettreBytes, "En attente", "", new java.sql.Date(System.currentTimeMillis()),
-                    idOffreSelectionnee
+                    idOffreSelectionnee,
+                    visiteurConnecte.getId_visiteur()
             );
 
             new CandidatCRUD().ajouter(nouveauCandidat);
@@ -168,7 +140,7 @@ public class CandidatureController {
     public void setOfferId(int offerId) {
         this.idOffreSelectionnee = offerId;
         try {
-            this.offreActuelle = new OffreCRUD().getById(offerId);
+            Offre offreActuelle = new OffreCRUD().getById(offerId);
             if (offreActuelle != null) {
                 descriptionEngine.loadContent(offreActuelle.getDescription());
             }

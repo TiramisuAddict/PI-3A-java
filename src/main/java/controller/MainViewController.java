@@ -50,9 +50,14 @@ public class MainViewController {
     // Charger FXML dans StackPane
     private void loadView(String fxmlFileName) {
         try {
-            Parent view = FXMLLoader.load(getClass().getResource("/" + fxmlFileName + ".fxml"));
+            String resourcePath = fxmlFileName.startsWith("/") ? fxmlFileName : "/" + fxmlFileName;
+            if (!resourcePath.endsWith(".fxml")) {
+                resourcePath += ".fxml";
+            }
+            Parent view = FXMLLoader.load(getClass().getResource(resourcePath));
             contentArea.getChildren().setAll(view);
-        } catch (IOException e) {
+        } catch (IOException | NullPointerException e) {
+            System.err.println("Error loading view: " + fxmlFileName);
             e.printStackTrace();
         }
     }
@@ -86,7 +91,7 @@ public class MainViewController {
     }
 
     @FXML private void showEmployer(ActionEvent event) {
-        loadView("employers");
+        loadView("entities/employers");
         updateActiveButton(btnEmployer);
     }
 
@@ -96,7 +101,7 @@ public class MainViewController {
     }
 
     @FXML private void showOffres(ActionEvent event) {
-        loadView("recrutement");
+        loadView("offres/recrutement");
         updateActiveButton(btnOffre);
     }
 }

@@ -23,7 +23,8 @@ public class App extends Application {
             Application.setUserAgentStylesheet(new PrimerLight().getUserAgentStylesheet());
 
             //Parent root = FXMLLoader.load(getClass().getResource("/main-view.fxml"));
-            Parent root = FXMLLoader.load(getClass().getResource("/offres/main-front-office.fxml"));
+            //Parent root = FXMLLoader.load(getClass().getResource("/offres/main-front-office.fxml"));
+            Parent root = FXMLLoader.load(getClass().getResource("/emp/login.fxml"));
 
             Scene scene = new Scene(root);
 
@@ -35,11 +36,11 @@ public class App extends Application {
             stage.getIcons().add(appIcon);
 
             //Minimum size of the window
-            stage.setMinWidth(1160);
+            stage.setMinWidth(1200);
             stage.setMinHeight(750);
 
             //Default size of the window when launched
-            stage.setWidth(1160);
+            stage.setWidth(1200);
             stage.setHeight(750);
 
             stage.setTitle("Momentum");

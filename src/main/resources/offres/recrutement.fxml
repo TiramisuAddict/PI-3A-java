@@ -19,6 +19,10 @@
             <Tab text="Candidatures" onSelectionChanged="#refreshCandidatTab">
                 <fx:include source="candidat.fxml" fx:id="candidatTab"/>
             </Tab>
+
+            <Tab text="Statistiques">
+                <fx:include source="recrutementStat.fxml" fx:id="statisticsTab"/>
+            </Tab>
         </tabs>
     </TabPane>
 </AnchorPane>

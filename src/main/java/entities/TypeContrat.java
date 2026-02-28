@@ -1,4 +1,4 @@
-package entity;
+package entities;
 
 public enum TypeContrat {
     CDI("CDI"),

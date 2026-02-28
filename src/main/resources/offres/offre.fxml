@@ -67,9 +67,11 @@
         </FlowPane>
         <!-- SEARCH BAR -->
         <HBox alignment="CENTER_LEFT" spacing="10.0">
-            <TextField fx:id="txtSearch" onKeyReleased="#searchOffre" prefHeight="35.0" prefWidth="350.0" promptText="Rechercher par titre ou code..." />
+            <TextField fx:id="txtSearch" onKeyReleased="#searchOffre" prefHeight="35.0" prefWidth="330.0" promptText="Rechercher par titre ou code..." />
             <Region HBox.hgrow="ALWAYS" />
-            <ComboBox fx:id="filterTypeCB" onAction="#OffreFiltre" prefHeight="35.0" promptText="Tous" />
+            <ComboBox fx:id="filterTypeCB" onAction="#applyFilters" prefHeight="35.0" promptText="Tous" />
+            <ComboBox fx:id="filterEtatCB" onAction="#applyFilters" prefHeight="35.0" promptText="Tous" />
+            <ComboBox fx:id="filterCategorieCB" onAction="#applyFilters" prefHeight="35.0" promptText="Tous" />
         </HBox>
         <!-- SCROLLABLE LIST OF CARDS -->
         <ScrollPane fitToWidth="true" style="-fx-background-color: transparent; -fx-background: transparent;"
@@ -109,7 +111,10 @@
                 <Label text="État de l'offre" />
                 <ComboBox fx:id="comboEtat" maxWidth="Infinity" />
             </VBox>
-        </VBox>
+            <VBox spacing="5.0">
+                <Label text="categorie" />
+                <ComboBox fx:id="comboCategorie" maxWidth="Infinity" />
+            </VBox>
         <VBox spacing="10.0">
             <HBox spacing="15.0" HBox.hgrow="ALWAYS">
                 <Button fx:id="btnSave" maxWidth="Infinity" onAction="#addOffre" prefHeight="40.0" styleClass="accent" text="Ajouter" HBox.hgrow="ALWAYS" />
@@ -117,5 +122,6 @@
             </HBox>
             <Button fx:id="btnDelete" disable="true" maxWidth="Infinity" onAction="#deleteOffre" prefHeight="40.0" styleClass="danger, outline" text="Supprimer" />
         </VBox>
+    </VBox>
     </VBox>
 </HBox>

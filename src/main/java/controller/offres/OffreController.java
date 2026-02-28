@@ -1,8 +1,9 @@
 package controller.offres;
 
-import entity.EtatOffre;
-import entity.Offre;
-import entity.TypeContrat;
+import entities.CategorieOffre;
+import entities.EtatOffre;
+import entities.Offre;
+import entities.TypeContrat;
 import javafx.collections.FXCollections;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -35,6 +36,7 @@ public class OffreController {
     @FXML private DatePicker dpDate;
     @FXML private ComboBox<EtatOffre> comboEtat;
     @FXML private Button btnSave, btnUpdate, btnDelete,btnDetail;
+    @FXML private ComboBox<CategorieOffre> comboCategorie;
 
     //List container
     @FXML private VBox offersContainer;
@@ -54,6 +56,8 @@ public class OffreController {
 
     //Filter checkbox
     @FXML private ComboBox<String> filterTypeCB;
+    @FXML private ComboBox<String> filterEtatCB;
+    @FXML private ComboBox<String> filterCategorieCB;
 
     @FXML
     public void initialize() {
@@ -64,8 +68,15 @@ public class OffreController {
         //Fill form combo boxes
         comboType.setItems(FXCollections.observableArrayList(TypeContrat.values()));
         comboEtat.setItems(FXCollections.observableArrayList(EtatOffre.values()));
+        comboCategorie.setItems(FXCollections.observableArrayList(CategorieOffre.values()));
 
         filterTypeCB.setItems(FXCollections.observableArrayList("Tous", "CDI", "CDD", "CVP", "Stage"));
+        filterEtatCB.setItems(FXCollections.observableArrayList("Tous", "Ouvert", "Fermé"));
+        filterCategorieCB.setItems(FXCollections.observableArrayList("Tous", "Informatique", "Marketing", "Vente", "Finance", "Ressources Humaines", "Santé", "Education", "Art et Design", "Autre"));
+
+        filterTypeCB.setValue("Tous");
+        filterEtatCB.setValue("Tous");
+        filterCategorieCB.setValue("Tous");
 
         loadOffersList();
     }
@@ -93,6 +104,7 @@ public class OffreController {
 
     private void addOfferCard(Offre o) {
         HBox card = new HBox();
+        card.setUserData(o);
         card.setSpacing(20);
         card.setAlignment(Pos.CENTER_LEFT);
         card.getStyleClass().add("glass-card");
@@ -165,6 +177,16 @@ public class OffreController {
             return false;
         }
 
+        if (comboCategorie.getValue() == null) {
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle("Erreur de validation");
+            alert.setHeaderText(null);
+            alert.setContentText("Veuillez sélectionner une catégorie pour l'offre.");
+            alert.showAndWait();
+
+            return false;
+        }
+
         return true;
     } //BASIC VALIDATION
 
@@ -184,6 +206,7 @@ public class OffreController {
                 txtTitre.setDisable(false);
                 comboType.setDisable(false);
                 comboEtat.setDisable(false);
+                comboCategorie.setDisable(false);
                 dpDate.setDisable(false);
 
                 btnDetail.setDisable(false);
@@ -199,6 +222,7 @@ public class OffreController {
                 txtTitre.setText(single.getTitrePoste());
                 comboType.setValue(single.getTypeContrat());
                 comboEtat.setValue(single.getEtat());
+                comboCategorie.setValue(single.getOffreCategorie());
                 dpDate.setValue(LocalDate.parse(single.getDateLimite().toString()));
                 currentDescription = single.getDescription();
             }
@@ -207,6 +231,7 @@ public class OffreController {
                 txtTitre.setDisable(true);
                 comboType.setDisable(true);
                 comboEtat.setDisable(true);
+                comboCategorie.setDisable(true);
                 dpDate.setDisable(true);
 
                 btnDetail.setDisable(true);
@@ -226,11 +251,13 @@ public class OffreController {
         dpDate.setValue(null);
         comboType.getSelectionModel().clearSelection();
         comboEtat.getSelectionModel().clearSelection();
+        comboCategorie.getSelectionModel().clearSelection();
         currentDescription = "";
 
         txtTitre.setDisable(false);
         comboType.setDisable(false);
         comboEtat.setDisable(false);
+        comboCategorie.setDisable(false);
         dpDate.setDisable(false);
 
         btnDetail.setDisable(false);
@@ -262,7 +289,8 @@ public class OffreController {
                     comboType.getValue(),
                     java.sql.Date.valueOf(dpDate.getValue()),
                     comboEtat.getValue(),
-                    currentDescription);
+                    currentDescription,
+                    comboCategorie.getValue());
             try {
                 crud.ajouter(o);
 
@@ -284,6 +312,7 @@ public class OffreController {
             o.setDateLimite(java.sql.Date.valueOf(dpDate.getValue()));
             o.setEtat(comboEtat.getValue());
             o.setDescription(currentDescription);
+            o.setOffreCategorie(comboCategorie.getValue());
 
             try {
                 crud.modifier(o);
@@ -292,6 +321,8 @@ public class OffreController {
                 updateButtonStates();
                 clearForm(null);
                 loadOffersList();
+                resetFiltersToDefault();
+                applyFilters();
             } catch (SQLException e) {
                 System.out.println("Erreur lors de la modification: " + e.getMessage());
             }
@@ -358,29 +389,39 @@ public class OffreController {
     //Search
     @FXML
     public void searchOffre(KeyEvent keyEvent) {
-        String query = txtSearch.getText().toLowerCase();
+        applyFilters();
+    }
+
+    @FXML private void applyFilters() {
+        String query = txtSearch.getText() == null ? "" : txtSearch.getText().toLowerCase().trim();
+        String selectedType = filterTypeCB.getValue() == null ? "Tous" : filterTypeCB.getValue();
+        String selectedEtat = filterEtatCB.getValue() == null ? "Tous" : filterEtatCB.getValue();
+        String selectedCategorie = filterCategorieCB.getValue() == null ? "Tous" : filterCategorieCB.getValue();
 
         offersContainer.getChildren().forEach(node -> {
             if (node instanceof HBox card) {
-                Label titleLabel = (Label) ((VBox) card.getChildren().get(2)).getChildren().getFirst();
-                boolean matches = titleLabel.getText().toLowerCase().contains(query);
+                Offre o = card.getUserData() instanceof Offre ? (Offre) card.getUserData() : null;
+
+                String title = o != null ? o.getTitrePoste() : "";
+                String type = o != null && o.getTypeContrat() != null ? o.getTypeContrat().getDisplayName() : "";
+                String etat = o != null && o.getEtat() != null ? o.getEtat().getDisplayName() : "";
+                String categorie = o != null && o.getOffreCategorie() != null ? o.getOffreCategorie().getDisplayName() : "";
+
+                boolean matchesSearch = query.isEmpty() || title.toLowerCase().contains(query);
+                boolean matchesType = "Tous".equals(selectedType) || type.equalsIgnoreCase(selectedType);
+                boolean matchesEtat = "Tous".equals(selectedEtat) || etat.equalsIgnoreCase(selectedEtat);
+                boolean matchesCategorie = "Tous".equals(selectedCategorie) || categorie.equalsIgnoreCase(selectedCategorie);
+
+                boolean matches = matchesSearch && matchesType && matchesEtat && matchesCategorie;
                 card.setVisible(matches);
                 card.setManaged(matches);
             }
         });
     }
 
-    //Filter by type
-    public void OffreFiltre(ActionEvent actionEvent) {
-        String selectedType = filterTypeCB.getValue();
-
-        offersContainer.getChildren().forEach(node -> {
-            if (node instanceof HBox card) {
-                Label subLabel = (Label) ((VBox) card.getChildren().get(2)).getChildren().get(1);
-                boolean matches = selectedType.equals("Tous") || subLabel.getText().toLowerCase().contains(selectedType.toLowerCase());
-                card.setVisible(matches);
-                card.setManaged(matches);
-            }
-        });
+    private void resetFiltersToDefault() {
+        filterTypeCB.setValue("Tous");
+        filterEtatCB.setValue("Tous");
+        filterCategorieCB.setValue("Tous");
     }
 }

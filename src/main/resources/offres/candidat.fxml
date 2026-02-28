@@ -7,14 +7,14 @@
 <?import javafx.scene.control.TableColumn?>
 <?import javafx.scene.control.TableView?>
 <?import javafx.scene.control.TextArea?>
-<?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.FlowPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.VBox?>
 
+<?import javafx.scene.control.TextField?>
 <HBox xmlns="http://javafx.com/javafx/21"
-        xmlns:fx="http://javafx.com/fxml/1" fx:controller="controller.offres.CandidatController">
+      xmlns:fx="http://javafx.com/fxml/1" fx:controller="controller.offres.CandidatController">
     <!-- LEFT: LIST AND FILTERS -->
     <VBox spacing="20.0" HBox.hgrow="ALWAYS">
         <padding>
@@ -28,9 +28,22 @@
                 <ComboBox fx:id="comboFilterOffre" onAction="#loadCandidatData" prefHeight="35.0"
                           prefWidth="350.0" promptText="Choisir une offre..." styleClass="rounded"/>
                 <Region HBox.hgrow="ALWAYS"/>
-<!--                <TextField fx:id="txtSearchCandidat" prefHeight="35.0" prefWidth="200.0"-->
-<!--                           promptText="Rechercher..."/>-->
+
+                <!-- number of preselected candidats in -->
+                <TextField fx:id="txtNbrPreselection" promptText="20" prefWidth="50" minWidth="50"/>
+
+                <!-- In the TOP VBox of the Candidature tab, next to the Search bar -->
+                <HBox spacing="10" alignment="CENTER_RIGHT">
+                    <Button fx:id="btnRunAI" onAction="#handleAIPreslection"
+                            styleClass="accent" text="⚡ Lancer l'IA Matching" minWidth="160">
+                        <graphic>
+                            <!-- Add a small icon if you want -->
+                        </graphic>
+                    </Button>
+                </HBox>
+
             </HBox>
+
         </VBox>
         <FlowPane fx:id="StatisticsPane" prefHeight="100.0" prefWidth="608.0">
             <VBox prefWidth="180.0"
@@ -89,6 +102,7 @@
                 <!-- Combiner Prénom + Nom -->
                 <TableColumn fx:id="colIdentite" prefWidth="200.0" text="Candidat"/>
                 <TableColumn fx:id="colEmail" prefWidth="180.0" text="Email"/>
+                <TableColumn fx:id="colScore" text="Score" prefWidth="100.0"/>
                 <TableColumn fx:id="colEtat" prefWidth="150.0" text="Phase Actuelle"/>
                 <TableColumn fx:id="colDate" prefWidth="150.0" text="Date de Candidature"/>
             </columns>
@@ -125,6 +139,14 @@
             <TextArea fx:id="txtNotes" prefHeight="200" promptText="Notes..." wrapText="true"
                       VBox.vgrow="ALWAYS"/>
         </VBox>
+
+        <Separator />
+        <Label text="Actions de Recrutement" style="-fx-font-weight: bold;"/>
+
+        <!-- Button to trigger Meet -->
+        <Button fx:id="btnScheduleMeet" onAction="#handleScheduleInterview"
+                maxWidth="Infinity" styleClass="accent" text="📅 Planifier Meet" />
+
         <Button defaultButton="true" maxWidth="Infinity" mnemonicParsing="false" text="Save"
                 onAction="#updateCandidatStatus"/>
     </VBox>

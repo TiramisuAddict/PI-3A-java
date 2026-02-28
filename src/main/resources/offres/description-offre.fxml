@@ -10,7 +10,7 @@
     <children>
         <Label style="-fx-font-weight: bold; -fx-font-size: 18;" text="Description de l'offre" />
 
-        <HTMLEditor fx:id="htmlEditor" prefHeight="450.0" prefWidth="750.0" />
+        <HTMLEditor fx:id="htmlEditor" prefHeight="450.0" prefWidth="750.0" VBox.vgrow="ALWAYS" maxHeight="Infinity" />
 
         <Button maxWidth="Infinity" onAction="#handleSave" prefHeight="40.0" styleClass="accent" text="Enregistrer et Fermer" />
     </children>

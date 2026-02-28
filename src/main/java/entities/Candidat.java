@@ -1,4 +1,4 @@
-package entity;
+package entities;
 
 import java.sql.Date;
 import java.util.Arrays;
@@ -6,10 +6,6 @@ import java.util.Arrays;
 public class Candidat {
     private int id;
     private String codeCandidature;
-    private String nom;
-    private String prenom;
-    private String email;
-    private String numTel;
     private String cvNom;
     private byte[] cvData;
     private String lettreMotivationNom;
@@ -18,15 +14,19 @@ public class Candidat {
     private String note;
     private Date dateCandidature;
     private int idOffre;
+    private double score = 0.0;
+
+    private int idVisiteur;
+
+    private String visiteurNom;
+    private String visiteurPrenom;
+    private String visiteurEmail;
+    private int visiteurTelephone;
 
     public Candidat() {}
 
-    public Candidat (String codeCandidature, String nom, String prenom, String email, String numTel, String cvNom, byte[] cvData, String lettreMotivationNom, byte[] lettreMotivationData, String etat, String note, Date dateCandidature, int idOffre) {
+    public Candidat (String codeCandidature, String cvNom, byte[] cvData, String lettreMotivationNom, byte[] lettreMotivationData, String etat, String note, Date dateCandidature, int idOffre, int idVisiteur) {
         this.codeCandidature = codeCandidature;
-        this.nom = nom;
-        this.prenom = prenom;
-        this.email = email;
-        this.numTel = numTel;
         this.cvNom = cvNom;
         this.cvData = cvData;
         this.lettreMotivationNom = lettreMotivationNom;
@@ -35,18 +35,18 @@ public class Candidat {
         this.note = note;
         this.dateCandidature = dateCandidature;
         this.idOffre = idOffre;
+
+        this.idVisiteur = idVisiteur;
     }
 
-    public Candidat (String codeCandidature, String nom, String prenom, String email, String numTel, String etat, String note, Date dateCandidature, int idOffre) {
+    public Candidat (String codeCandidature,String etat, String note, Date dateCandidature, int idOffre, int idVisiteur) {
         this.codeCandidature = codeCandidature;
-        this.nom = nom;
-        this.prenom = prenom;
-        this.email = email;
-        this.numTel = numTel;
         this.etat = etat;
         this.note = note;
         this.dateCandidature = dateCandidature;
         this.idOffre = idOffre;
+
+        this.idVisiteur = idVisiteur;
     }
 
     public int getId() {
@@ -55,22 +55,6 @@ public class Candidat {
 
     public String getCodeCandidature() {
         return codeCandidature;
-    }
-
-    public String getNom() {
-        return nom;
-    }
-
-    public String getPrenom() {
-        return prenom;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public String getNumTel() {
-        return numTel;
     }
 
     public String getCvNom() {
@@ -105,28 +89,36 @@ public class Candidat {
         return idOffre;
     }
 
+    public double getScore() {
+        return score;
+    }
+
+    public int getIdVisiteur() {return idVisiteur;}
+
+    public String getVisiteurNom() { return visiteurNom; }
+
+    public String getVisiteurPrenom() {
+        return visiteurPrenom;
+    }
+
+    public String getVisiteurEmail() {
+        return visiteurEmail;
+    }
+
+    public int getVisiteurTelephone() {
+        return visiteurTelephone;
+    }
+
+    public void setScore(double score) {
+        this.score = score;
+    }
+
     public void setId(int id) {
         this.id = id;
     }
 
     public void setCodeCandidature(String codeCandidature) {
         this.codeCandidature = codeCandidature;
-    }
-
-    public void setNom(String nom) {
-        this.nom = nom;
-    }
-
-    public void setPrenom(String prenom) {
-        this.prenom = prenom;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public void setNumTel(String numTel) {
-        this.numTel = numTel;
     }
 
     public void setCvNom(String cvNom) {
@@ -161,15 +153,29 @@ public class Candidat {
         this.idOffre = idOffre;
     }
 
+    public void setIdVisiteur(int idVisiteur) {this.idVisiteur = idVisiteur;}
+
+    public void setVisiteurNom(String visiteurNom) {
+        this.visiteurNom = visiteurNom;
+    }
+
+    public void setVisiteurPrenom(String visiteurPrenom) {
+        this.visiteurPrenom = visiteurPrenom;
+    }
+
+    public void setVisiteurEmail(String visiteurEmail) {
+        this.visiteurEmail = visiteurEmail;
+    }
+
+    public void setVisiteurTelephone(int visiteurTelephone) {
+        this.visiteurTelephone = visiteurTelephone;
+    }
+
     @Override
     public String toString() {
         return "Candidat{" +
                 "id=" + id +
                 ", codeCandidature='" + codeCandidature + '\'' +
-                ", nom='" + nom + '\'' +
-                ", prenom='" + prenom + '\'' +
-                ", email='" + email + '\'' +
-                ", numTel='" + numTel + '\'' +
                 ", cvNom='" + cvNom + '\'' +
                 ", cvData=" + Arrays.toString(cvData) +
                 ", lettreMotivationNom='" + lettreMotivationNom + '\'' +
@@ -178,6 +184,7 @@ public class Candidat {
                 ", note='" + note + '\'' +
                 ", dateCandidature=" + dateCandidature +
                 ", idOffre=" + idOffre +
+                ", score=" + score +
                 '}';
     }
 }

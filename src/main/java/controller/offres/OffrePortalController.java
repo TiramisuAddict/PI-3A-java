@@ -1,6 +1,7 @@
 package controller.offres;
 
-import entity.Offre;
+import entities.Offre;
+import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
@@ -26,13 +27,23 @@ public class OffrePortalController {
 
     private List<Offre> offresListCached = new ArrayList<>();
 
+    @FXML ComboBox<String> comboFilterCategorie, comboFilterTypeContrat;
+
     @FXML
     public void initialize() {
         loadDataFromDatabase();
 
-        txtSearch.textProperty().addListener((observable, oldValue, newValue) -> {
-            handleSearch();
-        });
+        comboFilterTypeContrat.setItems(FXCollections.observableArrayList("Tous", "CDI", "CDD", "CVP", "Stage"));
+        comboFilterCategorie.setItems(FXCollections.observableArrayList("Tous", "Informatique", "Marketing", "Vente", "Finance", "Ressources Humaines", "Santé", "Education", "Art et Design", "Autre"));
+
+        // Set default values
+        comboFilterTypeContrat.setValue("Tous");
+        comboFilterCategorie.setValue("Tous");
+
+        // Attach listeners to all filter controls to trigger applyFilters
+        txtSearch.textProperty().addListener((observable, oldValue, newValue) -> applyFilters());
+        comboFilterTypeContrat.valueProperty().addListener((observable, oldValue, newValue) -> applyFilters());
+        comboFilterCategorie.valueProperty().addListener((observable, oldValue, newValue) -> applyFilters());
     }
 
     private void loadDataFromDatabase() {
@@ -45,15 +56,31 @@ public class OffrePortalController {
     }
 
     @FXML
-    private void handleSearch() {
-        String query = txtSearch.getText().toLowerCase().trim();
+    private void applyFilters() {
+        String query = txtSearch.getText() == null ? "" : txtSearch.getText().toLowerCase().trim();
+        String selectedType = comboFilterTypeContrat.getValue() == null ? "Tous" : comboFilterTypeContrat.getValue();
+        String selectedCategorie = comboFilterCategorie.getValue() == null ? "Tous" : comboFilterCategorie.getValue();
 
         List<Offre> filteredList = offresListCached.stream()
-                .filter(o -> o.getTitrePoste().toLowerCase().contains(query) ||
-                        o.getTypeContrat().getDisplayName().toLowerCase().contains(query))
+                .filter(o -> {
+                    String title = o.getTitrePoste().toLowerCase();
+                    String type = o.getTypeContrat().getDisplayName();
+                    String categorie = o.getOffreCategorie().getDisplayName();
+
+                    boolean matchesSearch = query.isEmpty() || title.contains(query);
+                    boolean matchesType = "Tous".equals(selectedType) || type.equalsIgnoreCase(selectedType);
+                    boolean matchesCategorie = "Tous".equals(selectedCategorie) || categorie.equalsIgnoreCase(selectedCategorie);
+
+                    return matchesSearch && matchesType && matchesCategorie;
+                })
                 .toList();
 
         renderOffersGrid(filteredList);
+    }
+
+    @FXML
+    private void filterOffers() {
+        applyFilters();
     }
 
     private void renderOffersGrid(List<Offre> list) {
@@ -99,7 +126,7 @@ public class OffrePortalController {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/offres/candidature.fxml"));
             Parent candidatureOverlay = loader.load();
 
-            // 1. Injection des données dans le controller de destination
+            // Injection des données dans le controller de destination
             CandidatureController controller = loader.getController();
             controller.setOfferId(o.getId());
 
@@ -107,7 +134,7 @@ public class OffrePortalController {
 
             if (contentArea != null) {
                 if (!contentArea.getChildren().isEmpty()) {
-                    Node portalViewNode = contentArea.getChildren().get(0);
+                    Node portalViewNode = contentArea.getChildren().getFirst();
                     portalViewNode.setEffect(new GaussianBlur(40));
                     portalViewNode.setOpacity(0.7);
                 }
@@ -119,4 +146,5 @@ public class OffrePortalController {
             System.err.println("Impossible d'ouvrir la postulation: " + ex.getMessage());
         }
     }
+
 }

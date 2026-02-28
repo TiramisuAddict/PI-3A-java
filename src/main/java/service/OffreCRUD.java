@@ -1,13 +1,14 @@
 package service;
 
-import entity.EtatOffre;
-import entity.Offre;
+import entities.CategorieOffre;
+import entities.EtatOffre;
+import entities.Offre;
 
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-import entity.TypeContrat;
+import entities.TypeContrat;
 import utils.MyDB;
 
 public class OffreCRUD implements InterfaceCRUD <Offre>{
@@ -18,8 +19,8 @@ public class OffreCRUD implements InterfaceCRUD <Offre>{
 
     @Override
     public void ajouter(Offre o) throws SQLException {
-        String req = "INSERT INTO offre (id_employer, titre_poste, type_contrat, date_limite, etat, description) " +
-                "VALUES (?, ?, ?, ?, ?, ?)";
+        String req = "INSERT INTO offre (id_employer, titre_poste, type_contrat, date_limite, etat, description, categorie) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?)";
 
         PreparedStatement ps = conn.prepareStatement(req);
 
@@ -29,6 +30,7 @@ public class OffreCRUD implements InterfaceCRUD <Offre>{
         ps.setDate(4, o.getDateLimite());
         ps.setString(5, o.getEtat().getDisplayName());
         ps.setString(6, o.getDescription());
+        ps.setString(7, o.getOffreCategorie().getDisplayName());
 
         ps.executeUpdate();
         System.out.println("Offre ajoutée !");
@@ -36,7 +38,7 @@ public class OffreCRUD implements InterfaceCRUD <Offre>{
 
     @Override
     public void modifier(Offre o) throws SQLException {
-        String req="UPDATE offre SET titre_poste=?,type_contrat=?,date_limite=?,etat=?,description=? WHERE id=?";
+        String req="UPDATE offre SET titre_poste=?,type_contrat=?,date_limite=?,etat=?,description=?,categorie=? WHERE id=?";
 
         PreparedStatement ps = conn.prepareStatement(req);
 
@@ -45,8 +47,9 @@ public class OffreCRUD implements InterfaceCRUD <Offre>{
         ps.setDate(3, o.getDateLimite());
         ps.setString(4, o.getEtat().getDisplayName());
         ps.setString(5, o.getDescription());
+        ps.setString(6, o.getOffreCategorie().getDisplayName());
 
-        ps.setInt(6, o.getId());
+        ps.setInt(7, o.getId());
 
         ps.executeUpdate();
         System.out.println("Offre modifiée");
@@ -83,6 +86,7 @@ public class OffreCRUD implements InterfaceCRUD <Offre>{
             o.setDateLimite(rs.getDate("date_limite"));
             o.setEtat(EtatOffre.fromDisplayName(rs.getString("etat")));
             o.setDescription(rs.getString("description"));
+            o.setOffreCategorie(CategorieOffre.fromDisplayName(rs.getString("categorie")));
 
             listeOffres.add(o);
         }
@@ -108,6 +112,7 @@ public class OffreCRUD implements InterfaceCRUD <Offre>{
                 o.setDateLimite(rs.getDate("date_limite"));
                 o.setEtat(EtatOffre.fromDisplayName(rs.getString("etat")));
                 o.setDescription(rs.getString("description"));
+                o.setOffreCategorie(CategorieOffre.fromDisplayName(rs.getString("categorie")));
 
                 return o;
             }

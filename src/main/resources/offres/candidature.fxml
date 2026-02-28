@@ -3,7 +3,6 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
-<?import javafx.scene.control.TextField?>
 <?import javafx.scene.effect.DropShadow?>
 <?import javafx.scene.image.Image?>
 <?import javafx.scene.image.ImageView?>
@@ -52,10 +51,6 @@
                <!-- FORMULAIRE VIEW -->
                <VBox fx:id="postulationFormView" managed="false" spacing="20.0" visible="false">
                   <GridPane hgap="15.0" vgap="15.0">
-                     <TextField fx:id="txtNom" prefHeight="45.0" promptText="Nom *" GridPane.columnIndex="0" />
-                     <TextField fx:id="txtPrenom" prefHeight="45.0" promptText="Prénom *" GridPane.columnIndex="1" />
-                     <TextField fx:id="txtTel" prefHeight="45.0" promptText="Num Tél *" GridPane.rowIndex="1" />
-                     <TextField fx:id="txtEmail" prefHeight="45.0" promptText="Email *" GridPane.columnIndex="1" GridPane.rowIndex="1" />
                      <columnConstraints><ColumnConstraints hgrow="ALWAYS" /><ColumnConstraints hgrow="ALWAYS" /></columnConstraints>
                      <rowConstraints><RowConstraints /><RowConstraints /></rowConstraints>
                   </GridPane>

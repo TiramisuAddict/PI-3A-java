@@ -1,6 +1,6 @@
 package controller.offres;
 
-import entity.Candidat;
+import entities.Candidat;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
@@ -49,7 +49,7 @@ public class SuiviCandidatureController {
     private void displayStatus(Candidat c) {
         resultContainer.setVisible(true);
         try {
-            entity.Offre offre = offreCRUD.getById(c.getIdOffre());
+            entities.Offre offre = offreCRUD.getById(c.getIdOffre());
             if (offre != null) {
                 lblPoste.setText("Candidature pour le poste: " + offre.getTitrePoste());
             } else {
