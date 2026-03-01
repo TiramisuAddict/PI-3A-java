@@ -2,43 +2,31 @@ package controller.employers.admin_sys;
 
 import entities.employers.entreprise;
 import entities.employers.statut;
-import javafx.animation.ScaleTransition;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
-import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
-import javafx.scene.shape.Rectangle;
-import javafx.util.Duration;
 import service.employers.entrepriseCRUD;
+import utils.employers.UI;
 
-import java.io.File;
 import java.net.URL;
 import java.sql.SQLException;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.Optional;
 import java.util.ResourceBundle;
 import java.util.stream.Collectors;
 
 public class demandes_entreprise implements Initializable {
 
     @FXML private VBox demandesContainer;
-    @FXML private Label lblTotal;
-    @FXML private Label lblEnAttente;
-    @FXML private Label lblAcceptees;
-    @FXML private Label lblRefusees;
+    @FXML private Label lblTotal, lblEnAttente, lblAcceptees, lblRefusees;
     @FXML private TextField searchField;
     @FXML private ComboBox<String> filterStatut;
 
     private entrepriseCRUD entrepriseCRUD;
     private List<entreprise> entreprises;
-
-    private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("dd MMM yyyy");
 
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
@@ -47,7 +35,7 @@ public class demandes_entreprise implements Initializable {
             setupFilters();
             chargerDemandes();
         } catch (SQLException e) {
-            afficherErreur("Erreur de connexion", e.getMessage());
+            UI.afficherErreur("Erreur de connexion", e.getMessage());
         }
     }
 
@@ -55,7 +43,6 @@ public class demandes_entreprise implements Initializable {
         filterStatut.setItems(FXCollections.observableArrayList("Toutes", "En attente", "Acceptées", "Refusées"));
         filterStatut.setValue("Toutes");
         filterStatut.setOnAction(e -> appliquerFiltres());
-
         searchField.textProperty().addListener((obs, oldVal, newVal) -> appliquerFiltres());
     }
 
@@ -65,7 +52,7 @@ public class demandes_entreprise implements Initializable {
             mettreAJourStats(entreprises);
             appliquerFiltres();
         } catch (SQLException e) {
-            afficherErreur("Erreur de chargement", e.getMessage());
+            UI.afficherErreur("Erreur de chargement", e.getMessage());
         }
     }
 
@@ -73,13 +60,18 @@ public class demandes_entreprise implements Initializable {
         if (entreprises == null) return;
         String recherche = searchField.getText() != null ? searchField.getText().trim().toLowerCase() : "";
         String filtreStatut = filterStatut.getValue();
-        List<entreprise> filterTree = entreprises.stream().filter(e -> filtrerParStatut(e, filtreStatut)).filter(e -> filtrerParRecherche(e, recherche)).sorted((e1, e2) -> {
+
+        List<entreprise> filtrees = entreprises.stream()
+                .filter(e -> filtrerParStatut(e, filtreStatut))
+                .filter(e -> filtrerParRecherche(e, recherche))
+                .sorted((e1, e2) -> {
                     if (e1.getStatut() == statut.enattende && e2.getStatut() != statut.enattende) return -1;
                     if (e1.getStatut() != statut.enattende && e2.getStatut() == statut.enattende) return 1;
                     return 0;
-                }).collect(Collectors.toList());
+                })
+                .collect(Collectors.toList());
 
-        afficherEntreprises(filterTree);
+        afficherEntreprises(filtrees);
     }
 
     private boolean filtrerParStatut(entreprise e, String filtre) {
@@ -94,128 +86,85 @@ public class demandes_entreprise implements Initializable {
 
     private boolean filtrerParRecherche(entreprise e, String recherche) {
         if (recherche.isEmpty()) return true;
-        return e.getNom_entreprise().toLowerCase().contains(recherche) || (e.getPrenom() + " " + e.getNom()).toLowerCase().contains(recherche);
+        return e.getNom_entreprise().toLowerCase().contains(recherche)
+                || (e.getPrenom() + " " + e.getNom()).toLowerCase().contains(recherche);
     }
 
     private void afficherEntreprises(List<entreprise> entreprises) {
         demandesContainer.getChildren().clear();
         if (entreprises.isEmpty()) {
-            demandesContainer.getChildren().add(creerMessageVide());
+            demandesContainer.getChildren().add(
+                    UI.creerMessageVide(null, "Aucune demande trouvée", "Attendez de nouvelles inscriptions"));
             return;
         }
-
         for (entreprise ent : entreprises) {
             demandesContainer.getChildren().add(creerCarte(ent));
         }
     }
+
     private VBox creerCarte(entreprise ent) {
         VBox card = new VBox();
         card.getStyleClass().add("card");
-        card.setStyle(" -fx-background-color: -color-bg-subtle; -fx-background-radius: 5; -fx-border-color: -color-border-muted; -fx-border-radius: 5;");
+        UI.appliquerStyleCarte(card, false);
+
         HBox row = creerLigneEntreprise(ent, card);
         card.getChildren().add(row);
         return card;
     }
 
-    private HBox creerLigneEntreprise(entreprise entreprise, VBox parentCard) {
-        StackPane miniLogo = creerLogoOuSigle(entreprise, 36, 10, 13);
+    private HBox creerLigneEntreprise(entreprise ent, VBox parentCard) {
         HBox row = new HBox(10);
         row.setAlignment(Pos.CENTER_LEFT);
         row.setPadding(new Insets(15, 25, 15, 25));
         row.setStyle("-fx-cursor: hand;");
-        row.setOnMouseEntered(e -> parentCard.setStyle(" -fx-background-color: -color-bg-default;-fx-background-radius: 5; -fx-border-color: -color-accent-muted; -fx-border-radius: 5;"));
-        row.setOnMouseExited(e -> parentCard.setStyle("-fx-background-color: -color-bg-subtle;-fx-background-radius: 5;-fx-border-color: -color-border-muted;-fx-border-radius: 5;"));
-        row.setOnMouseClicked(e -> toggleDetails(parentCard, entreprise));
-        Label nomLabel = creerLabel(entreprise.getNom_entreprise(), 220, true);
-        Label dateLabel = creerLabel(formatDate(entreprise), 130, false);
-        Label emailLabel = creerLabel(entreprise.getE_mail(), 200, false);
-        HBox statutBox = new HBox(creerBadgeStatut(entreprise.getStatut()));
+
+        row.setOnMouseEntered(e -> UI.appliquerStyleCarteHover(parentCard, true));
+        row.setOnMouseExited(e -> UI.appliquerStyleCarte(parentCard, false));
+        row.setOnMouseClicked(e -> toggleDetails(parentCard, ent));
+
+        StackPane miniLogo = UI.creerLogoEntreprise(ent, 36, 10, 13);
+        Label nomLabel = UI.creerLabel(ent.getNom_entreprise(), 220, true);
+        Label dateLabel = UI.creerLabel(UI.formatDate(ent.getDate_demande()), 130, false);
+        Label emailLabel = UI.creerLabel(ent.getE_mail(), 200, false);
+
+        HBox statutBox = new HBox(UI.creerBadgeStatut(ent.getStatut()));
         statutBox.setPrefWidth(130);
         statutBox.setAlignment(Pos.CENTER_LEFT);
+
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
-        HBox buttonsBox = creerBoutonsAction(entreprise);
+
+        HBox buttonsBox = creerBoutonsAction(ent);
+
         row.getChildren().addAll(miniLogo, nomLabel, dateLabel, emailLabel, statutBox, spacer, buttonsBox);
         return row;
     }
 
-    private Label creerLabel(String text, double prefWidth, boolean bold) {
-        Label label = new Label(text);
-        label.setPrefWidth(prefWidth);
-        label.setStyle(bold ? "-fx-font-size: 14px; -fx-font-weight: bold;" : "-fx-font-size: 13px;");
-        return label;
-    }
-
-    private String formatDate(entreprise ent) {
-        return ent.getDate_demande() != null ? ent.getDate_demande().format(DATE_FORMAT) : "N/A";
-    }
-
-    private HBox creerBoutonsAction(entreprise entreprise) {
+    private HBox creerBoutonsAction(entreprise ent) {
         HBox buttonsBox = new HBox(10);
         buttonsBox.setAlignment(Pos.CENTER_RIGHT);
         buttonsBox.setPrefWidth(250);
 
-        Button btnAccepter = creerBouton("Accepter", "success");
-        Button btnRefuser = creerBouton("Refuser", "danger");
+        Button btnAccepter = UI.creerBouton("Accepter", "success");
+        Button btnRefuser = UI.creerBouton("Refuser", "danger");
 
         btnAccepter.setOnMouseClicked(e -> e.consume());
         btnRefuser.setOnMouseClicked(e -> e.consume());
 
-        btnAccepter.setOnAction(e -> confirmerAcceptation(entreprise));
-        btnRefuser.setOnAction(e -> confirmerRefus(entreprise));
+        btnAccepter.setOnAction(e -> confirmerAcceptation(ent));
+        btnRefuser.setOnAction(e -> confirmerRefus(ent));
 
-        if (entreprise.getStatut() != statut.enattende) {
-            desactiverBoutons(btnAccepter, btnRefuser);
+        if (ent.getStatut() != statut.enattende) {
+            UI.desactiverBoutons(btnAccepter, btnRefuser);
         }
 
         buttonsBox.getChildren().addAll(btnAccepter, btnRefuser);
         return buttonsBox;
     }
 
-    private Button creerBouton(String text, String type) {
-        Button btn = new Button(text);
-        btn.getStyleClass().addAll("button", type, "outline");
-        btn.setPrefHeight(32);
-        btn.setStyle("-fx-cursor: hand; -fx-font-weight: bold; -fx-font-size: 12px;");
-        return btn;
-    }
-
-    private void desactiverBoutons(Button... buttons) {
-        for (Button btn : buttons) {
-            btn.setDisable(true);
-            btn.getStyleClass().removeAll("success", "danger", "accent");
-            btn.setOpacity(0.5);
-        }
-    }
-
-    private Label creerBadgeStatut(statut s) {
-        Label badge = new Label();
-        String baseStyle = "-fx-font-size: 11px; -fx-font-weight: bold; -fx-padding: 4 12;-fx-background-radius: 15; ";
-        switch (s) {
-            case enattende -> {
-                badge.setText("En attente");
-                badge.setStyle(baseStyle + "-fx-background-color: -color-warning-muted;-fx-text-fill: -color-warning-fg;");
-            }
-            case acceptee -> {
-                badge.setText("Acceptée");
-                badge.setStyle(baseStyle + "-fx-background-color: -color-success-muted;-fx-text-fill: -color-success-fg;");
-            }
-            case refusee -> {
-                badge.setText("Refusée");
-                badge.setStyle(baseStyle + "-fx-background-color: -color-danger-muted;-fx-text-fill: -color-danger-fg;");
-            }
-        }
-        return badge;
-    }
-
     private void toggleDetails(VBox parentCard, entreprise ent) {
         if (parentCard.getChildren().size() > 1) {
-            VBox details = (VBox) parentCard.getChildren().get(1);
-            ScaleTransition st = new ScaleTransition(Duration.millis(150), details);
-            st.setFromY(1);
-            st.setToY(0);
-            st.setOnFinished(e -> parentCard.getChildren().remove(1));
-            st.play();
+            parentCard.getChildren().remove(1);
         } else {
             VBox detailsBox = creerPanneauDetails(ent);
             parentCard.getChildren().add(detailsBox);
@@ -225,129 +174,38 @@ public class demandes_entreprise implements Initializable {
     private VBox creerPanneauDetails(entreprise ent) {
         VBox box = new VBox(20);
         box.setPadding(new Insets(25, 35, 25, 35));
-        box.setStyle("-fx-background-color: -color-bg-default;-fx-border-color: -color-border-muted;-fx-border-width: 1 0 0 0;");
-        HBox header = creerDetailsHeader(ent);
+        box.setStyle("-fx-background-color: -color-bg-default; -fx-border-color: -color-border-muted; -fx-border-width: 1 0 0 0;");
+
         HBox infoGrid = creerInfoGrid(ent);
-        HBox footer = creerDetailsFooter(ent);
-        box.getChildren().addAll(header, new Separator(), infoGrid, footer);
+        box.getChildren().add(infoGrid);
+
+        if (ent.getStatut() == statut.acceptee || ent.getStatut() == statut.refusee) {
+            HBox footer = creerDetailsFooter(ent);
+            box.getChildren().add(footer);
+        }
+
         return box;
     }
 
-    private HBox creerDetailsHeader(entreprise ent) {
-        HBox header = new HBox(15);
-        header.setAlignment(Pos.CENTER_LEFT);
-        StackPane avatar = creerLogoOuSigle(ent, 50, 12, 18);
-
-        VBox titleBlock = new VBox(3);
-        titleBlock.setAlignment(Pos.CENTER_LEFT);
-        HBox.setHgrow(titleBlock, Priority.ALWAYS);
-
-        Label nomLabel = new Label(ent.getNom_entreprise());
-        nomLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 18px;");
-
-        HBox metaRow = new HBox(10);
-        metaRow.setAlignment(Pos.CENTER_LEFT);
-
-        Label locationLabel = creerIconLabel(ent.getVille() + ", " + ent.getPays());
-        Label emailLabel = creerIconLabel(ent.getE_mail());
-
-        metaRow.getChildren().addAll(locationLabel, creerSeparateurVertical(), emailLabel);
-        titleBlock.getChildren().addAll(nomLabel, metaRow);
-
-        VBox statusBlock = new VBox(5);
-        statusBlock.setAlignment(Pos.TOP_RIGHT);
-        statusBlock.getChildren().add(creerBadgeStatut(ent.getStatut()));
-
-        header.getChildren().addAll(avatar, titleBlock, statusBlock);
-        return header;
-    }
-
-    private StackPane creerLogoOuSigle(entreprise ent, double size, double radius, double fontSize) {
-        StackPane container = new StackPane();
-        container.setPrefSize(size, size);
-        container.setMinSize(size, size);
-        container.setMaxSize(size, size);
-        double loadSize = size * 2;
-        if (ent.getLogo() != null && !ent.getLogo().isBlank()) {
-            try {
-                File logoFile = new File(ent.getLogo());
-                if (logoFile.exists()) {
-                    Image image = new Image(
-                            logoFile.toURI().toString(),
-                            loadSize, loadSize,
-                            true, true
-                    );
-
-                    ImageView logoView = new ImageView(image);
-                    logoView.setFitWidth(size);
-                    logoView.setFitHeight(size);
-                    logoView.setSmooth(true);
-                    double w = image.getWidth();
-                    double h = image.getHeight();
-                    double side = Math.min(w, h);
-                    double x = (w - side) / 2;
-                    double y = (h - side) / 2;
-                    logoView.setViewport(new javafx.geometry.Rectangle2D(x, y, side, side));
-                    logoView.setPreserveRatio(false);
-                    Rectangle clip = new Rectangle(size, size);
-                    clip.setArcWidth(radius * 2);
-                    clip.setArcHeight(radius * 2);
-                    logoView.setClip(clip);
-                    container.setStyle(String.format("-fx-background-color: white;-fx-background-radius: %.0f;-fx-border-color: -color-border-muted;-fx-border-radius: %.0f;-fx-border-width: 1;", radius, radius));
-                    container.getChildren().add(logoView);
-                    return container;
-                }
-            } catch (Exception ignored) {}
-        }
-        String nom = ent.getNom_entreprise();
-        String[] colors = {"#4A5DEF", "#16A34A", "#F59E0B", "#DC2626", "#8B5CF6", "#06B6D4", "#EC4899", "#F97316"
-        };
-        int colorIndex = Math.abs(nom.hashCode()) % colors.length;
-        container.setStyle(String.format("-fx-background-color: %s;-fx-background-radius: %.0f;", colors[colorIndex], radius));
-        String initials = nom.length() >= 2 ? nom.substring(0, 2).toUpperCase() : nom.substring(0, 1).toUpperCase();
-
-        Label initialsLabel = new Label(initials);
-        initialsLabel.setStyle(String.format("-fx-text-fill: white;-fx-font-weight: bold;-fx-font-size: %.0fpx;", fontSize));
-        container.getChildren().add(initialsLabel);
-        return container;
-    }
-
-    private Label creerIconLabel( String text) {
-        Label label = new Label(text);
-        label.setStyle("-fx-text-fill: -color-fg-muted; -fx-font-size: 12px;");
-        return label;
-    }
-
-    private Region creerSeparateurVertical() {
-        Region sep = new Region();
-        sep.setPrefWidth(1);
-        sep.setPrefHeight(14);
-        sep.setStyle("-fx-background-color: -color-border-muted;");
-        return sep;
-    }
     private HBox creerInfoGrid(entreprise ent) {
         HBox grid = new HBox(30);
         grid.setPadding(new Insets(2, 0, 2, 0));
-
-        VBox col1 = creerInfoSection("Informations entreprise", creerInfoItem("Nom", ent.getNom_entreprise()), creerInfoItem("Ville", ent.getVille()), creerInfoItem("Pays", ent.getPays()), creerInfoItem("Matricule fiscale", ent.getMatricule_fiscale())
-        );
+        VBox col1 = creerInfoSection("Informations entreprise", creerInfoItem("Nom", ent.getNom_entreprise()), creerInfoItem("Ville", ent.getVille()), creerInfoItem("Pays", ent.getPays()), creerInfoItem("Matricule fiscale", ent.getMatricule_fiscale()));
         Region divider = new Region();
         divider.setPrefWidth(1);
         divider.setStyle("-fx-background-color: -color-border-muted;");
-        VBox col2 = creerInfoSection("Responsable", creerInfoItem("Nom complet", ent.getPrenom() + " " + ent.getNom()), creerInfoItem("Email", ent.getE_mail()), creerInfoItem("Téléphone", formatTelephone(ent.getTelephone())), creerInfoItem("Date de demande", formatDate(ent))
-        );
+        VBox col2 = creerInfoSection("Responsable", creerInfoItem("Nom complet", ent.getPrenom() + " " + ent.getNom()), creerInfoItem("Email", ent.getE_mail()), creerInfoItem("Téléphone", UI.formatTelephone(ent.getTelephone())), creerInfoItem("Date de demande", UI.formatDate(ent.getDate_demande())));
         HBox.setHgrow(col1, Priority.ALWAYS);
         HBox.setHgrow(col2, Priority.ALWAYS);
-
         grid.getChildren().addAll(col1, divider, col2);
         return grid;
     }
 
     private VBox creerInfoSection(String titre, HBox... items) {
         VBox section = new VBox(12);
-
         Label header = new Label(titre);
         header.setStyle("-fx-font-weight: bold; -fx-font-size: 13px; -fx-padding: 0 0 5 0;");
+
         VBox itemsBox = new VBox(10);
         itemsBox.getChildren().addAll(items);
 
@@ -362,10 +220,10 @@ public class demandes_entreprise implements Initializable {
         Label keyLabel = new Label(label);
         keyLabel.setMinWidth(120);
         keyLabel.setPrefWidth(120);
-        keyLabel.setStyle(" -fx-text-fill: -color-fg-muted; -fx-font-size: 12px;");
+        keyLabel.setStyle("-fx-text-fill: -color-fg-muted; -fx-font-size: 12px;");
 
         Label valueLabel = new Label(value != null && !value.isBlank() ? value : "—");
-        valueLabel.setStyle(" -fx-font-weight: bold; -fx-font-size: 12px;");
+        valueLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 12px;");
         valueLabel.setWrapText(true);
         HBox.setHgrow(valueLabel, Priority.ALWAYS);
 
@@ -373,130 +231,81 @@ public class demandes_entreprise implements Initializable {
         return item;
     }
 
-    private String formatTelephone(int telephone) {
-        String tel = String.valueOf(telephone);
-        if (tel.length() == 8) {
-            return tel.substring(0, 2) + " " + tel.substring(2, 5) + " " + tel.substring(5);
-        }
-        return tel;
-    }
     private HBox creerDetailsFooter(entreprise ent) {
         HBox footer = new HBox(15);
         footer.setAlignment(Pos.CENTER_RIGHT);
         footer.setPadding(new Insets(10, 0, 0, 0));
-        footer.setStyle(" -fx-border-color: -color-border-muted;-fx-border-width: 1 0 0 0;-fx-padding: 15 0 0 0;");
+        footer.setStyle("-fx-border-color: -color-border-muted; -fx-border-width: 1 0 0 0; -fx-padding: 15 0 0 0;");
 
-        Label timestamp = new Label("Demande soumise le " + formatDate(ent));
+        Label timestamp = new Label("Demande soumise le " + UI.formatDate(ent.getDate_demande()));
         timestamp.setStyle("-fx-text-fill: -color-fg-subtle; -fx-font-size: 11px;");
         HBox.setHgrow(timestamp, Priority.ALWAYS);
 
         footer.getChildren().add(timestamp);
 
         switch (ent.getStatut()) {
-            case enattende -> {
-                Button btnAccepter = creerBoutonFooter("Accepter", "success");
-                Button btnRefuser = creerBoutonFooter("Refuser", "danger");
-
-                btnAccepter.setOnAction(e -> confirmerAcceptation(ent));
-                btnRefuser.setOnAction(e -> confirmerRefus(ent));
-
-                footer.getChildren().addAll(btnRefuser, btnAccepter);
-            }
-
             case refusee -> {
-                Button btnDelete = creerBoutonFooter("Supprimer", "danger");
+                Button btnDelete = UI.creerBoutonFooter("Supprimer", "danger");
                 btnDelete.setOnAction(e -> confirmerSuppression(ent));
-
-                Button btnReconsider = creerBoutonFooter("Reconsidérer", "accent");
+                Button btnReconsider = UI.creerBoutonFooter("Reconsidérer", "accent");
                 btnReconsider.setOnAction(e -> {
-                    if (confirmer("Reconsidération", "Remettre en attente " + ent.getNom_entreprise() + " ?")) {
+                    if (UI.confirmer("Reconsidération", "Remettre en attente " + ent.getNom_entreprise() + " ?")) {
                         try {
                             entrepriseCRUD.changerStatut(ent.getId(), statut.enattende);
                             chargerDemandes();
                         } catch (SQLException ex) {
-                            afficherErreur("Erreur", ex.getMessage());
+                            UI.afficherErreur("Erreur", ex.getMessage());
                         }
                     }
                 });
-
                 footer.getChildren().addAll(btnDelete, btnReconsider);
             }
-
             case acceptee -> {
                 Label acceptedInfo = new Label("Entreprise approuvée");
-                acceptedInfo.setStyle(" -fx-text-fill: -color-success-fg; -fx-font-weight: bold;-fx-font-size: 12px;");
+                acceptedInfo.setStyle("-fx-text-fill: -color-success-fg; -fx-font-weight: bold; -fx-font-size: 12px;");
                 footer.getChildren().add(acceptedInfo);
             }
         }
         return footer;
     }
 
-    private Button creerBoutonFooter(String text, String type) {
-        Button btn = new Button(text);
-        btn.getStyleClass().addAll("button", type, "outline");
-        btn.setPrefHeight(35);
-        btn.setStyle("-fx-cursor: hand;-fx-font-weight: bold;-fx-font-size: 12px;-fx-padding: 8 20;");
-        return btn;
-    }
-
     private void confirmerAcceptation(entreprise ent) {
-        if (confirmer("Confirmation", "Accepter " + ent.getNom_entreprise() + " ?")) {
+        if (UI.confirmer("Confirmation", "Accepter " + ent.getNom_entreprise() + " ?")) {
             try {
                 entrepriseCRUD.accepterEntreprise(ent);
                 chargerDemandes();
             } catch (SQLException e) {
-                afficherErreur("Erreur", e.getMessage());
+                UI.afficherErreur("Erreur", e.getMessage());
             }
         }
     }
+
     private void confirmerRefus(entreprise ent) {
-        if (confirmer("Refus", "Refuser " + ent.getNom_entreprise() + " ?")) {
+        if (UI.confirmer("Refus", "Refuser " + ent.getNom_entreprise() + " ?")) {
             try {
                 entrepriseCRUD.changerStatut(ent.getId(), statut.refusee);
                 chargerDemandes();
             } catch (SQLException e) {
-                afficherErreur("Erreur", e.getMessage());
+                UI.afficherErreur("Erreur", e.getMessage());
             }
         }
     }
+
     private void confirmerSuppression(entreprise ent) {
-        if (confirmer("Suppression","Supprimer cette demande ? Cette action est irréversible.")) {
+        if (UI.confirmer("Suppression", "Supprimer cette demande ? Cette action est irréversible.")) {
             try {
                 entrepriseCRUD.supprimer(ent.getId());
                 chargerDemandes();
             } catch (SQLException e) {
-                afficherErreur("Erreur", e.getMessage());
+                UI.afficherErreur("Erreur", e.getMessage());
             }
         }
     }
-    private boolean confirmer(String titre, String message) {
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle(titre);
-        alert.setHeaderText(message);
-        Optional<ButtonType> result = alert.showAndWait();
-        return result.isPresent() && result.get() == ButtonType.OK;
-    }
+
     private void mettreAJourStats(List<entreprise> entreprises) {
         lblTotal.setText(String.valueOf(entreprises.size()));
         lblEnAttente.setText(String.valueOf(entreprises.stream().filter(e -> e.getStatut() == statut.enattende).count()));
         lblAcceptees.setText(String.valueOf(entreprises.stream().filter(e -> e.getStatut() == statut.acceptee).count()));
         lblRefusees.setText(String.valueOf(entreprises.stream().filter(e -> e.getStatut() == statut.refusee).count()));
-    }
-    private VBox creerMessageVide() {
-        VBox box = new VBox(10);
-        box.setAlignment(Pos.CENTER);
-        box.setPadding(new Insets(60));
-        Label message = new Label("Aucune demande trouvée");
-        message.setStyle("-fx-text-fill: -color-fg-muted; -fx-font-size: 16px;");
-        Label subMessage = new Label("attendez de nouvelles inscriptions");
-        subMessage.setStyle("-fx-text-fill: -color-fg-subtle; -fx-font-size: 13px;");
-        box.getChildren().addAll(message, subMessage);
-        return box;
-    }
-    private void afficherErreur(String titre, String msg) {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle(titre);
-        alert.setContentText(msg);
-        alert.show();
     }
 }

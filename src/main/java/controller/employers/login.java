@@ -73,8 +73,6 @@ public class login {
                 openAdminInterface();
                 return;
             }
-
-            // 2. Vérifier compte employé
             compte compteConnecte = compteService.authentifier(email, password);
             if (compteConnecte != null) {
                 employe emp = employeService.getById(compteConnecte.getId_employe());
@@ -88,22 +86,33 @@ public class login {
                     } else {
                         openInterfaceEmployeSimple();
                     }
-                } else {
-                    errorLabel.setText("Compte trouvé mais aucun profil employé associé.");
+                    return;
                 }
-                return;
             }
 
-            // 3. Vérifier visiteur (candidat)
             visiteur v = visiteurService.authentifier(email, password);
             if (v != null) {
+                employe empFromVisiteur = employeService.findByEmail(email);
+                if (empFromVisiteur != null) {
+                    compte compteEmp = compteService.findByEmployeId(empFromVisiteur.getId_employé());
+                    if (compteEmp != null) {
+                        session.setCompte(compteEmp);
+                        session.setEmploye(empFromVisiteur);
+                        role r = empFromVisiteur.getRole();
+
+                        if (r == role.ADMINISTRATEUR_ENTREPRISE || r == role.RH) {
+                            openRHetAdminInterface();
+                        } else {
+                            openInterfaceEmployeSimple();
+                        }
+                        return;
+                    }
+                }
                 session.setVisiteur(v);
                 System.out.println("Connexion réussie : Visiteur - " + v.getNom() + " " + v.getPrenom());
                 openInterfaceVisiteur();
                 return;
             }
-
-            // Aucun match
             errorLabel.setText("Email ou mot de passe incorrect !");
 
         } catch (Exception e) {

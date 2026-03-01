@@ -94,5 +94,19 @@ public class compteCRUD  {
         }
         return null;
     }
+    public compte findByEmployeId(int idEmploye) throws SQLException {
+        String sql = "SELECT * FROM compte WHERE id_employe = ?";
+        PreparedStatement ps = conn.prepareStatement(sql);
+        ps.setInt(1, idEmploye);
+        ResultSet rs = ps.executeQuery();
+        if (rs.next()) {
+            return new compte(
+                    rs.getString("e_mail"),
+                    rs.getString("mot_de_passe"),
+                    rs.getInt("id_employe")
+            );
+        }
+        return null;
+    }
 
 }

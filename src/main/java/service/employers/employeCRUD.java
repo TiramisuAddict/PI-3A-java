@@ -361,4 +361,14 @@ public class employeCRUD {
     public List<EmployeeInfo> getResponsables() throws SQLException {
         return getEmployeesByRole("chef projet");
     }
+    public employe findByEmail(String email) throws SQLException {
+        String sql = "SELECT * FROM employé WHERE e_mail = ?";
+        PreparedStatement ps = conn.prepareStatement(sql);
+        ps.setString(1, email);
+        ResultSet rs = ps.executeQuery();
+        if (rs.next()) {
+            return creerEmployeDepuisResultSet(rs);
+        }
+        return null;
+    }
 }
