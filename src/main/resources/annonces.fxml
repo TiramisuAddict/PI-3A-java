@@ -12,14 +12,6 @@
             xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="controller.annonces.AnnonceController">
 
-    <top>
-
-        <HBox alignment="CENTER_LEFT" spacing="20" style="-fx-padding: 25 30; -fx-background-color: -color-base-0; -fx-border-color: -color-border-muted; -fx-border-width: 0 0 1 0;">
-            <Label text="Administration" style="-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: -color-fg-default;"/>
-        </HBox>
-
-
-    </top>
     <left>
         <VBox fx:id="sidebar" prefWidth="68.0" styleClass="sidebar" BorderPane.alignment="CENTER">
             <children>
@@ -152,9 +144,10 @@
     </left>
 
     <center>
-
-
         <VBox>
+            <HBox alignment="CENTER_LEFT" spacing="20" style="-fx-padding: 25 30; -fx-background-color: -color-base-0; -fx-border-color: -color-border-muted; -fx-border-width: 0 0 1 0;">
+                <Label text="Administration" style="-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: -color-fg-default;"/>
+            </HBox>
 
             <TabPane fx:id="mainTabPane" VBox.vgrow="ALWAYS" styleClass="custom-tab-pane" tabClosingPolicy="UNAVAILABLE">
 
@@ -239,7 +232,17 @@
                                     <HBox spacing="15">
                                         <VBox spacing="5" HBox.hgrow="ALWAYS">
                                             <Label text="Lieu" style="-fx-font-weight: 600;"/>
-                                            <TextField fx:id="txtLieu" promptText="Lieu de l'événement" prefHeight="35"/>
+                                            <HBox spacing="8">
+                                                <TextField fx:id="txtLieu" promptText="Tapez une ville ou adresse..." prefHeight="35" HBox.hgrow="ALWAYS"/>
+                                                <Button onAction="#ouvrirCarte" prefHeight="35" prefWidth="38"
+                                                        style="-fx-background-color: #0a66c2; -fx-background-radius: 8; -fx-cursor: hand;">
+                                                    <graphic>
+                                                        <Label text="🗺" style="-fx-font-size: 16px;"/>
+                                                    </graphic>
+                                                </Button>
+                                            </HBox>
+                                            <ListView fx:id="suggestionListView" maxHeight="160" visible="false" managed="false"
+                                                      style="-fx-background-color: white; -fx-border-color: #d1d5db; -fx-border-width: 1; -fx-background-radius: 6; -fx-border-radius: 6; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.12), 8, 0, 0, 3);"/>
                                         </VBox>
 
                                         <VBox spacing="5">
@@ -287,50 +290,64 @@
                                 <Label text="Vue d'ensemble des performances" style="-fx-font-size: 13px; -fx-text-fill: -color-fg-muted;"/>
                             </VBox>
 
-                            <FlowPane hgap="15" vgap="15" alignment="CENTER_LEFT">
-                                <VBox spacing="10" style="-fx-background-color: -color-base-0; -fx-padding: 20; -fx-background-radius: 15; -fx-border-color: -color-border-muted; -fx-border-radius: 15;" prefWidth="180">
-                                    <Label text="Total Posts" style="-fx-font-size: 12px; -fx-font-weight: 600; -fx-text-fill: -color-fg-muted;"/>
-                                    <Label fx:id="lblTotalPosts" text="0" style="-fx-font-size: 32px; -fx-font-weight: bold; -fx-text-fill: -color-fg-default;"/>
-                                </VBox>
-
-                                <VBox spacing="10" style="-fx-background-color: -color-base-0; -fx-padding: 20; -fx-background-radius: 15; -fx-border-color: -color-border-muted; -fx-border-radius: 15;" prefWidth="180">
-                                    <Label text="Total Likes" style="-fx-font-size: 12px; -fx-font-weight: 600; -fx-text-fill: -color-fg-muted;"/>
-                                    <Label fx:id="lblTotalLikes" text="0" style="-fx-font-size: 32px; -fx-font-weight: bold; -fx-text-fill: -color-accent-emphasis;"/>
-                                </VBox>
-
-                                <VBox spacing="10" style="-fx-background-color: -color-base-0; -fx-padding: 20; -fx-background-radius: 15; -fx-border-color: -color-border-muted; -fx-border-radius: 15;" prefWidth="180">
-                                    <Label text="Commentaires" style="-fx-font-size: 12px; -fx-font-weight: 600; -fx-text-fill: -color-fg-muted;"/>
-                                    <Label fx:id="lblTotalComments" text="0" style="-fx-font-size: 32px; -fx-font-weight: bold; -fx-text-fill: -color-fg-default;"/>
-                                </VBox>
-                            </FlowPane>
-
                             <HBox spacing="15">
-                                <VBox spacing="15" style="-fx-background-color: -color-base-0; -fx-padding: 20; -fx-background-radius: 15; -fx-border-color: -color-border-muted; -fx-border-radius: 15;" HBox.hgrow="ALWAYS">
-                                    <Label text="Répartition des Posts" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: -color-fg-default;"/>
-                                    <PieChart fx:id="chartPostTypes" prefHeight="250" legendVisible="true"/>
+                                <VBox spacing="8" style="-fx-background-color: white; -fx-padding: 20 24; -fx-background-radius: 12; -fx-border-color: #e0ddd8; -fx-border-radius: 12; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.06), 6, 0, 0, 2);" HBox.hgrow="ALWAYS">
+                                    <Label text="📄  Total Posts" style="-fx-font-size: 12px; -fx-font-weight: 700; -fx-text-fill: #697386;"/>
+                                    <Label fx:id="lblTotalPosts" text="0" style="-fx-font-size: 36px; -fx-font-weight: 800; -fx-text-fill: #1a1f36;"/>
+                                    <Label fx:id="lblPostsChange" text="" style="-fx-font-size: 12px; -fx-text-fill: #10b981;"/>
+                                </VBox>
+                                <VBox spacing="8" style="-fx-background-color: white; -fx-padding: 20 24; -fx-background-radius: 12; -fx-border-color: #e0ddd8; -fx-border-radius: 12; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.06), 6, 0, 0, 2);" HBox.hgrow="ALWAYS">
+                                    <Label text="❤️  Total Likes" style="-fx-font-size: 12px; -fx-font-weight: 700; -fx-text-fill: #697386;"/>
+                                    <Label fx:id="lblTotalLikes" text="0" style="-fx-font-size: 36px; -fx-font-weight: 800; -fx-text-fill: #ef4444;"/>
+                                    <Label fx:id="lblLikesChange" text="" style="-fx-font-size: 12px; -fx-text-fill: #10b981;"/>
+                                </VBox>
+                                <VBox spacing="8" style="-fx-background-color: white; -fx-padding: 20 24; -fx-background-radius: 12; -fx-border-color: #e0ddd8; -fx-border-radius: 12; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.06), 6, 0, 0, 2);" HBox.hgrow="ALWAYS">
+                                    <Label text="💬  Commentaires" style="-fx-font-size: 12px; -fx-font-weight: 700; -fx-text-fill: #697386;"/>
+                                    <Label fx:id="lblTotalComments" text="0" style="-fx-font-size: 36px; -fx-font-weight: 800; -fx-text-fill: #0a66c2;"/>
+                                    <Label fx:id="lblCommentsChange" text="" style="-fx-font-size: 12px; -fx-text-fill: #10b981;"/>
+                                </VBox>
+                                <VBox spacing="8" style="-fx-background-color: white; -fx-padding: 20 24; -fx-background-radius: 12; -fx-border-color: #e0ddd8; -fx-border-radius: 12; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.06), 6, 0, 0, 2);" HBox.hgrow="ALWAYS">
+                                    <Label text="✅  Participations" style="-fx-font-size: 12px; -fx-font-weight: 700; -fx-text-fill: #697386;"/>
+                                    <Label fx:id="lblTotalParticipations" text="0" style="-fx-font-size: 36px; -fx-font-weight: 800; -fx-text-fill: #10b981;"/>
+                                    <Label text="" style="-fx-font-size: 12px;"/>
+                                </VBox>
+                            </HBox>
+
+                            <!-- Row 2: Pie + Engagement Bar -->
+                            <HBox spacing="15">
+                                <VBox spacing="12" style="-fx-background-color: white; -fx-padding: 20; -fx-background-radius: 12; -fx-border-color: #e0ddd8; -fx-border-radius: 12; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.06), 6, 0, 0, 2);" prefWidth="280">
+                                    <Label text="Répartition des Posts" style="-fx-font-size: 15px; -fx-font-weight: 700; -fx-text-fill: #1a1f36;"/>
+                                    <PieChart fx:id="chartPostTypes" prefHeight="230" legendVisible="true"/>
                                 </VBox>
 
-                                <VBox spacing="15" style="-fx-background-color: -color-base-0; -fx-padding: 20; -fx-background-radius: 15; -fx-border-color: -color-border-muted; -fx-border-radius: 15;" HBox.hgrow="ALWAYS">
-                                    <Label text="Engagement" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: -color-fg-default;"/>
-                                    <BarChart fx:id="chartEngagement" prefHeight="250" legendVisible="false">
+                                <VBox spacing="12" style="-fx-background-color: white; -fx-padding: 20; -fx-background-radius: 12; -fx-border-color: #e0ddd8; -fx-border-radius: 12; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.06), 6, 0, 0, 2);" HBox.hgrow="ALWAYS">
+                                    <Label text="Engagement par Post (Likes vs Commentaires)" style="-fx-font-size: 15px; -fx-font-weight: 700; -fx-text-fill: #1a1f36;"/>
+                                    <Label text="Top 5 publications les plus actives" style="-fx-font-size: 12px; -fx-text-fill: #697386;"/>
+                                    <BarChart fx:id="chartEngagement" prefHeight="230" legendVisible="true" animated="true">
                                         <xAxis>
-                                            <CategoryAxis label="Posts" side="BOTTOM"/>
+                                            <CategoryAxis label="Publications" side="BOTTOM"/>
                                         </xAxis>
                                         <yAxis>
-                                            <NumberAxis label="Interactions" side="LEFT"/>
+                                            <NumberAxis label="Nombre" side="LEFT" minorTickCount="1"/>
                                         </yAxis>
                                     </BarChart>
                                 </VBox>
                             </HBox>
 
-                            <VBox spacing="15" style="-fx-background-color: -color-base-0; -fx-padding: 20; -fx-background-radius: 15; -fx-border-color: -color-border-muted; -fx-border-radius: 15;">
-                                <Label text="Activité Mensuelle" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: -color-fg-default;"/>
-                                <LineChart fx:id="chartActivity" prefHeight="300" legendVisible="true">
+                            <!-- Row 3: Participation rate line chart -->
+                            <VBox spacing="12" style="-fx-background-color: white; -fx-padding: 20; -fx-background-radius: 12; -fx-border-color: #e0ddd8; -fx-border-radius: 12; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.06), 6, 0, 0, 2);">
+                                <HBox alignment="CENTER_LEFT" spacing="12">
+                                    <VBox spacing="4" HBox.hgrow="ALWAYS">
+                                        <Label text="Taux de Participation par Événement" style="-fx-font-size: 15px; -fx-font-weight: 700; -fx-text-fill: #1a1f36;"/>
+                                        <Label text="Participants confirmés (GOING) / Capacité maximale — en %" style="-fx-font-size: 12px; -fx-text-fill: #697386;"/>
+                                    </VBox>
+                                </HBox>
+                                <LineChart fx:id="chartParticipation" prefHeight="260" legendVisible="false" animated="true" createSymbols="true">
                                     <xAxis>
-                                        <CategoryAxis label="Mois" side="BOTTOM"/>
+                                        <CategoryAxis label="Événements" side="BOTTOM"/>
                                     </xAxis>
                                     <yAxis>
-                                        <NumberAxis label="Nombre" side="LEFT"/>
+                                        <NumberAxis label="Taux (%)" side="LEFT" lowerBound="0" upperBound="100" tickUnit="25" autoRanging="false"/>
                                     </yAxis>
                                 </LineChart>
                             </VBox>

@@ -6,6 +6,7 @@ import entity.Post;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
@@ -23,6 +24,10 @@ import javafx.scene.text.FontWeight;
 import javafx.util.Duration;
 import service.CommentaireCRUD;
 import service.EventImageCRUD;
+import service.LieuService;
+import service.NotificationCRUD;
+import service.ParticipationCRUD;
+import utils.MapPickerDialog;
 import service.LikeCRUD;
 import service.PostCRUD;
 import entity.EventImage;
@@ -55,6 +60,7 @@ public class AnnonceController {
     @FXML private CheckBox chkActive;
     @FXML private DatePicker dateEvenement, dateFinEvenement;
     @FXML private TextField txtLieu, txtCapaciteMax;
+    @FXML private ListView<LieuService.GeoResult> suggestionListView;
 
     @FXML private Label lblTitreError, lblContenuError, lblTypeError, lblCapaciteError;
     @FXML private VBox postsContainer, formContainer, eventFieldsContainer;
@@ -64,22 +70,31 @@ public class AnnonceController {
     @FXML private VBox commentsContainer;
 
     @FXML private Label lblTotalPosts, lblTotalLikes, lblTotalComments;
+    @FXML private Label lblTotalParticipations;
     @FXML private Label lblPostsChange, lblLikesChange, lblCommentsChange;
     @FXML private PieChart chartPostTypes;
     @FXML private BarChart<String, Number> chartEngagement;
-    @FXML private LineChart<String, Number> chartActivity;
+    @FXML private LineChart<String, Number> chartParticipation;
     @FXML private VBox detailedStatsContainer;
 
     private boolean isExpanded = false;
     private PostCRUD postCRUD = new PostCRUD();
     private CommentaireCRUD commentaireCRUD = new CommentaireCRUD();
     private LikeCRUD likeCRUD = new LikeCRUD();
+    private ParticipationCRUD participationCRUD = new ParticipationCRUD();
+    private NotificationCRUD notificationCRUD = new NotificationCRUD();
+    private int currentUserId = 1; // admin
     private EventImageCRUD eventImageCRUD = new EventImageCRUD();
+    private Timeline debounceTimer = null;
     private Post selectedPost = null;
     private String currentFilter = "ALL";
     private HBox imageGalleryContainer = null;
     private static final int MAX_PHOTOS = 10;
     private static final String IMAGES_DIR = "src/main/resources/images/events/";
+
+    // Autocomplete state
+    private Double selectedLat = null;
+    private Double selectedLon = null;
 
     @FXML
     public void initialize() {
@@ -96,6 +111,7 @@ public class AnnonceController {
         });
 
         buildImageUploadSection();
+        buildLieuAutocomplete();
         addValidationListeners();
         refreshPosts();
         loadCommentsByPost();
@@ -127,6 +143,76 @@ public class AnnonceController {
 
         imageSection.getChildren().addAll(imageLabel, btnUpload, imageGalleryContainer);
         eventFieldsContainer.getChildren().add(imageSection);
+    }
+
+    private void buildLieuAutocomplete() {
+        txtLieu.textProperty().addListener((obs, oldVal, newVal) -> {
+            selectedLat = null;
+            selectedLon = null;
+
+            if (debounceTimer != null) debounceTimer.stop();
+
+            if (newVal == null || newVal.trim().length() < 2) {
+                hideSuggestions();
+                return;
+            }
+
+            final String query = newVal.trim();
+            debounceTimer = new Timeline(
+                    new KeyFrame(Duration.millis(400), e -> {
+                        new Thread(() -> {
+                            List<LieuService.GeoResult> results =
+                                    LieuService.suggererLieux(query);
+                            Platform.runLater(() -> {
+                                if (results.isEmpty()) {
+                                    hideSuggestions();
+                                } else {
+                                    suggestionListView.getItems().setAll(results);
+                                    showSuggestions();
+                                }
+                            });
+                        }).start();
+                    })
+            );
+            debounceTimer.play();
+        });
+
+        suggestionListView.setOnMouseClicked(e -> {
+            LieuService.GeoResult selected =
+                    suggestionListView.getSelectionModel().getSelectedItem();
+            if (selected != null) {
+                selectedLat = selected.lat;
+                selectedLon = selected.lon;
+                Platform.runLater(() -> {
+                    txtLieu.setText(selected.displayName);
+                    hideSuggestions();
+                });
+            }
+        });
+    }
+
+    @FXML
+    private void ouvrirCarte() {
+        new MapPickerDialog().show(result -> {
+            Platform.runLater(() -> {
+                txtLieu.setText(result.cityName);
+                selectedLat = result.lat;
+                selectedLon = result.lon;
+                hideSuggestions();
+            });
+        });
+    }
+
+    private void showSuggestions() {
+        suggestionListView.setVisible(true);
+        suggestionListView.setManaged(true);
+    }
+
+    private void hideSuggestions() {
+        if (suggestionListView != null) {
+            suggestionListView.setVisible(false);
+            suggestionListView.setManaged(false);
+        }
     }
 
     private void handleUploadImages() {
@@ -531,6 +617,8 @@ public class AnnonceController {
             if (post.getDateFinEvenement() != null) dateFinEvenement.setValue(post.getDateFinEvenement());
             if (post.getLieu() != null) txtLieu.setText(post.getLieu());
             if (post.getCapaciteMax() != null) txtCapaciteMax.setText(String.valueOf(post.getCapaciteMax()));
+            selectedLat = post.getLatitude();
+            selectedLon = post.getLongitude();
         }
 
         formTitle.setText("Modifier l'Annonce");
@@ -557,6 +645,17 @@ public class AnnonceController {
 
         try {
             postCRUD.ajouter(post);
+
+            // Notifier tous les employés du nouveau post
+            String type = post.getTypePost() == 2 ? "NEW_EVENT" : "NEW_POST";
+            String msg = post.getTypePost() == 2
+                    ? "📅 Nouvel événement : \"" + truncate(post.getTitre(), 35) + "\""
+                    : "📢 Nouvelle annonce : \"" + truncate(post.getTitre(), 35) + "\"";
+            int newPostId = notificationCRUD.getLastInsertedPostId();
+            if (newPostId > 0) {
+                notificationCRUD.notifierTous(currentUserId, type, msg, newPostId);
+            }
+
             showSuccess("Succès", "Annonce ajoutée avec succès!");
             handleCancelForm();
             refreshPosts();
@@ -594,6 +693,8 @@ public class AnnonceController {
             post.setDateFinEvenement(dateFinEvenement.getValue());
             post.setLieu(txtLieu.getText().trim().isEmpty() ? null : txtLieu.getText().trim());
             post.setCapaciteMax(txtCapaciteMax.getText().trim().isEmpty() ? null : Integer.parseInt(txtCapaciteMax.getText().trim()));
+            post.setLatitude(selectedLat);
+            post.setLongitude(selectedLon);
         } else {
             post.setDateEvenement(null);
             post.setDateFinEvenement(null);
@@ -641,6 +742,9 @@ public class AnnonceController {
         dateFinEvenement.setValue(null);
         txtLieu.clear();
         txtCapaciteMax.clear();
+        selectedLat = null;
+        selectedLon = null;
+        hideSuggestions();
     }
 
     private void clearErrors() {
@@ -787,10 +891,11 @@ public class AnnonceController {
             if (lblTotalPosts != null) lblTotalPosts.setText(String.valueOf(stats.totalPosts));
             if (lblTotalComments != null) lblTotalComments.setText(String.valueOf(stats.totalCommentaires));
             if (lblTotalLikes != null) lblTotalLikes.setText(String.valueOf(stats.totalLikes));
+            if (lblTotalParticipations != null) lblTotalParticipations.setText(String.valueOf(stats.totalParticipations));
 
             loadPieChart(stats);
             loadBarChart();
-            loadLineChart();
+            loadParticipationChart();
         } catch (SQLException e) {
             showError("Erreur", "Erreur statistiques: " + e.getMessage());
         }
@@ -813,51 +918,110 @@ public class AnnonceController {
 
         try {
             List<Post> posts = postCRUD.afficher();
-            XYChart.Series<String, Number> series = new XYChart.Series<>();
-            series.setName("Engagement");
 
-            for (int i = 0; i < Math.min(5, posts.size()); i++) {
-                Post p = posts.get(i);
+            // Sort by total engagement (likes + comments), take top 5
+            List<Post> top5 = posts.stream()
+                    .sorted((a, b) -> {
+                        try {
+                            int engA = likeCRUD.countByPost(a.getIdPost()) + commentaireCRUD.countByPost(a.getIdPost());
+                            int engB = likeCRUD.countByPost(b.getIdPost()) + commentaireCRUD.countByPost(b.getIdPost());
+                            return Integer.compare(engB, engA);
+                        } catch (SQLException e) { return 0; }
+                    })
+                    .limit(5)
+                    .collect(Collectors.toList());
+
+            XYChart.Series<String, Number> likesSeries = new XYChart.Series<>();
+            likesSeries.setName("❤ Likes");
+
+            XYChart.Series<String, Number> commentsSeries = new XYChart.Series<>();
+            commentsSeries.setName("💬 Commentaires");
+
+            for (Post p : top5) {
+                String shortTitle = p.getTitre().length() > 18
+                        ? p.getTitre().substring(0, 18) + "…" : p.getTitre();
                 int likes = likeCRUD.countByPost(p.getIdPost());
                 int comments = commentaireCRUD.countByPost(p.getIdPost());
-                int total = likes + comments;
-
-                String shortTitle = p.getTitre().length() > 15 ?
-                        p.getTitre().substring(0, 15) + "..." : p.getTitre();
-
-                series.getData().add(new XYChart.Data<>(shortTitle, total));
+                likesSeries.getData().add(new XYChart.Data<>(shortTitle, likes));
+                commentsSeries.getData().add(new XYChart.Data<>(shortTitle, comments));
             }
 
             chartEngagement.getData().clear();
-            chartEngagement.getData().add(series);
+            chartEngagement.getData().addAll(likesSeries, commentsSeries);
+
+            // Style the bars
+            Platform.runLater(() -> {
+                for (XYChart.Series<String, Number> series : chartEngagement.getData()) {
+                    String color = series.getName().contains("Likes") ? "#ef4444" : "#0a66c2";
+                    for (XYChart.Data<String, Number> data : series.getData()) {
+                        if (data.getNode() != null) {
+                            data.getNode().setStyle("-fx-bar-fill: " + color + "; -fx-background-radius: 4 4 0 0;");
+                        }
+                    }
+                }
+            });
+
         } catch (SQLException e) {
             e.printStackTrace();
         }
     }
 
-    private void loadLineChart() {
-        if (chartActivity == null) return;
+    private void loadParticipationChart() {
+        if (chartParticipation == null) return;
 
-        XYChart.Series<String, Number> postsSeries = new XYChart.Series<>();
-        postsSeries.setName("Posts");
+        try {
+            List<Post> events = postCRUD.afficher().stream()
+                    .filter(p -> p.getTypePost() == 2 && p.getCapaciteMax() != null && p.getCapaciteMax() > 0)
+                    .collect(Collectors.toList());
 
-        XYChart.Series<String, Number> likesSeries = new XYChart.Series<>();
-        likesSeries.setName("Likes");
+            if (events.isEmpty()) return;
 
-        XYChart.Series<String, Number> commentsSeries = new XYChart.Series<>();
-        commentsSeries.setName("Commentaires");
+            XYChart.Series<String, Number> series = new XYChart.Series<>();
+            series.setName("Taux de participation");
 
-        String[] months = {"Jan", "Fév", "Mar", "Avr", "Mai", "Juin"};
-        Random rand = new Random();
+            for (Post p : events) {
+                int participants = participationCRUD.countByPost(p.getIdPost());
+                double taux = Math.min(100.0, (participants * 100.0) / p.getCapaciteMax());
+                String shortTitle = p.getTitre().length() > 16
+                        ? p.getTitre().substring(0, 16) + "…" : p.getTitre();
+                series.getData().add(new XYChart.Data<>(shortTitle, Math.round(taux)));
+            }
 
-        for (String month : months) {
-            postsSeries.getData().add(new XYChart.Data<>(month, rand.nextInt(20) + 5));
-            likesSeries.getData().add(new XYChart.Data<>(month, rand.nextInt(50) + 10));
-            commentsSeries.getData().add(new XYChart.Data<>(month, rand.nextInt(30) + 5));
+            chartParticipation.getData().clear();
+            chartParticipation.getData().add(series);
+
+            // Style the line and dots
+            Platform.runLater(() -> {
+                // Line color
+                javafx.scene.Node line = chartParticipation.lookup(".chart-series-line");
+                if (line != null) line.setStyle("-fx-stroke: #10b981; -fx-stroke-width: 2.5px;");
+
+                for (XYChart.Data<String, Number> data : series.getData()) {
+                    if (data.getNode() != null) {
+                        double val = data.getYValue().doubleValue();
+                        String color = val >= 80 ? "#ef4444" : val >= 50 ? "#f59e0b" : "#10b981";
+                        data.getNode().setStyle(
+                                "-fx-background-color: " + color + ", white; " +
+                                        "-fx-background-insets: 0, 2; " +
+                                        "-fx-background-radius: 6px; " +
+                                        "-fx-padding: 6px;"
+                        );
+                        // Tooltip on each dot
+                        Tooltip tooltip = new Tooltip(data.getXValue() + " : " + (int) val + "% de remplissage");
+                        tooltip.setStyle("-fx-font-size: 12px; -fx-font-weight: 600;");
+                        Tooltip.install(data.getNode(), tooltip);
+                    }
+                }
+            });
+
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
+    }
 
-        chartActivity.getData().clear();
-        chartActivity.getData().addAll(postsSeries, likesSeries, commentsSeries);
+    private String truncate(String text, int max) {
+        if (text == null) return "";
+        return text.length() > max ? text.substring(0, max) + "..." : text;
     }
 
     private void showError(String title, String message) {

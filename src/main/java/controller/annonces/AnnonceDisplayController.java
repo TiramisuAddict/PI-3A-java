@@ -8,6 +8,7 @@ import entity.Post;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
+import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -21,13 +22,16 @@ import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.SVGPath;
 import javafx.util.Duration;
-import service.CommentaireCRUD;
-import service.EventImageCRUD;
-import service.LikeCRUD;
-import service.ParticipationCRUD;
-import service.PostCRUD;
+import service.*;
+import entity.Notification;
+import utils.MapPickerDialog;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
@@ -47,14 +51,21 @@ public class AnnonceDisplayController {
     @FXML private BorderPane rootPane;
     @FXML private VBox postsContainer;
     @FXML private ComboBox<String> comboFilter;
+    @FXML private VBox notifSidebar;
+    @FXML private Button btnNotif;
+    @FXML private Label badgeCount;
+    @FXML private Label lblBell;
 
     private boolean isExpanded = false;
+    private boolean notifPanelOpen = false;
+    private VBox notifPanel = null;
     private PostCRUD postCRUD = new PostCRUD();
     private CommentaireCRUD commentaireCRUD = new CommentaireCRUD();
     private LikeCRUD likeCRUD = new LikeCRUD();
     private ParticipationCRUD participationCRUD = new ParticipationCRUD();
     private EventImageCRUD eventImageCRUD = new EventImageCRUD();
-    private int currentUserId = 1;
+    private NotificationCRUD notificationCRUD = new NotificationCRUD();
+    private int currentUserId = 2;
 
     @FXML
     public void initialize() {
@@ -62,7 +73,291 @@ public class AnnonceDisplayController {
         comboFilter.setValue("Tout voir");
         comboFilter.valueProperty().addListener((obs, oldVal, newVal) -> refreshPosts());
         refreshPosts();
+        refreshBadge();
     }
+
+    // ── Notifications ─────────────────────────────────────────────
+
+    private void refreshBadge() {
+        try {
+            int unread = notificationCRUD.countUnread(currentUserId);
+            if (unread > 0) {
+                badgeCount.setText(unread > 9 ? "9+" : String.valueOf(unread));
+                badgeCount.setVisible(true);
+                badgeCount.setManaged(true);
+            } else {
+                badgeCount.setVisible(false);
+                badgeCount.setManaged(false);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @FXML
+    private void toggleNotifPanel() {
+        if (notifPanelOpen) {
+            closeNotifPanel();
+        } else {
+            openNotifPanel();
+        }
+    }
+
+    private void openNotifPanel() {
+        notifPanelOpen = true;
+
+        // Build panel
+        notifPanel = new VBox(0);
+        notifPanel.setPrefWidth(340);
+        notifPanel.setMaxWidth(340);
+        notifPanel.setStyle(
+                "-fx-background-color: white;" +
+                        "-fx-border-color: #e0ddd8; -fx-border-width: 0 0 0 1;" +
+                        "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.10), 12, 0, -4, 0);"
+        );
+
+        // ── Header with close button ──────────────────────────────
+        HBox header = new HBox(8);
+        header.setAlignment(Pos.CENTER_LEFT);
+        header.setPadding(new Insets(16, 12, 14, 20));
+        header.setStyle("-fx-border-color: #e0ddd8; -fx-border-width: 0 0 1 0;");
+
+        Label title = new Label("Notifications");
+        title.setStyle("-fx-font-size: 18px; -fx-font-weight: 700; -fx-text-fill: #1a1f36;");
+        HBox.setHgrow(title, Priority.ALWAYS);
+
+        Button btnMarkAll = new Button("Tout lire");
+        btnMarkAll.setStyle(
+                "-fx-background-color: transparent; -fx-text-fill: #0a66c2;" +
+                        "-fx-font-size: 11px; -fx-font-weight: 600; -fx-cursor: hand; -fx-padding: 4 6;"
+        );
+        btnMarkAll.setOnAction(e -> {
+            try {
+                notificationCRUD.markAllAsRead(currentUserId);
+                refreshBadge();
+                openNotifPanel();
+            } catch (SQLException ex) { ex.printStackTrace(); }
+        });
+
+        Button btnClose = new Button("✕");
+        btnClose.setStyle(
+                "-fx-background-color: transparent; -fx-text-fill: #697386;" +
+                        "-fx-font-size: 14px; -fx-font-weight: bold; -fx-cursor: hand; -fx-padding: 4 8;"
+        );
+        btnClose.setOnMouseEntered(e -> btnClose.setStyle(
+                "-fx-background-color: #f3f2ef; -fx-text-fill: #1a1f36;" +
+                        "-fx-font-size: 14px; -fx-font-weight: bold; -fx-cursor: hand;" +
+                        "-fx-background-radius: 50; -fx-padding: 4 8;"
+        ));
+        btnClose.setOnMouseExited(e -> btnClose.setStyle(
+                "-fx-background-color: transparent; -fx-text-fill: #697386;" +
+                        "-fx-font-size: 14px; -fx-font-weight: bold; -fx-cursor: hand; -fx-padding: 4 8;"
+        ));
+        btnClose.setOnAction(e -> closeNotifPanel());
+
+        header.getChildren().addAll(title, btnMarkAll, btnClose);
+        notifPanel.getChildren().add(header);
+
+        // ── Notification list ──────────────────────────────────────
+        ScrollPane scroll = new ScrollPane();
+        scroll.setFitToWidth(true);
+        scroll.setStyle("-fx-background-color: transparent; -fx-background: transparent; -fx-border-width: 0;");
+        scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+
+        VBox list = new VBox(0);
+
+        try {
+            List<Notification> notifs = notificationCRUD.getByUser(currentUserId);
+
+            if (notifs.isEmpty()) {
+                VBox empty = new VBox(10);
+                empty.setAlignment(Pos.CENTER);
+                empty.setPadding(new Insets(60));
+                Label emptyIcon = new Label("🔔");
+                emptyIcon.setStyle("-fx-font-size: 40px;");
+                Label emptyText = new Label("Aucune notification");
+                emptyText.setStyle("-fx-font-size: 14px; -fx-text-fill: #697386;");
+                empty.getChildren().addAll(emptyIcon, emptyText);
+                list.getChildren().add(empty);
+            } else {
+                for (Notification n : notifs) {
+                    list.getChildren().add(buildNotifRow(n));
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        scroll.setContent(list);
+        VBox.setVgrow(scroll, Priority.ALWAYS);
+        notifPanel.getChildren().add(scroll);
+
+        // ── Keep bell sidebar + show panel side by side ───────────
+        HBox rightArea = new HBox(0);
+        rightArea.getChildren().addAll(notifPanel, notifSidebar);
+
+        notifPanel.setTranslateX(340);
+        rootPane.setRight(rightArea);
+
+        Timeline slideIn = new Timeline(
+                new KeyFrame(Duration.millis(220),
+                        new KeyValue(notifPanel.translateXProperty(), 0,
+                                javafx.animation.Interpolator.EASE_OUT))
+        );
+        slideIn.play();
+    }
+
+    private void closeNotifPanel() {
+        notifPanelOpen = false;
+        if (notifPanel == null) {
+            rootPane.setRight(notifSidebar);
+            return;
+        }
+        Timeline slideOut = new Timeline(
+                new KeyFrame(Duration.millis(180),
+                        new KeyValue(notifPanel.translateXProperty(), 340,
+                                javafx.animation.Interpolator.EASE_IN))
+        );
+        slideOut.setOnFinished(e -> rootPane.setRight(notifSidebar));
+        slideOut.play();
+    }
+
+    private HBox buildNotifRow(Notification n) {
+        HBox row = new HBox(12);
+        row.setAlignment(Pos.CENTER_LEFT);
+        row.setPadding(new Insets(12, 16, 12, 16));
+        row.setCursor(javafx.scene.Cursor.HAND);
+
+        // Unread = light blue background
+        String bg = n.isLu() ? "white" : "#f0f7ff";
+        row.setStyle("-fx-background-color: " + bg + "; -fx-border-color: #f0eeeb; -fx-border-width: 0 0 1 0;");
+        row.setOnMouseEntered(e -> row.setStyle("-fx-background-color: #f8f9fa; -fx-border-color: #f0eeeb; -fx-border-width: 0 0 1 0;"));
+        row.setOnMouseExited(e -> row.setStyle("-fx-background-color: " + (n.isLu() ? "white" : "#f0f7ff") + "; -fx-border-color: #f0eeeb; -fx-border-width: 0 0 1 0;"));
+
+        // ── Click: mark as read + close panel ─────────────────────
+        row.setOnMouseClicked(e -> {
+            try {
+                notificationCRUD.markAsRead(n.getIdNotification());
+                n.setLu(true);
+                // Update row background to white
+                row.setStyle("-fx-background-color: white; -fx-border-color: #f0eeeb; -fx-border-width: 0 0 1 0;");
+                row.setOnMouseExited(ev -> row.setStyle("-fx-background-color: white; -fx-border-color: #f0eeeb; -fx-border-width: 0 0 1 0;"));
+                // Remove blue dot
+                row.getChildren().removeIf(child ->
+                        child instanceof VBox && ((VBox)child).getChildren().stream()
+                                .anyMatch(c -> c instanceof javafx.scene.shape.Circle)
+                );
+                refreshBadge();
+                closeNotifPanel();
+                int targetPostId = n.getPostId();
+                Platform.runLater(() -> scrollToPost(targetPostId));
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+            }
+        });
+
+        // ── Icon circle ───────────────────────────────────────────
+        StackPane iconCircle = new StackPane();
+        iconCircle.setPrefSize(44, 44);
+        iconCircle.setMinSize(44, 44);
+        iconCircle.setMaxSize(44, 44);
+        String[] typeStyle = getTypeStyle(n.getType());
+        iconCircle.setStyle("-fx-background-color: " + typeStyle[0] + "; -fx-background-radius: 22;");
+        Label icon = new Label(typeStyle[1]);
+        icon.setStyle("-fx-font-size: 18px;");
+        iconCircle.getChildren().add(icon);
+
+        // ── Text content ──────────────────────────────────────────
+        VBox content = new VBox(3);
+        HBox.setHgrow(content, Priority.ALWAYS);
+
+        Label message = new Label(n.getMessage());
+        message.setStyle("-fx-font-size: 13px; -fx-text-fill: #1a1f36; -fx-wrap-text: true;"
+                + (n.isLu() ? "" : " -fx-font-weight: 600;"));
+        message.setWrapText(true);
+        message.setMaxWidth(240);
+
+        Label time = new Label(formatRelativeTime(n.getDateCreation()));
+        time.setStyle("-fx-font-size: 11px; -fx-text-fill: " + (n.isLu() ? "#8898aa" : "#0a66c2") + ";"
+                + (n.isLu() ? "" : " -fx-font-weight: 600;"));
+
+        content.getChildren().addAll(message, time);
+
+        // ── Unread blue dot ───────────────────────────────────────
+        VBox dotBox = new VBox();
+        dotBox.setAlignment(Pos.CENTER);
+        dotBox.setPrefWidth(16);
+        if (!n.isLu()) {
+            javafx.scene.shape.Circle dot = new javafx.scene.shape.Circle(5, Color.web("#0a66c2"));
+            dotBox.getChildren().add(dot);
+        }
+
+        row.getChildren().addAll(iconCircle, content, dotBox);
+        return row;
+    }
+
+    private String[] getTypeStyle(String type) {
+        switch (type) {
+            case "LIKE":          return new String[]{"#fde8e8", "❤️"};
+            case "COMMENT":       return new String[]{"#e8f4fd", "💬"};
+            case "PARTICIPATION": return new String[]{"#e8fdf0", "✅"};
+            case "NEW_EVENT":     return new String[]{"#fff3e0", "📅"};
+            default:              return new String[]{"#f0f0f0", "🔔"};
+        }
+    }
+
+    private String formatRelativeTime(LocalDateTime dt) {
+        long minutes = java.time.Duration.between(dt, LocalDateTime.now()).toMinutes();
+        if (minutes < 1)   return "À l'instant";
+        if (minutes < 60)  return minutes + " min";
+        long hours = minutes / 60;
+        if (hours < 24)    return hours + "h";
+        long days = hours / 24;
+        if (days < 7)      return days + "j";
+        return dt.format(DateTimeFormatter.ofPattern("dd/MM"));
+    }
+
+    // ── Called after like/comment/participation to create notif ───
+    private void createNotification(String type, String actorName, int postId) {
+        try {
+            Post post = postCRUD.getById(postId);
+            if (post == null) return;
+
+            String message;
+            switch (type) {
+                case "LIKE":
+                    // Like → not broadcast, just skip (likes are private)
+                    return;
+                case "COMMENT":
+                    message = actorName + " a commenté \"" + truncate(post.getTitre(), 30) + "\"";
+                    break;
+                case "PARTICIPATION":
+                    message = actorName + " participe à \"" + truncate(post.getTitre(), 30) + "\"";
+                    break;
+                case "NEW_EVENT":
+                    message = "Nouvel événement : \"" + truncate(post.getTitre(), 30) + "\"";
+                    break;
+                case "NEW_POST":
+                    message = "Nouvelle annonce : \"" + truncate(post.getTitre(), 30) + "\"";
+                    break;
+                default:
+                    message = "Nouvelle activité sur \"" + truncate(post.getTitre(), 30) + "\"";
+            }
+
+            System.out.println("=== Broadcasting notif [" + type + "] to all users except " + currentUserId);
+            notificationCRUD.notifierTous(currentUserId, type, message, postId);
+            refreshBadge();
+        } catch (SQLException e) {
+            System.out.println("=== SQL ERROR in createNotification: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    private String truncate(String text, int max) {
+        if (text == null) return "";
+        return text.length() > max ? text.substring(0, max) + "..." : text;
+    }
+
 
     @FXML
     private void handleToggleSidebar() {
@@ -186,11 +481,22 @@ public class AnnonceDisplayController {
 
     private VBox createProfessionalPostCard(Post post) {
         VBox card = new VBox(0);
+        card.setUserData(post.getIdPost()); // used by scrollToComments
+        String borderColor;
+
+        if (post.getTypePost() == 1) {
+            borderColor = "#4CAF50"; // exemple : vert
+        } else if (post.getTypePost() == 2) {
+            borderColor = "#2196F3"; // exemple : bleu
+        } else {
+            borderColor = "#e0ddd8"; // default
+        }
+
         card.setStyle(
                 "-fx-background-color: white; " +
                         "-fx-background-radius: 8; " +
                         "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.08), 4, 0, 0, 1); " +
-                        "-fx-border-color: #e0ddd8; " +
+                        "-fx-border-color: " + borderColor + "; " +
                         "-fx-border-width: 1; " +
                         "-fx-border-radius: 8;"
         );
@@ -212,10 +518,6 @@ public class AnnonceDisplayController {
 
         HBox statsBar = createStatsBar(post);
         card.getChildren().add(statsBar);
-
-        Separator separator = new Separator();
-        separator.setStyle("-fx-background-color: #eaeef3;");
-        card.getChildren().add(separator);
 
         HBox actionBar = createActionBar(post);
         card.getChildren().add(actionBar);
@@ -330,6 +632,13 @@ public class AnnonceDisplayController {
         if (post.getLieu() != null && !post.getLieu().isEmpty()) {
             HBox lieuRow = createInfoRow("📍", "Lieu", post.getLieu());
             eventBox.getChildren().add(lieuRow);
+
+            // Mini-map + bouton si on a les coordonnées
+            if (post.getLatitude() != null && post.getLongitude() != null) {
+                eventBox.getChildren().add(
+                        createMiniMap(post.getLatitude(), post.getLongitude(), post.getLieu())
+                );
+            }
         }
 
         if (post.getCapaciteMax() != null) {
@@ -338,6 +647,137 @@ public class AnnonceDisplayController {
         }
 
         return eventBox;
+    }
+
+    private VBox createMiniMap(double lat, double lon, String lieu) {
+        int zoom = 13;
+        int W = 600, H = 180;
+        int TILE = 256;
+
+        // ── Tile math ────────────────────────────────────────────
+        double tileXd = (lon + 180.0) / 360.0 * Math.pow(2, zoom);
+        double latRad  = Math.toRadians(lat);
+        double tileYd  = (1.0 - Math.log(Math.tan(latRad) + 1.0 / Math.cos(latRad)) / Math.PI)
+                / 2.0 * Math.pow(2, zoom);
+
+        int tileX0 = (int) Math.floor(tileXd - (double) W / 2 / TILE);
+        int tileY0 = (int) Math.floor(tileYd - (double) H / 2 / TILE);
+        int tileX1 = (int) Math.ceil(tileXd + (double) W / 2 / TILE);
+        int tileY1 = (int) Math.ceil(tileYd + (double) H / 2 / TILE);
+
+        // Pixel offset of the top-left tile
+        double originPxX = tileX0 * TILE;
+        double originPxY = tileY0 * TILE;
+        double centerPxX = tileXd * TILE;
+        double centerPxY = tileYd * TILE;
+
+        // ── Map pane ─────────────────────────────────────────────
+        Pane mapPane = new Pane();
+        mapPane.setPrefSize(W, H);
+        mapPane.setMaxSize(W, H);
+        mapPane.setMinSize(W, H);
+        mapPane.setStyle("-fx-background-color: #AAD3DF;");
+        mapPane.setClip(new javafx.scene.shape.Rectangle(W, H));
+
+        HttpClient httpClient = HttpClient.newHttpClient();
+
+        // Load tiles
+        for (int tx = tileX0; tx <= tileX1; tx++) {
+            for (int ty = tileY0; ty <= tileY1; ty++) {
+                double px = tx * TILE - originPxX - (centerPxX - originPxX) + W / 2.0;
+                double py = ty * TILE - originPxY - (centerPxY - originPxY) + H / 2.0;
+
+                ImageView iv = new ImageView();
+                iv.setFitWidth(TILE);
+                iv.setFitHeight(TILE);
+                iv.setLayoutX(px);
+                iv.setLayoutY(py);
+
+                final int ftx = tx, fty = ty;
+                new Thread(() -> {
+                    try {
+                        String url = "https://tile.openstreetmap.org/" + zoom + "/" + ftx + "/" + fty + ".png";
+                        HttpRequest req = HttpRequest.newBuilder()
+                                .uri(URI.create(url))
+                                .header("User-Agent", "MomentumHR/1.0 (educational)")
+                                .GET().build();
+                        HttpResponse<byte[]> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofByteArray());
+                        if (resp.statusCode() == 200) {
+                            Image img = new Image(new ByteArrayInputStream(resp.body()));
+                            javafx.application.Platform.runLater(() -> iv.setImage(img));
+                        }
+                    } catch (Exception ignored) {}
+                }).start();
+
+                mapPane.getChildren().add(iv);
+            }
+        }
+
+        // ── Marker ───────────────────────────────────────────────
+        javafx.scene.shape.Circle marker = new javafx.scene.shape.Circle(10, Color.web("#c0392b"));
+        marker.setStroke(Color.WHITE);
+        marker.setStrokeWidth(2.5);
+        marker.setEffect(new javafx.scene.effect.DropShadow(8, Color.rgb(0, 0, 0, 0.4)));
+        marker.setLayoutX(W / 2.0);
+        marker.setLayoutY(H / 2.0);
+        mapPane.getChildren().add(marker);
+
+        // ── Location label on map ─────────────────────────────────
+        Label locLabel = new Label("📍 " + lieu);
+        locLabel.setStyle(
+                "-fx-background-color: rgba(255,255,255,0.92); " +
+                        "-fx-text-fill: #1a1f36; -fx-font-weight: 600; -fx-font-size: 12px; " +
+                        "-fx-padding: 5 12; -fx-background-radius: 20; " +
+                        "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 6, 0, 0, 2);"
+        );
+        locLabel.setLayoutX(10);
+        locLabel.setLayoutY(10);
+        mapPane.getChildren().add(locLabel);
+
+        // ── "Voir en grand" button ────────────────────────────────
+        Button btnVoir = new Button("🗺  Voir en grand");
+        btnVoir.setStyle(
+                "-fx-background-color: white; -fx-text-fill: #0a66c2; " +
+                        "-fx-font-weight: 700; -fx-font-size: 12px; " +
+                        "-fx-background-radius: 20; -fx-padding: 6 14; -fx-cursor: hand; " +
+                        "-fx-border-color: #0a66c2; -fx-border-width: 1.5; -fx-border-radius: 20; " +
+                        "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.12), 6, 0, 0, 2);"
+        );
+        btnVoir.setOnMouseEntered(e -> btnVoir.setStyle(
+                "-fx-background-color: #0a66c2; -fx-text-fill: white; " +
+                        "-fx-font-weight: 700; -fx-font-size: 12px; " +
+                        "-fx-background-radius: 20; -fx-padding: 6 14; -fx-cursor: hand; " +
+                        "-fx-border-color: #0a66c2; -fx-border-width: 1.5; -fx-border-radius: 20;"
+        ));
+        btnVoir.setOnMouseExited(e -> btnVoir.setStyle(
+                "-fx-background-color: white; -fx-text-fill: #0a66c2; " +
+                        "-fx-font-weight: 700; -fx-font-size: 12px; " +
+                        "-fx-background-radius: 20; -fx-padding: 6 14; -fx-cursor: hand; " +
+                        "-fx-border-color: #0a66c2; -fx-border-width: 1.5; -fx-border-radius: 20; " +
+                        "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.12), 6, 0, 0, 2);"
+        ));
+        btnVoir.setOnAction(e -> ouvrirCarteReadOnly(lat, lon, lieu));
+
+        // Position button bottom-right
+        btnVoir.setLayoutX(W - 160);
+        btnVoir.setLayoutY(H - 40);
+        mapPane.getChildren().add(btnVoir);
+
+        // ── Wrap with rounded clip ────────────────────────────────
+        VBox wrapper = new VBox(mapPane);
+        wrapper.setStyle(
+                "-fx-background-radius: 10; -fx-border-radius: 10; " +
+                        "-fx-border-color: #e0ddd8; -fx-border-width: 1; " +
+                        "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.06), 4, 0, 0, 1);"
+        );
+        VBox.setMargin(wrapper, new Insets(4, 0, 0, 0));
+        return wrapper;
+    }
+
+    private void ouvrirCarteReadOnly(double lat, double lon, String lieu) {
+        // Reuse MapPickerDialog but pre-centered on the location (read-only mode)
+        MapPickerDialog dialog = new MapPickerDialog();
+        dialog.showReadOnly(lat, lon, lieu);
     }
 
     private VBox createPhotoGallery(Post post) {
@@ -582,14 +1022,14 @@ public class AnnonceDisplayController {
         try {
             int likesCount = likeCRUD.countByPost(post.getIdPost());
             int commentsCount = commentaireCRUD.countByPost(post.getIdPost());
+            int participantsCount = post.getTypePost() == 2
+                    ? participationCRUD.countByPost(post.getIdPost()) : 0;
 
             if (likesCount > 0) {
                 HBox likeBox = new HBox(6);
                 likeBox.setAlignment(Pos.CENTER_LEFT);
-
                 SVGPath heart = createHeartIcon();
                 heart.setFill(Color.web("#ef4444"));
-
                 Label likeCount = new Label(String.valueOf(likesCount));
                 likeCount.setStyle("-fx-font-size: 14px; -fx-font-weight: 500; -fx-text-fill: #525f7f;");
                 likeBox.getChildren().addAll(heart, likeCount);
@@ -603,7 +1043,6 @@ public class AnnonceDisplayController {
             }
 
             if (post.getTypePost() == 2) {
-                int participantsCount = participationCRUD.countByPost(post.getIdPost());
                 if (participantsCount > 0) {
                     Label participantCount = new Label(participantsCount + " participant" + (participantsCount > 1 ? "s" : ""));
                     participantCount.setStyle("-fx-font-size: 14px; -fx-font-weight: 500; -fx-text-fill: #525f7f;");
@@ -613,16 +1052,23 @@ public class AnnonceDisplayController {
                 if (post.getCapaciteMax() != null) {
                     int placesRestantes = post.getCapaciteMax() - participantsCount;
                     boolean isComplet = placesRestantes <= 0;
-
-                    Label capaciteLabel = new Label(isComplet ? "COMPLET" : placesRestantes + " place" + (placesRestantes > 1 ? "s" : "") + " restante" + (placesRestantes > 1 ? "s" : ""));
+                    Label capaciteLabel = new Label(isComplet ? "COMPLET"
+                            : placesRestantes + " place" + (placesRestantes > 1 ? "s" : "") + " restante" + (placesRestantes > 1 ? "s" : ""));
                     capaciteLabel.setStyle(isComplet
                             ? "-fx-font-size: 12px; -fx-font-weight: 700; -fx-text-fill: white; -fx-background-color: #ef4444; -fx-padding: 3 10; -fx-background-radius: 10;"
                             : "-fx-font-size: 12px; -fx-font-weight: 600; -fx-text-fill: #10b981; -fx-background-color: #d1fae5; -fx-padding: 3 10; -fx-background-radius: 10;");
                     statsBar.getChildren().add(capaciteLabel);
                 }
             }
+
         } catch (SQLException e) {
             e.printStackTrace();
+        }
+
+        // Hide completely if nothing to show
+        if (statsBar.getChildren().isEmpty()) {
+            statsBar.setVisible(false);
+            statsBar.setManaged(false);
         }
 
         return statsBar;
@@ -639,8 +1085,6 @@ public class AnnonceDisplayController {
         actionBar.getChildren().addAll(likeBtn, commentBtn);
 
         if (post.getTypePost() == 2) {
-            Button interestedBtn = createActionButton("⭐  Intéressé", post, "interested");
-            actionBar.getChildren().add(interestedBtn);
 
             boolean eventFull = false;
             if (post.getCapaciteMax() != null) {
@@ -939,22 +1383,97 @@ public class AnnonceDisplayController {
             switch (action) {
                 case "like":
                     toggleLike(post.getIdPost());
+                    refreshPosts();
+                    break;
+                case "comment":
+                    // Scroll to comment section — just refresh to expand it
+                    scrollToComments(post);
                     break;
                 case "interested":
                     toggleParticipation(post.getIdPost(), "INTERESTED");
+                    refreshPosts();
                     break;
                 case "going":
                     toggleParticipation(post.getIdPost(), "GOING");
+                    refreshPosts();
                     break;
             }
-            refreshPosts();
         } catch (SQLException e) {
             showError("Erreur", "Action impossible: " + e.getMessage());
         }
     }
 
+    private void scrollToPost(int postId) {
+        ScrollPane sp = findScrollPane(postsContainer);
+        if (sp == null) return;
+
+        for (javafx.scene.Node node : postsContainer.getChildren()) {
+            if (node.getUserData() != null && node.getUserData().equals(postId)) {
+                postsContainer.applyCss();
+                postsContainer.layout();
+
+                double nodeY      = node.getBoundsInParent().getMinY();
+                double totalH     = postsContainer.getBoundsInLocal().getHeight();
+                double viewportH  = sp.getViewportBounds().getHeight();
+                double scrollable = totalH - viewportH;
+
+                if (scrollable > 0) {
+                    sp.setVvalue(Math.min(1.0, nodeY / scrollable));
+                }
+
+                // Highlight the card briefly
+                String original = node.getStyle();
+                node.setStyle(original + " -fx-border-color: #0a66c2; -fx-border-width: 2;");
+                new Timeline(new KeyFrame(Duration.millis(1500),
+                        e -> node.setStyle(original))).play();
+                break;
+            }
+        }
+    }
+
+    private ScrollPane findScrollPane(javafx.scene.Node node) {
+        javafx.scene.Node current = node.getParent();
+        while (current != null) {
+            if (current instanceof ScrollPane) return (ScrollPane) current;
+            current = current.getParent();
+        }
+        return null;
+    }
+
+    private void scrollToComments(Post post) {
+        // Find the card and focus the comment input
+        for (javafx.scene.Node node : postsContainer.getChildren()) {
+            if (node.getUserData() != null && node.getUserData().equals(post.getIdPost())) {
+                // Scroll postsContainer's parent ScrollPane to this card
+                node.requestFocus();
+                // Find TextField inside this card and focus it
+                findAndFocusCommentField(node);
+                break;
+            }
+        }
+    }
+
+    private void findAndFocusCommentField(javafx.scene.Node node) {
+        if (node instanceof TextField) {
+            TextField tf = (TextField) node;
+            if ("Ajouter un commentaire...".equals(tf.getPromptText())) {
+                tf.requestFocus();
+                return;
+            }
+        }
+        if (node instanceof javafx.scene.Parent) {
+            for (javafx.scene.Node child : ((javafx.scene.Parent) node).getChildrenUnmodifiable()) {
+                findAndFocusCommentField(child);
+            }
+        }
+    }
+
     private void toggleLike(int postId) throws SQLException {
+        boolean wasLiked = likeCRUD.hasLiked(currentUserId, postId);
         likeCRUD.toggleLike(currentUserId, postId);
+        if (!wasLiked) {
+            createNotification("LIKE", "Utilisateur #" + currentUserId, postId);
+        }
     }
 
     private void toggleParticipation(int postId, String status) throws SQLException {
@@ -975,6 +1494,7 @@ public class AnnonceDisplayController {
                         return;
                     }
                 }
+                createNotification("PARTICIPATION", "Utilisateur #" + currentUserId, postId);
             }
 
             Participation existing = participationCRUD.getByUserAndPost(currentUserId, postId);
@@ -999,6 +1519,7 @@ public class AnnonceDisplayController {
             comment.setContenu(contenu);
             comment.setDateCommentaire(LocalDateTime.now());
             commentaireCRUD.ajouter(comment);
+            createNotification("COMMENT", "Utilisateur #" + currentUserId, postId);
         } catch (SQLException e) {
             showError("Erreur", "Impossible d'ajouter le commentaire: " + e.getMessage());
         }

@@ -27,8 +27,8 @@ public class App extends Application {
         try {
             Application.setUserAgentStylesheet(new PrimerLight().getUserAgentStylesheet());
 
-            Parent root = FXMLLoader.load(getClass().getResource("/annonces-display.fxml"));
-            //Parent root = FXMLLoader.load(getClass().getResource(ANNONCES_FXML));
+            //Parent root = FXMLLoader.load(getClass().getResource("/annonces-display.fxml"));
+            Parent root = FXMLLoader.load(getClass().getResource(ANNONCES_FXML));
 
             Scene scene = new Scene(root);
 

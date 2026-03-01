@@ -19,6 +19,9 @@ public class Post {
     private String lieu;
     private Integer capaciteMax;
 
+    private Double latitude;
+    private Double longitude;
+
 
     public Post() {}
 
@@ -123,6 +126,12 @@ public class Post {
     public void setCapaciteMax(Integer capaciteMax) {
         this.capaciteMax = capaciteMax;
     }
+
+    public Double getLatitude() { return latitude; }
+    public void setLatitude(Double latitude) { this.latitude = latitude; }
+
+    public Double getLongitude() { return longitude; }
+    public void setLongitude(Double longitude) { this.longitude = longitude; }
 
     @Override
     public String toString() {

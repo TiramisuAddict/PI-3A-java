@@ -9,7 +9,6 @@ import java.util.List;
 
 public class PostCRUD implements InterfaceCRUD<Post> {
 
-    public static final String SELECT_FROM_POST = "SELECT * FROM post";
     Connection conn;
 
     public PostCRUD() {
@@ -22,8 +21,8 @@ public class PostCRUD implements InterfaceCRUD<Post> {
         String req = """
             INSERT INTO post 
             (titre, contenu, type_post, date_creation, utilisateur_id, active,
-             date_evenement, date_fin_evenement, lieu, capacite_max)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             date_evenement, date_fin_evenement, lieu, capacite_max, latitude, longitude)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """;
 
         PreparedStatement pst = conn.prepareStatement(req);
@@ -39,6 +38,8 @@ public class PostCRUD implements InterfaceCRUD<Post> {
         pst.setDate(8, p.getDateFinEvenement() != null ? Date.valueOf(p.getDateFinEvenement()) : null);
         pst.setString(9, p.getLieu());
         pst.setObject(10, p.getCapaciteMax());
+        pst.setObject(11, p.getLatitude());
+        pst.setObject(12, p.getLongitude());
 
         pst.executeUpdate();
         System.out.println("Post ajouté");
@@ -50,7 +51,8 @@ public class PostCRUD implements InterfaceCRUD<Post> {
         String req = """
             UPDATE post SET
             titre = ?, contenu = ?, type_post = ?, active = ?,
-            date_evenement = ?, date_fin_evenement = ?, lieu = ?, capacite_max = ?
+            date_evenement = ?, date_fin_evenement = ?, lieu = ?, capacite_max = ?,
+            latitude = ?, longitude = ?
             WHERE id_post = ?
         """;
 
@@ -65,8 +67,10 @@ public class PostCRUD implements InterfaceCRUD<Post> {
         pst.setDate(6, p.getDateFinEvenement() != null ? Date.valueOf(p.getDateFinEvenement()) : null);
         pst.setString(7, p.getLieu());
         pst.setObject(8, p.getCapaciteMax());
+        pst.setObject(9, p.getLatitude());
+        pst.setObject(10, p.getLongitude());
 
-        pst.setInt(9, p.getIdPost());
+        pst.setInt(11, p.getIdPost());
 
         pst.executeUpdate();
         System.out.println("Post modifié");
@@ -87,9 +91,10 @@ public class PostCRUD implements InterfaceCRUD<Post> {
     public List<Post> afficher() throws SQLException {
 
         List<Post> posts = new ArrayList<>();
+        String req = "SELECT * FROM post";
 
         Statement st = conn.createStatement();
-        ResultSet rs = st.executeQuery(SELECT_FROM_POST);
+        ResultSet rs = st.executeQuery(req);
 
         while (rs.next()) {
 
@@ -110,6 +115,8 @@ public class PostCRUD implements InterfaceCRUD<Post> {
 
             p.setLieu(rs.getString("lieu"));
             p.setCapaciteMax((Integer) rs.getObject("capacite_max"));
+            p.setLatitude(rs.getObject("latitude") != null ? rs.getDouble("latitude") : null);
+            p.setLongitude(rs.getObject("longitude") != null ? rs.getDouble("longitude") : null);
 
             posts.add(p);
         }
@@ -146,6 +153,8 @@ public class PostCRUD implements InterfaceCRUD<Post> {
 
             p.setLieu(rs.getString("lieu"));
             p.setCapaciteMax((Integer) rs.getObject("capacite_max"));
+            p.setLatitude(rs.getObject("latitude") != null ? rs.getDouble("latitude") : null);
+            p.setLongitude(rs.getObject("longitude") != null ? rs.getDouble("longitude") : null);
 
             return p;
         }

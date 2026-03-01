@@ -169,4 +169,26 @@
         </ScrollPane>
     </center>
 
+    <right>
+        <!-- Bell button always visible -->
+        <VBox fx:id="notifSidebar" prefWidth="52" minWidth="52" maxWidth="52"
+              style="-fx-background-color: white; -fx-border-color: #e0ddd8; -fx-border-width: 0 0 0 1;"
+              alignment="TOP_CENTER">
+            <padding><Insets top="16"/></padding>
+            <StackPane>
+                <Button fx:id="btnNotif" onAction="#toggleNotifPanel"
+                        style="-fx-background-color: transparent; -fx-cursor: hand; -fx-padding: 8;">
+                    <graphic>
+                        <Label fx:id="lblBell" text="🔔" style="-fx-font-size: 20px;"/>
+                    </graphic>
+                </Button>
+                <Label fx:id="badgeCount" text="0" visible="false" managed="false"
+                       style="-fx-background-color: #e0245e; -fx-text-fill: white; -fx-font-size: 9px;
+                              -fx-font-weight: bold; -fx-background-radius: 10; -fx-padding: 1 4;
+                              -fx-min-width: 16; -fx-min-height: 16; -fx-alignment: center;"
+                       StackPane.alignment="TOP_RIGHT" translateX="-2" translateY="2"/>
+            </StackPane>
+        </VBox>
+    </right>
+
 </BorderPane>
