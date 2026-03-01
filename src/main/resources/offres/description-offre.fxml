@@ -6,7 +6,7 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.web.HTMLEditor?>
 
-<VBox spacing="15.0" style="-fx-background-color: -color-bg-default;" stylesheets="@../customTheme.css" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controller.offres.DescriptionOffreController">
+<VBox spacing="15.0" style="-fx-background-color: -color-bg-default;" stylesheets="@../css/customTheme.css" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controller.offres.DescriptionOffreController">
     <children>
         <Label style="-fx-font-weight: bold; -fx-font-size: 18;" text="Description de l'offre" />
 

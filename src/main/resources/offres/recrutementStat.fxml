@@ -10,7 +10,7 @@
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
 
-<ScrollPane fitToWidth="true" style="-fx-background-color: transparent; -fx-background: transparent;" stylesheets="@../customTheme.css" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controller.offres.RecrutementStatController">
+<ScrollPane fitToWidth="true" style="-fx-background-color: transparent; -fx-background: transparent;" stylesheets="@../css/customTheme.css" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="controller.offres.RecrutementStatController">
     <content>
         <VBox spacing="30.0" style="-fx-background-color: -color-bg-subtle;">
             <padding>

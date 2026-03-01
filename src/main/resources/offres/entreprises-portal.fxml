@@ -8,7 +8,7 @@
             hbarPolicy="NEVER"
             vbarPolicy="AS_NEEDED"
             style="-fx-background-color: transparent; -fx-background: transparent;"
-            stylesheets="@../customTheme.css"
+            stylesheets="@../css/customTheme.css"
             xmlns="http://javafx.com/javafx/21"
             xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="controller.offres.EnterprisePortalController">

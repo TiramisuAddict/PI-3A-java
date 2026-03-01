@@ -330,15 +330,6 @@
 .default-color3.chart-bar,
 .default-color3.chart-pie { -fx-bar-fill: #54aeff; -fx-pie-color: #54aeff; }
 
-/* Button Accent Style */
-.button.accent {
-    -fx-background-color: linear-gradient(to bottom, #667eea, #764ba2);
-    -fx-text-fill: white;
-    -fx-font-weight: bold;
-    -fx-background-radius: 8;
-    -fx-cursor: hand;
-    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 8, 0, 0, 2);
-}
 
 .button.accent:hover {
     -fx-background-color: linear-gradient(to bottom, #5568d3, #6541a5);

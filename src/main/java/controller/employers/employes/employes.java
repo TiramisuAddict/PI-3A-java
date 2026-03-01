@@ -76,7 +76,7 @@ public class employes {
     }
 
     @FXML private void showDemande(ActionEvent event) {
-        loadView("demandes");
+        loadView("demandes-employe");
         updateActiveButton(btnDemande);
     }
 
