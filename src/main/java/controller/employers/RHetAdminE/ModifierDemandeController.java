@@ -8,19 +8,26 @@ import service.demande.DemandeCRUD;
 import service.demande.DemandeDetailsCRUD;
 
 import javafx.application.Platform;
+import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
+import javafx.scene.Node;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.stage.Modality;
 import javafx.stage.Stage;
-import javafx.util.Callback;
 
+import java.io.IOException;
 import java.net.URL;
 import java.sql.SQLException;
 import java.time.LocalDate;
-import java.util.Map;
-import java.util.ResourceBundle;
+import java.time.ZoneId;
+import java.util.*;
 
 public class ModifierDemandeController implements Initializable {
 
@@ -33,63 +40,98 @@ public class ModifierDemandeController implements Initializable {
     @FXML private ComboBox<String> categorieCombo;
     @FXML private ComboBox<String> typeDemandeCombo;
     @FXML private ComboBox<String> prioriteCombo;
-    @FXML private TextArea descriptionArea;
     @FXML private ComboBox<String> statusCombo;
+    @FXML private TextArea descriptionArea;
     @FXML private DatePicker dateCreationPicker;
 
     @FXML private Label titreError;
     @FXML private Label categorieError;
     @FXML private Label typeError;
     @FXML private Label prioriteError;
-    @FXML private Label descriptionError;
     @FXML private Label statusError;
+    @FXML private Label descriptionError;
     @FXML private Label dateError;
 
     @FXML private TitledPane detailsPane;
     @FXML private VBox dynamicFieldsContainer;
 
-    // MAP / DESTINATION FIELDS
+    @FXML private Label destinationLabel;
     @FXML private HBox destinationContainer;
     @FXML private TextField destinationField;
     @FXML private Button mapButton;
     @FXML private Label destinationError;
-    @FXML private Label destinationLabel;
-
-    @FXML private Button submitBtn;
-    @FXML private Button cancelBtn;
 
     // ═══════════════════════════════════════════════════════════════════════════
     // INSTANCE VARIABLES
     // ═══════════════════════════════════════════════════════════════════════════
 
+    private DemandeCRUD demandeCRUD;
+    private DemandeDetailsCRUD detailsCRUD;
+    private DemandeFormHelper formHelper;
+
+    private DemandesController parentController;
+    private Demande currentDemande;
+    private DemandeDetails currentDetails;
+
+    // CRITICAL: Store details JSON and control filling
+    private String pendingDetailsJson = null;
+    private boolean shouldFillDetails = false;
+
     private double selectedLat = 0;
     private double selectedLon = 0;
     private String selectedDestination = null;
 
-    private DemandeCRUD demandeCRUD;
-    private DemandeDetailsCRUD detailsCRUD;
-    private DemandeFormHelper formHelper;
-    private DemandesController parentController;
-    private Demande currentDemande;
+    private static final Map<String, List<String>> CATEGORY_TYPES = new LinkedHashMap<>();
 
-    private static final String[] DESTINATION_TYPES = {
-            "Mission", "Déplacement", "Formation externe", "Voyage d'affaires",
-            "Conférence", "Séminaire", "Visite client", "Voyage", "Transport",
-            "Certification", "Mutation", "Télétravail"
-    };
+    static {
+        CATEGORY_TYPES.put("Ressources Humaines", Arrays.asList(
+                "Congé", "Attestation de travail", "Attestation de salaire",
+                "Certificat de travail", "Mutation", "Démission"
+        ));
+        CATEGORY_TYPES.put("Administrative", Arrays.asList(
+                "Avance sur salaire", "Remboursement", "Matériel de bureau",
+                "Badge d'accès", "Carte de visite"
+        ));
+        CATEGORY_TYPES.put("Informatique", Arrays.asList(
+                "Matériel informatique", "Accès système", "Logiciel", "Problème technique"
+        ));
+        CATEGORY_TYPES.put("Formation", Arrays.asList(
+                "Formation interne", "Formation externe", "Certification"
+        ));
+        CATEGORY_TYPES.put("Organisation du travail", Arrays.asList(
+                "Télétravail", "Changement d'horaires", "Heures supplémentaires"
+        ));
+    }
+
+    private static final List<String> ALL_STATUSES = Arrays.asList(
+            "Nouvelle", "En cours", "En attente", "Résolue", "Fermée", "Annulée"
+    );
 
     // ═══════════════════════════════════════════════════════════════════════════
     // SETTERS
     // ═══════════════════════════════════════════════════════════════════════════
 
-    public void setParentController(DemandesController parentController) {
-        this.parentController = parentController;
+    public void setParentController(DemandesController parent) {
+        this.parentController = parent;
     }
 
+    /**
+     * MAIN ENTRY POINT - Called when editing a demande
+     */
     public void setDemande(Demande demande) {
+        System.out.println("╔═══════════════════════════════════════════════════════════╗");
+        System.out.println("║ setDemande() called                                       ║");
+        System.out.println("║ Demande: " + (demande != null ? demande.getTitre() : "null"));
+        System.out.println("╚═══════════════════════════════════════════════════════════╝");
+
         this.currentDemande = demande;
+
         if (demande != null) {
-            fillFormWithDemande(demande);
+            // Step 1: Load details from database
+            loadDemandeDetailsFromDB(demande.getIdDemande());
+
+            // Step 2: Fill form with proper sequencing
+            fillFormWithProperSequencing(demande);
         }
     }
 
@@ -105,55 +147,392 @@ public class ModifierDemandeController implements Initializable {
         detailsCRUD = new DemandeDetailsCRUD();
         formHelper = new DemandeFormHelper();
 
-        formHelper.initializeComboBoxes(categorieCombo, typeDemandeCombo, prioriteCombo, statusCombo);
-        setupDatePicker();
-        setupDestinationField();
-
-        if (typeDemandeCombo != null) {
-            typeDemandeCombo.setOnAction(e -> {
-                String type = typeDemandeCombo.getValue();
-                formHelper.updateDynamicFields(type, dynamicFieldsContainer, detailsPane);
-                updateDestinationVisibility(type);
-            });
-        }
-
+        initializeComboBoxes();
+        setupCategoryListener();
+        setupTypeListener();
         setupRealtimeValidation();
+        setupDestinationField();
 
         System.out.println("ModifierDemandeController initialized!");
     }
 
-    // ═══════════════════════════════════════════════════════════════════════════
-    // DATE PICKER SETUP
-    // ═══════════════════════════════════════════════════════════════════════════
+    private void initializeComboBoxes() {
+        if (categorieCombo != null) {
+            categorieCombo.setItems(FXCollections.observableArrayList(CATEGORY_TYPES.keySet()));
+        }
 
-    private void setupDatePicker() {
-        if (dateCreationPicker == null) return;
+        if (prioriteCombo != null) {
+            prioriteCombo.setItems(FXCollections.observableArrayList("HAUTE", "NORMALE", "BASSE"));
+        }
 
-        Callback<DatePicker, DateCell> dayCellFactory = new Callback<DatePicker, DateCell>() {
-            @Override
-            public DateCell call(final DatePicker datePicker) {
-                return new DateCell() {
-                    @Override
-                    public void updateItem(LocalDate item, boolean empty) {
-                        super.updateItem(item, empty);
+        if (statusCombo != null) {
+            statusCombo.setItems(FXCollections.observableArrayList(ALL_STATUSES));
+        }
 
-                        if (item.isBefore(LocalDate.now())) {
-                            setStyle("-fx-background-color: #fff3cd;");
-                            setTooltip(new Tooltip("Date dans le passé"));
-                        } else if (item.equals(LocalDate.now())) {
-                            setStyle("-fx-background-color: #90EE90; -fx-font-weight: bold;");
-                            setTooltip(new Tooltip("Aujourd'hui"));
-                        }
+        if (typeDemandeCombo != null) {
+            typeDemandeCombo.setItems(FXCollections.observableArrayList());
+        }
+    }
+
+    private void setupCategoryListener() {
+        if (categorieCombo != null) {
+            categorieCombo.valueProperty().addListener((obs, oldVal, newVal) -> {
+                System.out.println("📁 Category changed: " + oldVal + " → " + newVal);
+
+                if (newVal != null && CATEGORY_TYPES.containsKey(newVal)) {
+                    List<String> types = CATEGORY_TYPES.get(newVal);
+                    typeDemandeCombo.setItems(FXCollections.observableArrayList(types));
+                    System.out.println("   Types set: " + types);
+                } else {
+                    typeDemandeCombo.getItems().clear();
+                }
+            });
+        }
+    }
+
+    /**
+     * CRITICAL: Type listener creates dynamic fields and fills them
+     */
+    private void setupTypeListener() {
+        if (typeDemandeCombo != null) {
+            typeDemandeCombo.valueProperty().addListener((obs, oldVal, newVal) -> {
+                System.out.println("╔═══════════════════════════════════════════════════════════╗");
+                System.out.println("║ TYPE CHANGED: " + oldVal + " → " + newVal);
+                System.out.println("║ shouldFillDetails: " + shouldFillDetails);
+                System.out.println("║ pendingDetailsJson: " + (pendingDetailsJson != null ? "EXISTS" : "NULL"));
+                System.out.println("╚═══════════════════════════════════════════════════════════╝");
+
+                if (newVal != null && !newVal.isEmpty()) {
+                    // Step 1: Create dynamic fields
+                    System.out.println(">>> Creating dynamic fields for: " + newVal);
+                    formHelper.updateDynamicFields(newVal, dynamicFieldsContainer, detailsPane);
+
+                    // Step 2: Update destination visibility
+                    updateDestinationVisibility(newVal);
+
+                    // Step 3: Fill fields if we have pending data
+                    if (shouldFillDetails && pendingDetailsJson != null &&
+                            !pendingDetailsJson.isEmpty() && !pendingDetailsJson.equals("{}")) {
+
+                        // Use multiple Platform.runLater to ensure fields are fully created
+                        Platform.runLater(() -> {
+                            Platform.runLater(() -> {
+                                System.out.println(">>> FILLING DYNAMIC FIELDS NOW <<<");
+                                System.out.println("JSON: " + pendingDetailsJson);
+
+                                fillDynamicFieldsFromJson();
+                                fillDestinationFromJson();
+
+                                System.out.println(">>> FILLING COMPLETE <<<");
+
+                                // Reset flag after filling
+                                shouldFillDetails = false;
+                            });
+                        });
                     }
-                };
-            }
-        };
+                } else {
+                    formHelper.updateDynamicFields(null, dynamicFieldsContainer, detailsPane);
+                    hideDestinationField();
+                }
+            });
+        }
+    }
 
-        dateCreationPicker.setDayCellFactory(dayCellFactory);
+    private void setupRealtimeValidation() {
+        if (titreField != null) {
+            titreField.textProperty().addListener((o, ov, nv) -> {
+                if (nv != null && !nv.trim().isEmpty()) clearFieldError(titreField, titreError);
+            });
+        }
+        if (descriptionArea != null) {
+            descriptionArea.textProperty().addListener((o, ov, nv) -> {
+                if (nv != null && !nv.trim().isEmpty()) clearFieldError(descriptionArea, descriptionError);
+            });
+        }
+        if (categorieCombo != null) {
+            categorieCombo.valueProperty().addListener((o, ov, nv) -> {
+                if (nv != null) clearFieldError(categorieCombo, categorieError);
+            });
+        }
+        if (typeDemandeCombo != null) {
+            typeDemandeCombo.valueProperty().addListener((o, ov, nv) -> {
+                if (nv != null) clearFieldError(typeDemandeCombo, typeError);
+            });
+        }
+        if (prioriteCombo != null) {
+            prioriteCombo.valueProperty().addListener((o, ov, nv) -> {
+                if (nv != null) clearFieldError(prioriteCombo, prioriteError);
+            });
+        }
+        if (statusCombo != null) {
+            statusCombo.valueProperty().addListener((o, ov, nv) -> {
+                if (nv != null) clearFieldError(statusCombo, statusError);
+            });
+        }
+    }
+
+    private void clearFieldError(Control field, Label errorLabel) {
+        if (errorLabel != null) errorLabel.setText("");
+        if (field != null) field.setStyle("");
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // DESTINATION / MAP METHODS
+    // LOAD DETAILS FROM DATABASE
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    private void loadDemandeDetailsFromDB(int idDemande) {
+        System.out.println("╔═══════════════════════════════════════════════════════════╗");
+        System.out.println("║ Loading details from DB for demande ID: " + idDemande);
+
+        try {
+            currentDetails = detailsCRUD.getByDemande(idDemande);
+
+            if (currentDetails != null && currentDetails.getDetails() != null
+                    && !currentDetails.getDetails().isEmpty()) {
+                pendingDetailsJson = currentDetails.getDetails();
+                shouldFillDetails = true;
+                System.out.println("║ ✅ Details loaded: " + pendingDetailsJson);
+            } else {
+                pendingDetailsJson = null;
+                shouldFillDetails = false;
+                System.out.println("║ ⚠️ No details found in database");
+            }
+        } catch (SQLException e) {
+            System.err.println("║ ❌ Error loading details: " + e.getMessage());
+            e.printStackTrace();
+            pendingDetailsJson = null;
+            shouldFillDetails = false;
+        }
+
+        System.out.println("╚═══════════════════════════════════════════════════════════╝");
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // FILL FORM WITH PROPER SEQUENCING
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    private void fillFormWithProperSequencing(Demande demande) {
+        System.out.println("╔═══════════════════════════════════════════════════════════╗");
+        System.out.println("║ fillFormWithProperSequencing()");
+        System.out.println("║ Title: " + demande.getTitre());
+        System.out.println("║ Category: " + demande.getCategorie());
+        System.out.println("║ Type: " + demande.getTypeDemande());
+        System.out.println("╚═══════════════════════════════════════════════════════════╝");
+
+        // Header
+        if (headerLabel != null) {
+            headerLabel.setText("✏️ Modifier: " + demande.getTitre());
+        }
+
+        // Basic fields (these don't depend on anything)
+        if (titreField != null) {
+            titreField.setText(demande.getTitre() != null ? demande.getTitre() : "");
+        }
+
+        if (descriptionArea != null) {
+            descriptionArea.setText(demande.getDescription() != null ? demande.getDescription() : "");
+        }
+
+        if (prioriteCombo != null && demande.getPriorite() != null) {
+            prioriteCombo.setValue(demande.getPriorite());
+        }
+
+        if (statusCombo != null && demande.getStatus() != null) {
+            statusCombo.setValue(demande.getStatus());
+        }
+
+        if (dateCreationPicker != null && demande.getDateCreation() != null) {
+            try {
+                LocalDate date = demande.getDateCreation().toInstant()
+                        .atZone(ZoneId.systemDefault())
+                        .toLocalDate();
+                dateCreationPicker.setValue(date);
+            } catch (Exception e) {
+                dateCreationPicker.setValue(LocalDate.now());
+            }
+        }
+
+        // CRITICAL SEQUENCING: Category → Types populated → Type set → Dynamic fields created → Fields filled
+
+        String category = demande.getCategorie();
+        String type = demande.getTypeDemande();
+
+        if (category != null && !category.isEmpty()) {
+            // Ensure category is in the list
+            if (!categorieCombo.getItems().contains(category)) {
+                categorieCombo.getItems().add(category);
+            }
+
+            // Set category - this will trigger the listener which populates types
+            System.out.println(">>> Setting category: " + category);
+            categorieCombo.setValue(category);
+
+            // Now set the type AFTER category listener has run
+            Platform.runLater(() -> {
+                if (type != null && !type.isEmpty()) {
+                    // Ensure type is in the list
+                    if (!typeDemandeCombo.getItems().contains(type)) {
+                        System.out.println(">>> Adding type to list: " + type);
+                        typeDemandeCombo.getItems().add(type);
+                    }
+
+                    // Set the flag BEFORE setting type
+                    shouldFillDetails = (pendingDetailsJson != null && !pendingDetailsJson.isEmpty());
+
+                    System.out.println(">>> Setting type: " + type);
+                    System.out.println(">>> shouldFillDetails: " + shouldFillDetails);
+
+                    // Set type - this will trigger the type listener which creates fields and fills them
+                    typeDemandeCombo.setValue(type);
+                }
+            });
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // FILL DYNAMIC FIELDS FROM JSON
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    private void fillDynamicFieldsFromJson() {
+        if (pendingDetailsJson == null || pendingDetailsJson.isEmpty()) {
+            System.out.println("No pending JSON to fill");
+            return;
+        }
+
+        System.out.println("Filling dynamic fields from: " + pendingDetailsJson);
+
+        // Get all dynamic fields from form helper
+        Map<String, Control> fields = formHelper.getDynamicFields();
+        System.out.println("Available dynamic fields: " + fields.keySet());
+
+        if (fields.isEmpty()) {
+            System.out.println("⚠️ No dynamic fields available!");
+            return;
+        }
+
+        // Parse JSON
+        Map<String, String> values = formHelper.parseDetailsJson(pendingDetailsJson);
+        System.out.println("Parsed values: " + values);
+
+        // Fill each field
+        for (Map.Entry<String, String> entry : values.entrySet()) {
+            String key = entry.getKey();
+            String value = entry.getValue();
+
+            // Skip coordinate fields
+            if (key.endsWith("Lat") || key.endsWith("Lon")) {
+                continue;
+            }
+
+            // Find and fill the field
+            Control control = findControlByKey(fields, key);
+            if (control != null) {
+                setControlValue(control, value);
+                System.out.println("✅ Set '" + key + "' = '" + value + "'");
+
+                // Handle location field coordinates
+                if (formHelper.isLocationField(key) && control instanceof TextField) {
+                    String latStr = values.get(key + "Lat");
+                    String lonStr = values.get(key + "Lon");
+                    if (latStr != null && lonStr != null) {
+                        try {
+                            double lat = Double.parseDouble(latStr);
+                            double lon = Double.parseDouble(lonStr);
+                            ((TextField) control).setUserData(new double[]{lat, lon});
+                            control.setStyle("-fx-border-color: #27ae60; -fx-border-width: 2;");
+                        } catch (NumberFormatException e) {
+                            // Ignore
+                        }
+                    }
+                }
+            } else {
+                System.out.println("⚠️ Control not found for: " + key);
+            }
+        }
+    }
+
+    private Control findControlByKey(Map<String, Control> fields, String key) {
+        // Direct match
+        if (fields.containsKey(key)) {
+            return fields.get(key);
+        }
+
+        // Try case-insensitive match
+        String keyLower = key.toLowerCase();
+        for (Map.Entry<String, Control> entry : fields.entrySet()) {
+            if (entry.getKey().toLowerCase().equals(keyLower)) {
+                return entry.getValue();
+            }
+        }
+
+        // Try normalized match
+        String normalizedKey = normalizeKey(key);
+        for (Map.Entry<String, Control> entry : fields.entrySet()) {
+            if (normalizeKey(entry.getKey()).equals(normalizedKey)) {
+                return entry.getValue();
+            }
+        }
+
+        return null;
+    }
+
+    private String normalizeKey(String key) {
+        if (key == null) return "";
+        return key.toLowerCase()
+                .replaceAll("[\\s_-]", "")
+                .replaceAll("[àâäáã]", "a")
+                .replaceAll("[éèêëẽ]", "e")
+                .replaceAll("[ïîíì]", "i")
+                .replaceAll("[ôöóòõ]", "o")
+                .replaceAll("[ùûüúũ]", "u")
+                .replaceAll("ç", "c");
+    }
+
+    private void setControlValue(Control control, String value) {
+        if (control == null || value == null) return;
+
+        try {
+            if (control instanceof TextField) {
+                ((TextField) control).setText(value);
+            } else if (control instanceof TextArea) {
+                ((TextArea) control).setText(value);
+            } else if (control instanceof ComboBox) {
+                @SuppressWarnings("unchecked")
+                ComboBox<String> combo = (ComboBox<String>) control;
+                if (!combo.getItems().contains(value) && !value.isEmpty()) {
+                    combo.getItems().add(value);
+                }
+                combo.setValue(value);
+            } else if (control instanceof DatePicker) {
+                try {
+                    LocalDate date = LocalDate.parse(value);
+                    ((DatePicker) control).setValue(date);
+                } catch (Exception e) {
+                    // Try other formats
+                    try {
+                        if (value.contains("/")) {
+                            String[] parts = value.split("/");
+                            if (parts.length == 3) {
+                                LocalDate date = LocalDate.of(
+                                        Integer.parseInt(parts[2]),
+                                        Integer.parseInt(parts[1]),
+                                        Integer.parseInt(parts[0])
+                                );
+                                ((DatePicker) control).setValue(date);
+                            }
+                        }
+                    } catch (Exception ex) {
+                        System.err.println("Could not parse date: " + value);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error setting value for control: " + e.getMessage());
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // DESTINATION / MAP
     // ═══════════════════════════════════════════════════════════════════════════
 
     private void setupDestinationField() {
@@ -165,10 +544,8 @@ public class ModifierDemandeController implements Initializable {
             destinationLabel.setVisible(false);
             destinationLabel.setManaged(false);
         }
-
         if (destinationField != null) {
             destinationField.setEditable(false);
-            destinationField.setPromptText("Cliquez sur 📍 pour choisir");
         }
     }
 
@@ -192,12 +569,26 @@ public class ModifierDemandeController implements Initializable {
     private boolean isDestinationType(String type) {
         if (type == null) return false;
         String typeLower = type.toLowerCase();
-        for (String destType : DESTINATION_TYPES) {
-            if (typeLower.contains(destType.toLowerCase())) {
+        String[] destTypes = {"mission", "déplacement", "formation externe", "voyage",
+                "conférence", "séminaire", "visite", "transport", "certification", "mutation", "télétravail"};
+        for (String destType : destTypes) {
+            if (typeLower.contains(destType)) {
                 return true;
             }
         }
         return false;
+    }
+
+    private void hideDestinationField() {
+        if (destinationContainer != null) {
+            destinationContainer.setVisible(false);
+            destinationContainer.setManaged(false);
+        }
+        if (destinationLabel != null) {
+            destinationLabel.setVisible(false);
+            destinationLabel.setManaged(false);
+        }
+        clearDestination();
     }
 
     private void clearDestination() {
@@ -210,6 +601,34 @@ public class ModifierDemandeController implements Initializable {
         }
         if (destinationError != null) {
             destinationError.setText("");
+        }
+    }
+
+    private void fillDestinationFromJson() {
+        if (pendingDetailsJson == null || pendingDetailsJson.isEmpty()) return;
+
+        try {
+            Map<String, String> values = formHelper.parseDetailsJson(pendingDetailsJson);
+
+            if (values.containsKey("destination")) {
+                selectedDestination = values.get("destination");
+
+                try {
+                    selectedLat = Double.parseDouble(values.getOrDefault("destinationLat", "0"));
+                    selectedLon = Double.parseDouble(values.getOrDefault("destinationLon", "0"));
+                } catch (NumberFormatException e) {
+                    selectedLat = 0;
+                    selectedLon = 0;
+                }
+
+                if (destinationField != null && selectedDestination != null && !selectedDestination.isEmpty()) {
+                    destinationField.setText(selectedDestination);
+                    destinationField.setStyle("-fx-border-color: #27ae60; -fx-border-width: 2;");
+                    System.out.println("✅ Loaded destination: " + selectedDestination);
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error loading destination: " + e.getMessage());
         }
     }
 
@@ -231,168 +650,99 @@ public class ModifierDemandeController implements Initializable {
                         if (destinationError != null) {
                             destinationError.setText("");
                         }
-
-                        System.out.println("📍 Destination modifiée: " + result.cityName +
-                                " (Lat: " + result.lat + ", Lon: " + result.lon + ")");
                     });
                 }
             });
         } catch (Exception e) {
-            System.err.println("Error opening map: " + e.getMessage());
             showAlert(Alert.AlertType.ERROR, "Erreur", "Impossible d'ouvrir la carte: " + e.getMessage());
         }
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // REALTIME VALIDATION
+    // FORM VALIDATION
     // ═══════════════════════════════════════════════════════════════════════════
 
-    private void setupRealtimeValidation() {
-        if (titreField != null) {
-            titreField.textProperty().addListener((obs, o, n) -> {
-                if (n != null && !n.trim().isEmpty()) {
-                    formHelper.clearFieldError(titreField, titreError);
-                }
-            });
-        }
-        if (descriptionArea != null) {
-            descriptionArea.textProperty().addListener((obs, o, n) -> {
-                if (n != null && !n.trim().isEmpty()) {
-                    formHelper.clearFieldError(descriptionArea, descriptionError);
-                }
-            });
-        }
-        if (categorieCombo != null) {
-            categorieCombo.valueProperty().addListener((obs, o, n) -> {
-                if (n != null) formHelper.clearFieldError(categorieCombo, categorieError);
-            });
-        }
-        if (typeDemandeCombo != null) {
-            typeDemandeCombo.valueProperty().addListener((obs, o, n) -> {
-                if (n != null) formHelper.clearFieldError(typeDemandeCombo, typeError);
-            });
-        }
-        if (prioriteCombo != null) {
-            prioriteCombo.valueProperty().addListener((obs, o, n) -> {
-                if (n != null) formHelper.clearFieldError(prioriteCombo, prioriteError);
-            });
-        }
-        if (statusCombo != null) {
-            statusCombo.valueProperty().addListener((obs, o, n) -> {
-                if (n != null) formHelper.clearFieldError(statusCombo, statusError);
-            });
-        }
-        if (dateCreationPicker != null) {
-            dateCreationPicker.valueProperty().addListener((obs, o, n) -> {
-                if (n != null) formHelper.clearFieldError(dateCreationPicker, dateError);
-            });
-        }
-        if (destinationField != null) {
-            destinationField.textProperty().addListener((o, ov, nv) -> {
-                if (nv != null && !nv.trim().isEmpty()) {
-                    if (destinationError != null) destinationError.setText("");
-                    destinationField.setStyle("-fx-border-color: #27ae60;");
-                }
-            });
-        }
-    }
+    private boolean validateForm() {
+        boolean valid = true;
 
-    // ═══════════════════════════════════════════════════════════════════════════
-    // FILL FORM WITH EXISTING DATA
-    // ═══════════════════════════════════════════════════════════════════════════
-
-    private void fillFormWithDemande(Demande demande) {
-        if (demande == null) {
-            System.err.println("Warning: demande is null in fillFormWithDemande");
-            return;
+        if (titreField == null || titreField.getText() == null || titreField.getText().trim().isEmpty()) {
+            setFieldError(titreField, titreError, "Le titre est obligatoire");
+            valid = false;
+        } else if (titreField.getText().trim().length() < 3) {
+            setFieldError(titreField, titreError, "Minimum 3 caractères");
+            valid = false;
         }
 
-        System.out.println("Filling form with demande: " + demande.getTitre());
-
-        if (headerLabel != null) {
-            headerLabel.setText("✏️ Modifier: " + demande.getTitre());
-        }
-        if (titreField != null) titreField.setText(demande.getTitre());
-        if (descriptionArea != null) descriptionArea.setText(demande.getDescription());
-        if (categorieCombo != null) categorieCombo.setValue(demande.getCategorie());
-        if (prioriteCombo != null) prioriteCombo.setValue(demande.getPriorite());
-        if (statusCombo != null) statusCombo.setValue(demande.getStatus());
-
-        if (demande.getDateCreation() != null && dateCreationPicker != null) {
-            java.sql.Date sqlDate = new java.sql.Date(demande.getDateCreation().getTime());
-            dateCreationPicker.setValue(sqlDate.toLocalDate());
+        if (categorieCombo == null || categorieCombo.getValue() == null) {
+            setFieldError(categorieCombo, categorieError, "Sélectionnez une catégorie");
+            valid = false;
         }
 
-        if (typeDemandeCombo != null) {
-            typeDemandeCombo.setValue(demande.getTypeDemande());
+        if (typeDemandeCombo == null || typeDemandeCombo.getValue() == null) {
+            setFieldError(typeDemandeCombo, typeError, "Sélectionnez un type");
+            valid = false;
         }
 
-        formHelper.updateDynamicFields(demande.getTypeDemande(), dynamicFieldsContainer, detailsPane);
-        updateDestinationVisibility(demande.getTypeDemande());
+        if (prioriteCombo == null || prioriteCombo.getValue() == null) {
+            setFieldError(prioriteCombo, prioriteError, "Sélectionnez une priorité");
+            valid = false;
+        }
 
-        // Load existing details including destination
-        try {
-            DemandeDetails details = detailsCRUD.getByDemande(demande.getIdDemande());
-            if (details != null && details.getDetails() != null) {
-                String detailsJson = details.getDetails();
-                Map<String, String> parsed = formHelper.parseDetailsJson(detailsJson);
+        if (statusCombo == null || statusCombo.getValue() == null) {
+            setFieldError(statusCombo, statusError, "Sélectionnez un statut");
+            valid = false;
+        }
 
-                // Fill dynamic fields
-                for (Map.Entry<String, String> entry : parsed.entrySet()) {
-                    Control field = formHelper.getDynamicFields().get(entry.getKey());
-                    if (field != null) {
-                        formHelper.setFieldValue(field, entry.getValue());
-                    }
-                }
+        if (descriptionArea == null || descriptionArea.getText() == null ||
+                descriptionArea.getText().trim().isEmpty()) {
+            setFieldError(descriptionArea, descriptionError, "La description est obligatoire");
+            valid = false;
+        } else if (descriptionArea.getText().trim().length() < 10) {
+            setFieldError(descriptionArea, descriptionError, "Minimum 10 caractères");
+            valid = false;
+        }
 
-                // Load destination if exists
-                if (parsed.containsKey("destination")) {
-                    selectedDestination = parsed.get("destination");
-                    if (destinationField != null) {
-                        destinationField.setText(selectedDestination);
-                        destinationField.setStyle("-fx-border-color: #27ae60;");
-                    }
-                }
-                if (parsed.containsKey("destinationLat")) {
-                    try {
-                        selectedLat = Double.parseDouble(parsed.get("destinationLat"));
-                    } catch (NumberFormatException ignored) {
-                    }
-                }
-                if (parsed.containsKey("destinationLon")) {
-                    try {
-                        selectedLon = Double.parseDouble(parsed.get("destinationLon"));
-                    } catch (NumberFormatException ignored) {
-                    }
-                }
+        if (dateCreationPicker == null || dateCreationPicker.getValue() == null) {
+            setFieldError(dateCreationPicker, dateError, "La date est obligatoire");
+            valid = false;
+        }
+
+        if (destinationContainer != null && destinationContainer.isVisible()) {
+            if (selectedDestination == null || selectedDestination.trim().isEmpty()) {
+                if (destinationError != null) destinationError.setText("⚠️ Sélectionnez une destination");
+                if (destinationField != null) destinationField.setStyle("-fx-border-color: #e74c3c;");
+                valid = false;
             }
-        } catch (SQLException e) {
-            System.err.println("Error loading details: " + e.getMessage());
         }
+
+        if (formHelper != null && !formHelper.validateDynamicFields()) {
+            valid = false;
+        }
+
+        return valid;
+    }
+
+    private void setFieldError(Control field, Label errorLabel, String message) {
+        if (errorLabel != null) errorLabel.setText(message);
+        if (field != null) field.setStyle("-fx-border-color: #e74c3c; -fx-border-width: 2;");
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // FORM SUBMISSION
+    // MODIFY DEMANDE
     // ═══════════════════════════════════════════════════════════════════════════
 
     @FXML
     private void modifierDemande() {
-        System.out.println("=== modifierDemande() called ===");
+        System.out.println("=== modifierDemande() ===");
 
         if (!validateForm()) {
-            System.out.println("Form validation failed");
+            System.out.println("Validation failed");
             return;
         }
 
         if (currentDemande == null) {
             showAlert(Alert.AlertType.ERROR, "Erreur", "❌ Aucune demande à modifier");
             return;
-        }
-
-        // Disable button during processing
-        if (submitBtn != null) {
-            submitBtn.setDisable(true);
-            submitBtn.setText("⏳ Enregistrement...");
         }
 
         try {
@@ -402,49 +752,46 @@ public class ModifierDemandeController implements Initializable {
             currentDemande.setTypeDemande(typeDemandeCombo.getValue());
             currentDemande.setPriorite(prioriteCombo.getValue());
             currentDemande.setStatus(statusCombo.getValue());
-            currentDemande.setDateCreation(java.sql.Date.valueOf(dateCreationPicker.getValue()));
+
+            if (dateCreationPicker.getValue() != null) {
+                currentDemande.setDateCreation(java.sql.Date.valueOf(dateCreationPicker.getValue()));
+            }
 
             demandeCRUD.modifier(currentDemande);
-            System.out.println("✅ Demande modified successfully");
+            System.out.println("✅ Demande updated");
 
-            // Build details JSON including destination
-            String detailsJson = buildDetailsJsonWithDestination();
+            // Build and save details
+            String detailsJson = buildDetailsJson();
+            System.out.println("Details JSON: " + detailsJson);
 
-            DemandeDetails existing = detailsCRUD.getByDemande(currentDemande.getIdDemande());
-            if (existing != null) {
-                existing.setDetails(detailsJson);
-                detailsCRUD.modifier(existing);
+            if (currentDetails != null) {
+                currentDetails.setDetails(detailsJson);
+                detailsCRUD.modifier(currentDetails);
             } else if (!detailsJson.equals("{}")) {
                 DemandeDetails newDetails = new DemandeDetails();
                 newDetails.setIdDemande(currentDemande.getIdDemande());
                 newDetails.setDetails(detailsJson);
                 detailsCRUD.ajouter(newDetails);
             }
-            System.out.println("✅ Details saved");
 
-            showAlert(Alert.AlertType.INFORMATION, "Succès", "✅ Demande modifiée avec succès!");
+            pendingDetailsJson = null;
+            shouldFillDetails = false;
 
-            // Close the window
-            closeWindow();
+            showAlert(Alert.AlertType.INFORMATION, "Succès ✅",
+                    "Demande modifiée avec succès!\n\n📋 " + currentDemande.getTitre());
+
+            returnToDemandesList();
 
         } catch (SQLException e) {
-            System.err.println("❌ Error modifying demande: " + e.getMessage());
             e.printStackTrace();
-
-            if (submitBtn != null) {
-                submitBtn.setDisable(false);
-                submitBtn.setText("💾 Enregistrer");
-            }
-
-            showAlert(Alert.AlertType.ERROR, "Erreur", "❌ Erreur: " + e.getMessage());
+            showAlert(Alert.AlertType.ERROR, "Erreur", "❌ " + e.getMessage());
         }
     }
 
-    private String buildDetailsJsonWithDestination() {
+    private String buildDetailsJson() {
         StringBuilder json = new StringBuilder("{");
         boolean hasContent = false;
 
-        // Get form helper's dynamic fields
         String formDetails = formHelper.buildDetailsJson();
         if (!formDetails.equals("{}")) {
             String inner = formDetails.substring(1, formDetails.length() - 1);
@@ -454,12 +801,9 @@ public class ModifierDemandeController implements Initializable {
             }
         }
 
-        // Add destination if selected and visible
         if (selectedDestination != null && !selectedDestination.isEmpty() &&
                 destinationContainer != null && destinationContainer.isVisible()) {
-
             if (hasContent) json.append(",");
-
             json.append("\"destination\":\"").append(escapeJson(selectedDestination)).append("\"");
             json.append(",\"destinationLat\":").append(selectedLat);
             json.append(",\"destinationLon\":").append(selectedLon);
@@ -479,89 +823,111 @@ public class ModifierDemandeController implements Initializable {
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // VALIDATION
-    // ═══════════════════════════════════════════════════════════════════════════
-
-    private boolean validateForm() {
-        boolean valid = true;
-
-        // Basic validation using form helper
-        if (!formHelper.validateForm(titreField, titreError, categorieCombo, categorieError,
-                typeDemandeCombo, typeError, prioriteCombo, prioriteError,
-                descriptionArea, descriptionError, statusCombo, statusError,
-                dateCreationPicker, dateError)) {
-            valid = false;
-        }
-
-        // Destination validation (only if visible)
-        if (destinationContainer != null && destinationContainer.isVisible()) {
-            if (selectedDestination == null || selectedDestination.trim().isEmpty()) {
-                if (destinationError != null) {
-                    destinationError.setText("⚠️ Veuillez sélectionner une destination");
-                }
-                if (destinationField != null) {
-                    destinationField.setStyle("-fx-border-color: #e74c3c;");
-                }
-                valid = false;
-            }
-        }
-
-        return valid;
-    }
-
-    // ═══════════════════════════════════════════════════════════════════════════
-    // NAVIGATION - FIXED (NO NavigationHelper)
+    // NAVIGATION
     // ═══════════════════════════════════════════════════════════════════════════
 
     @FXML
     private void retourListe() {
-        closeWindow();
+        returnToDemandesList();
     }
 
-    /**
-     * Close the current window
-     */
-    private void closeWindow() {
+    private void returnToDemandesList() {
         try {
-            Stage stage = getStage();
-            if (stage != null) {
-                stage.close();
-                System.out.println("Modifier window closed.");
+            StackPane contentArea = findContentAreaByTraversal();
+
+            if (contentArea != null) {
+                loadDemandesIntoContentArea(contentArea);
+                return;
             }
+
+            Stage currentStage = getStageFromAnyNode();
+            if (currentStage != null) {
+                if (currentStage.getModality() != Modality.NONE) {
+                    currentStage.close();
+                    return;
+                }
+
+                Scene scene = currentStage.getScene();
+                if (scene != null) {
+                    Node contentNode = scene.lookup("#contentArea");
+                    if (contentNode instanceof StackPane) {
+                        loadDemandesIntoContentArea((StackPane) contentNode);
+                        return;
+                    }
+                }
+            }
+
+            if (parentController != null) {
+                parentController.loadDemandes();
+                if (currentStage != null) currentStage.close();
+                return;
+            }
+
+            showAlert(Alert.AlertType.WARNING, "Navigation", "Veuillez fermer cette fenêtre manuellement.");
+
         } catch (Exception e) {
-            System.err.println("Error closing window: " + e.getMessage());
             e.printStackTrace();
+            showAlert(Alert.AlertType.ERROR, "Erreur", "Erreur de navigation: " + e.getMessage());
         }
     }
 
-    /**
-     * Get the current stage from any available FXML element
-     */
-    private Stage getStage() {
-        if (titreField != null && titreField.getScene() != null) {
-            return (Stage) titreField.getScene().getWindow();
-        }
-        if (headerLabel != null && headerLabel.getScene() != null) {
-            return (Stage) headerLabel.getScene().getWindow();
-        }
-        if (categorieCombo != null && categorieCombo.getScene() != null) {
-            return (Stage) categorieCombo.getScene().getWindow();
-        }
-        if (submitBtn != null && submitBtn.getScene() != null) {
-            return (Stage) submitBtn.getScene().getWindow();
+    private StackPane findContentAreaByTraversal() {
+        Node startNode = getAnyFXMLNode();
+        if (startNode == null) return null;
+
+        Parent parent = startNode.getParent();
+        int depth = 0;
+
+        while (parent != null && depth < 50) {
+            depth++;
+            if (parent instanceof StackPane) {
+                StackPane sp = (StackPane) parent;
+                if ("contentArea".equals(sp.getId()) || sp.getStyleClass().contains("content-area")) {
+                    return sp;
+                }
+            }
+            parent = parent.getParent();
         }
         return null;
     }
 
-    // ═══════════════════════════════════════════════════════════════════════════
-    // UTILITY
-    // ═══════════════════════════════════════════════════════════════════════════
+    private void loadDemandesIntoContentArea(StackPane contentArea) {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/demandes.fxml"));
+            Parent demandesView = loader.load();
+            contentArea.getChildren().setAll(demandesView);
+        } catch (IOException e) {
+            e.printStackTrace();
+            showAlert(Alert.AlertType.ERROR, "Erreur", "Impossible de charger la liste");
+        }
+    }
 
-    private void showAlert(Alert.AlertType type, String title, String content) {
+    private Node getAnyFXMLNode() {
+        if (titreField != null) return titreField;
+        if (descriptionArea != null) return descriptionArea;
+        if (categorieCombo != null) return categorieCombo;
+        if (typeDemandeCombo != null) return typeDemandeCombo;
+        if (headerLabel != null) return headerLabel;
+        if (dynamicFieldsContainer != null) return dynamicFieldsContainer;
+        return null;
+    }
+
+    private Stage getStageFromAnyNode() {
+        Node node = getAnyFXMLNode();
+        if (node != null) {
+            Scene scene = node.getScene();
+            if (scene != null && scene.getWindow() instanceof Stage) {
+                return (Stage) scene.getWindow();
+            }
+        }
+        return null;
+    }
+
+    private void showAlert(Alert.AlertType type, String title, String message) {
         Alert alert = new Alert(type);
         alert.setTitle(title);
         alert.setHeaderText(null);
-        alert.setContentText(content);
+        alert.setContentText(message);
         alert.showAndWait();
     }
 }

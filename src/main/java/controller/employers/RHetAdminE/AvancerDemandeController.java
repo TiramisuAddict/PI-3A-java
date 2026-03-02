@@ -12,13 +12,21 @@ import service.employers.employeCRUD;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.StackPane;
+import javafx.stage.Modality;
 import javafx.stage.Stage;
 
+import java.io.IOException;
 import java.net.URL;
 import java.sql.SQLException;
 import java.util.*;
@@ -95,11 +103,13 @@ public class AvancerDemandeController implements Initializable {
     public void initialize(URL location, ResourceBundle resources) {
         System.out.println("=== AvancerDemandeController.initialize() ===");
 
+        // Initialize services
         demandeCRUD = new DemandeCRUD();
         historiqueCRUD = new HistoriqueDemandeCRUD();
         employeCrud = new employeCRUD();
         emailService = new EmailService();
 
+        // Setup
         detectConnectedUser();
         initializeHistoriqueTable();
         setupRealtimeValidation();
@@ -374,6 +384,8 @@ public class AvancerDemandeController implements Initializable {
 
         List<String> allowed = new ArrayList<>();
 
+        if (currentStatus == null) currentStatus = "Nouvelle";
+
         switch (currentStatus) {
             case "Nouvelle":
                 allowed.addAll(Arrays.asList("En cours", "En attente"));
@@ -498,27 +510,35 @@ public class AvancerDemandeController implements Initializable {
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // MAIN ACTION - AVANCER STATUT
+    // MAIN ACTION - AVANCER STATUT (FIXED)
     // ═══════════════════════════════════════════════════════════════════════════
 
     @FXML
     private void avancerStatut() {
         System.out.println("=== avancerStatut() called ===");
 
+        // Validate form
         if (!validateForm()) {
             System.out.println("Validation failed");
             return;
         }
 
+        // Check demande
         if (currentDemande == null) {
             showAlert(Alert.AlertType.ERROR, "Erreur", "❌ Aucune demande sélectionnée");
             return;
         }
 
+        // Get values
         String ancienStatut = currentDemande.getStatus();
         String nouveauStatut = nouveauStatutCombo.getValue();
         String acteur = connectedActeurFullName + " (" + connectedActeurRole + ")";
         String commentaire = commentaireArea.getText().trim();
+
+        System.out.println("Ancien statut: " + ancienStatut);
+        System.out.println("Nouveau statut: " + nouveauStatut);
+        System.out.println("Acteur: " + acteur);
+        System.out.println("Commentaire: " + commentaire);
 
         // Disable button during processing
         if (submitBtn != null) {
@@ -527,12 +547,12 @@ public class AvancerDemandeController implements Initializable {
         }
 
         try {
-            // Update demande status
+            // 1. Update demande status in database
             currentDemande.setStatus(nouveauStatut);
             demandeCRUD.modifier(currentDemande);
             System.out.println("✅ Demande status updated: " + ancienStatut + " → " + nouveauStatut);
 
-            // Add historique entry
+            // 2. Add historique entry
             HistoriqueDemande historique = new HistoriqueDemande();
             historique.setIdDemande(currentDemande.getIdDemande());
             historique.setAncienStatut(ancienStatut);
@@ -543,10 +563,10 @@ public class AvancerDemandeController implements Initializable {
             historiqueCRUD.ajouter(historique);
             System.out.println("✅ Historique entry added");
 
-            // Send email notification (async)
+            // 3. Send email notification (async - don't wait)
             sendEmailToEmployee(ancienStatut, nouveauStatut, acteur, commentaire);
 
-            // Show success message
+            // 4. Show success message
             showAlert(Alert.AlertType.INFORMATION, "Succès ✅",
                     "Statut mis à jour avec succès!\n\n" +
                             "📋 " + currentDemande.getTitre() + "\n" +
@@ -554,13 +574,15 @@ public class AvancerDemandeController implements Initializable {
                             "👤 Par: " + acteur + "\n\n" +
                             "📧 Notification envoyée à l'employé.");
 
-            // Close the window
-            closeWindow();
+            // 5. Return to demandes list
+            System.out.println("Returning to demandes list...");
+            returnToDemandesList();
 
         } catch (SQLException e) {
             System.err.println("❌ Error updating demande: " + e.getMessage());
             e.printStackTrace();
 
+            // Re-enable button on error
             if (submitBtn != null) {
                 submitBtn.setDisable(false);
                 submitBtn.setText("⚡ Avancer le statut");
@@ -612,9 +634,12 @@ public class AvancerDemandeController implements Initializable {
             }
 
             // Send email asynchronously
+            final String finalEmpName = empName;
+            final String finalEmpEmail = empEmail;
+
             emailService.sendStatusChangeToEmployee(
-                    empName,
-                    empEmail,
+                    finalEmpName,
+                    finalEmpEmail,
                     currentDemande.getTitre(),
                     ancienStatut,
                     nouveauStatut,
@@ -623,8 +648,8 @@ public class AvancerDemandeController implements Initializable {
             ).thenAccept(success -> {
                 Platform.runLater(() -> {
                     System.out.println(success ?
-                            "✅ Email sent successfully to: " + empEmail :
-                            "❌ Email failed to: " + empEmail);
+                            "✅ Email sent successfully to: " + finalEmpEmail :
+                            "❌ Email failed to: " + finalEmpEmail);
                 });
             }).exceptionally(ex -> {
                 System.err.println("❌ Email error: " + ex.getMessage());
@@ -638,49 +663,255 @@ public class AvancerDemandeController implements Initializable {
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // NAVIGATION - FIXED (NO NavigationHelper)
+    // NAVIGATION - RETURN TO LIST (COMPLETELY FIXED)
     // ═══════════════════════════════════════════════════════════════════════════
 
     @FXML
     private void retourListe() {
-        closeWindow();
+        System.out.println("=== retourListe() called ===");
+        returnToDemandesList();
     }
 
     /**
-     * Close the current window
+     * Return to the demandes list - handles ALL scenarios
      */
-    private void closeWindow() {
+    private void returnToDemandesList() {
+        System.out.println("=== returnToDemandesList() ===");
+
         try {
-            Stage stage = getStage();
-            if (stage != null) {
-                stage.close();
-                System.out.println("Avancer window closed.");
+            // Get any available node
+            Node anyNode = getAnyFXMLNode();
+            if (anyNode == null) {
+                System.err.println("❌ No FXML node available!");
+                showAlert(Alert.AlertType.ERROR, "Erreur", "Erreur de navigation");
+                return;
             }
+
+            Scene scene = anyNode.getScene();
+            if (scene == null) {
+                System.err.println("❌ Scene is null!");
+                showAlert(Alert.AlertType.ERROR, "Erreur", "Erreur de navigation");
+                return;
+            }
+
+            Stage currentStage = (Stage) scene.getWindow();
+            System.out.println("Current stage: " + currentStage);
+            System.out.println("Stage modality: " + (currentStage != null ? currentStage.getModality() : "null"));
+
+            // ═══════════════════════════════════════════════════════════════
+            // METHOD 1: Check if we're in a modal window - just close it
+            // ═══════════════════════════════════════════════════════════════
+            if (currentStage != null && currentStage.getModality() != Modality.NONE) {
+                System.out.println("✅ Method 1: Closing modal window");
+                currentStage.close();
+                return;
+            }
+
+            // ═══════════════════════════════════════════════════════════════
+            // METHOD 2: Direct scene lookup for contentArea
+            // ═══════════════════════════════════════════════════════════════
+            Node contentNode = scene.lookup("#contentArea");
+            if (contentNode instanceof StackPane) {
+                System.out.println("✅ Method 2: Found via scene.lookup()");
+                loadDemandesIntoContentArea((StackPane) contentNode);
+                return;
+            }
+
+            // ═══════════════════════════════════════════════════════════════
+            // METHOD 3: Lookup from root
+            // ═══════════════════════════════════════════════════════════════
+            Parent root = scene.getRoot();
+            if (root != null) {
+                contentNode = root.lookup("#contentArea");
+                if (contentNode instanceof StackPane) {
+                    System.out.println("✅ Method 3: Found via root.lookup()");
+                    loadDemandesIntoContentArea((StackPane) contentNode);
+                    return;
+                }
+
+                // ═══════════════════════════════════════════════════════════
+                // METHOD 4: If root is BorderPane, check center
+                // ═══════════════════════════════════════════════════════════
+                if (root instanceof BorderPane) {
+                    BorderPane bp = (BorderPane) root;
+                    Node center = bp.getCenter();
+                    if (center instanceof StackPane) {
+                        System.out.println("✅ Method 4: Found as BorderPane center");
+                        loadDemandesIntoContentArea((StackPane) center);
+                        return;
+                    }
+                }
+            }
+
+            // ═══════════════════════════════════════════════════════════════
+            // METHOD 5: Parent traversal
+            // ═══════════════════════════════════════════════════════════════
+            StackPane contentArea = findContentAreaByTraversal(anyNode);
+            if (contentArea != null) {
+                System.out.println("✅ Method 5: Found via traversal");
+                loadDemandesIntoContentArea(contentArea);
+                return;
+            }
+
+            // ═══════════════════════════════════════════════════════════════
+            // METHOD 6: Use parent controller if available
+            // ═══════════════════════════════════════════════════════════════
+            if (parentController != null) {
+                System.out.println("✅ Method 6: Using parent controller");
+                parentController.loadDemandes();
+
+                // Close window if we're in a separate stage
+                if (currentStage != null && currentStage.getOwner() != null) {
+                    currentStage.close();
+                }
+                return;
+            }
+
+            // ═══════════════════════════════════════════════════════════════
+            // METHOD 7: Force close any window (last resort)
+            // ═══════════════════════════════════════════════════════════════
+            if (currentStage != null) {
+                System.out.println("✅ Method 7: Force closing current window");
+                currentStage.close();
+                return;
+            }
+
+            System.err.println("❌ All navigation methods failed!");
+            showAlert(Alert.AlertType.WARNING, "Navigation",
+                    "Impossible de retourner automatiquement.\n" +
+                            "Veuillez cliquer sur 'Demandes' dans le menu.");
+
         } catch (Exception e) {
-            System.err.println("Error closing window: " + e.getMessage());
             e.printStackTrace();
+            showAlert(Alert.AlertType.ERROR, "Erreur", "Erreur de navigation: " + e.getMessage());
         }
     }
 
     /**
-     * Get the current stage from any available FXML element
+     * Find content area by traversing parent hierarchy
      */
-    private Stage getStage() {
-        if (nouveauStatutCombo != null && nouveauStatutCombo.getScene() != null) {
-            return (Stage) nouveauStatutCombo.getScene().getWindow();
+    private StackPane findContentAreaByTraversal(Node startNode) {
+        if (startNode == null) {
+            System.out.println("startNode is null");
+            return null;
         }
-        if (infoTitreLabel != null && infoTitreLabel.getScene() != null) {
-            return (Stage) infoTitreLabel.getScene().getWindow();
+
+        Parent parent = startNode.getParent();
+        int depth = 0;
+        final int MAX_DEPTH = 100;
+
+        System.out.println("Starting traversal from: " + startNode.getClass().getSimpleName());
+
+        while (parent != null && depth < MAX_DEPTH) {
+            depth++;
+
+            // Check StackPane
+            if (parent instanceof StackPane) {
+                StackPane sp = (StackPane) parent;
+                String id = sp.getId();
+
+                System.out.println("  Depth " + depth + ": StackPane, id=" + id);
+
+                if ("contentArea".equals(id)) {
+                    System.out.println("Found contentArea at depth " + depth);
+                    return sp;
+                }
+
+                // Check style class
+                if (sp.getStyleClass().contains("content-area")) {
+                    System.out.println("Found content-area (by style) at depth " + depth);
+                    return sp;
+                }
+            }
+
+            // Check BorderPane center
+            if (parent instanceof BorderPane) {
+                BorderPane bp = (BorderPane) parent;
+                Node center = bp.getCenter();
+
+                System.out.println("  Depth " + depth + ": BorderPane found");
+
+                if (center instanceof StackPane) {
+                    StackPane sp = (StackPane) center;
+                    String id = sp.getId();
+
+                    System.out.println("    BorderPane center is StackPane, id=" + id);
+
+                    if ("contentArea".equals(id) || id == null) {
+                        System.out.println("Found contentArea in BorderPane center at depth " + depth);
+                        return sp;
+                    }
+                }
+            }
+
+            parent = parent.getParent();
         }
-        if (commentaireArea != null && commentaireArea.getScene() != null) {
-            return (Stage) commentaireArea.getScene().getWindow();
+
+        System.out.println("contentArea not found after " + depth + " levels");
+        return null;
+    }
+
+    /**
+     * Load demandes.fxml into content area
+     */
+    private void loadDemandesIntoContentArea(StackPane contentArea) {
+        System.out.println("Loading demandes.fxml into content area...");
+
+        // Try multiple paths
+        String[] possiblePaths = {
+                "/demandes.fxml",
+                "/emp/RHetAdminE/demandes.fxml",
+                "/demandes/demandes.fxml"
+        };
+
+        for (String path : possiblePaths) {
+            try {
+                System.out.println("Trying path: " + path);
+                URL resource = getClass().getResource(path);
+
+                if (resource != null) {
+                    FXMLLoader loader = new FXMLLoader(resource);
+                    Parent demandesView = loader.load();
+                    contentArea.getChildren().setAll(demandesView);
+                    System.out.println("✅ Demandes view loaded successfully from: " + path);
+                    return;
+                }
+            } catch (IOException e) {
+                System.out.println("Failed to load from " + path + ": " + e.getMessage());
+            }
         }
-        if (submitBtn != null && submitBtn.getScene() != null) {
-            return (Stage) submitBtn.getScene().getWindow();
-        }
-        if (acteurLabel != null && acteurLabel.getScene() != null) {
-            return (Stage) acteurLabel.getScene().getWindow();
-        }
+
+        // If all paths fail
+        System.err.println("❌ Could not load demandes.fxml from any path");
+        showAlert(Alert.AlertType.ERROR, "Erreur",
+                "Impossible de charger la liste des demandes.\n" +
+                        "Veuillez cliquer sur 'Demandes' dans le menu.");
+    }
+
+    /**
+     * Get any available FXML node
+     */
+    private Node getAnyFXMLNode() {
+        // Try all available nodes
+        if (nouveauStatutCombo != null && nouveauStatutCombo.getScene() != null) return nouveauStatutCombo;
+        if (commentaireArea != null && commentaireArea.getScene() != null) return commentaireArea;
+        if (submitBtn != null && submitBtn.getScene() != null) return submitBtn;
+        if (cancelBtn != null && cancelBtn.getScene() != null) return cancelBtn;
+        if (infoTitreLabel != null && infoTitreLabel.getScene() != null) return infoTitreLabel;
+        if (acteurLabel != null && acteurLabel.getScene() != null) return acteurLabel;
+        if (historiqueTable != null && historiqueTable.getScene() != null) return historiqueTable;
+        if (statusFlowContainer != null && statusFlowContainer.getScene() != null) return statusFlowContainer;
+        if (infoTypeLabel != null && infoTypeLabel.getScene() != null) return infoTypeLabel;
+        if (infoPrioriteLabel != null && infoPrioriteLabel.getScene() != null) return infoPrioriteLabel;
+        if (infoStatusLabel != null && infoStatusLabel.getScene() != null) return infoStatusLabel;
+
+        // Return any non-null node even without scene check
+        if (nouveauStatutCombo != null) return nouveauStatutCombo;
+        if (commentaireArea != null) return commentaireArea;
+        if (submitBtn != null) return submitBtn;
+        if (cancelBtn != null) return cancelBtn;
+        if (infoTitreLabel != null) return infoTitreLabel;
+
         return null;
     }
 

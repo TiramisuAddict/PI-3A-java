@@ -13,19 +13,27 @@ import service.api.MapPickerDialog;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.*;
 
 public class DemandeFormHelper {
 
+    // ═══════════════════════════════════════════════════════════════════════════
+    // INSTANCE VARIABLES
+    // ═══════════════════════════════════════════════════════════════════════════
+
     private Map<String, Control> dynamicFields = new LinkedHashMap<>();
     private Map<String, Label> dynamicErrorLabels = new LinkedHashMap<>();
     private Set<String> locationFieldKeys = new HashSet<>();
+    private Map<String, FieldDefinition> fieldDefinitions = new LinkedHashMap<>();
 
-    // Define categories and their types
+    // ═══════════════════════════════════════════════════════════════════════════
+    // CATEGORY AND TYPE DEFINITIONS
+    // ═══════════════════════════════════════════════════════════════════════════
+
     private static final Map<String, List<String>> CATEGORY_TYPES = new LinkedHashMap<>();
 
     static {
-        // RH Category
         CATEGORY_TYPES.put("Ressources Humaines", Arrays.asList(
                 "Congé",
                 "Attestation de travail",
@@ -35,7 +43,6 @@ public class DemandeFormHelper {
                 "Démission"
         ));
 
-        // Administrative Category
         CATEGORY_TYPES.put("Administrative", Arrays.asList(
                 "Avance sur salaire",
                 "Remboursement",
@@ -44,7 +51,6 @@ public class DemandeFormHelper {
                 "Carte de visite"
         ));
 
-        // IT Category
         CATEGORY_TYPES.put("Informatique", Arrays.asList(
                 "Matériel informatique",
                 "Accès système",
@@ -52,14 +58,12 @@ public class DemandeFormHelper {
                 "Problème technique"
         ));
 
-        // Formation Category
         CATEGORY_TYPES.put("Formation", Arrays.asList(
                 "Formation interne",
                 "Formation externe",
                 "Certification"
         ));
 
-        // Work Organization Category
         CATEGORY_TYPES.put("Organisation du travail", Arrays.asList(
                 "Télétravail",
                 "Changement d'horaires",
@@ -67,63 +71,78 @@ public class DemandeFormHelper {
         ));
     }
 
-    // ==================== INITIALIZATION ====================
+    // ═══════════════════════════════════════════════════════════════════════════
+    // INITIALIZATION METHODS
+    // ═══════════════════════════════════════════════════════════════════════════
 
     public void initializeComboBoxes(ComboBox<String> categorieCombo,
                                      ComboBox<String> typeDemandeCombo,
                                      ComboBox<String> prioriteCombo,
                                      ComboBox<String> statusCombo) {
-        // Categories
-        categorieCombo.setItems(FXCollections.observableArrayList(CATEGORY_TYPES.keySet()));
-
-        // Priorities
-        prioriteCombo.setItems(FXCollections.observableArrayList("HAUTE", "NORMALE", "BASSE"));
-
-        // Status options
-        if (statusCombo != null) {
-            statusCombo.setItems(FXCollections.observableArrayList(
-                    "Nouvelle", "En cours", "En attente", "Résolue", "Fermée"));
+        if (categorieCombo != null) {
+            categorieCombo.setItems(FXCollections.observableArrayList(CATEGORY_TYPES.keySet()));
         }
 
-        categorieCombo.valueProperty().addListener((obs, oldVal, newVal) -> {
-            System.out.println("Category changed: " + oldVal + " -> " + newVal);
-            if (newVal != null && CATEGORY_TYPES.containsKey(newVal)) {
-                List<String> types = CATEGORY_TYPES.get(newVal);
-                System.out.println("Setting types: " + types);
-                typeDemandeCombo.setItems(FXCollections.observableArrayList(types));
-                typeDemandeCombo.setValue(null);
-            } else {
-                typeDemandeCombo.getItems().clear();
-            }
-        });
+        if (prioriteCombo != null) {
+            prioriteCombo.setItems(FXCollections.observableArrayList("HAUTE", "NORMALE", "BASSE"));
+        }
+
+        if (statusCombo != null) {
+            statusCombo.setItems(FXCollections.observableArrayList(
+                    "Nouvelle", "En cours", "En attente", "Résolue", "Fermée", "Annulée"));
+        }
+
+        if (categorieCombo != null && typeDemandeCombo != null) {
+            categorieCombo.valueProperty().addListener((obs, oldVal, newVal) -> {
+                System.out.println("Category changed: " + oldVal + " -> " + newVal);
+                if (newVal != null && CATEGORY_TYPES.containsKey(newVal)) {
+                    List<String> types = CATEGORY_TYPES.get(newVal);
+                    System.out.println("Setting types: " + types);
+                    typeDemandeCombo.setItems(FXCollections.observableArrayList(types));
+                    typeDemandeCombo.setValue(null);
+                } else {
+                    typeDemandeCombo.getItems().clear();
+                }
+            });
+        }
     }
 
     public void initializeEmployeeComboBoxes(ComboBox<String> categorieCombo,
                                              ComboBox<String> typeDemandeCombo,
                                              ComboBox<String> prioriteCombo) {
-        categorieCombo.setItems(FXCollections.observableArrayList(CATEGORY_TYPES.keySet()));
+        if (categorieCombo != null) {
+            categorieCombo.setItems(FXCollections.observableArrayList(CATEGORY_TYPES.keySet()));
+        }
 
-        prioriteCombo.setItems(FXCollections.observableArrayList("HAUTE", "NORMALE", "BASSE"));
-        prioriteCombo.setValue("NORMALE");
+        if (prioriteCombo != null) {
+            prioriteCombo.setItems(FXCollections.observableArrayList("HAUTE", "NORMALE", "BASSE"));
+            prioriteCombo.setValue("NORMALE");
+        }
 
-        categorieCombo.valueProperty().addListener((obs, oldVal, newVal) -> {
-            System.out.println("Category changed: " + oldVal + " -> " + newVal);
-            if (newVal != null && CATEGORY_TYPES.containsKey(newVal)) {
-                List<String> types = CATEGORY_TYPES.get(newVal);
-                System.out.println("Setting types: " + types);
-                typeDemandeCombo.setItems(FXCollections.observableArrayList(types));
-                typeDemandeCombo.setValue(null);
-            } else {
-                typeDemandeCombo.getItems().clear();
-            }
-        });
+        if (categorieCombo != null && typeDemandeCombo != null) {
+            categorieCombo.valueProperty().addListener((obs, oldVal, newVal) -> {
+                System.out.println("Category changed: " + oldVal + " -> " + newVal);
+                if (newVal != null && CATEGORY_TYPES.containsKey(newVal)) {
+                    List<String> types = CATEGORY_TYPES.get(newVal);
+                    System.out.println("Setting types: " + types);
+                    typeDemandeCombo.setItems(FXCollections.observableArrayList(types));
+                    typeDemandeCombo.setValue(null);
+                } else {
+                    typeDemandeCombo.getItems().clear();
+                }
+            });
+        }
     }
 
     public void setupDatePicker(DatePicker datePicker) {
-        datePicker.setValue(LocalDate.now());
+        if (datePicker != null) {
+            datePicker.setValue(LocalDate.now());
+        }
     }
 
-    // ==================== DYNAMIC FIELDS ====================
+    // ═══════════════════════════════════════════════════════════════════════════
+    // DYNAMIC FIELDS MANAGEMENT
+    // ═══════════════════════════════════════════════════════════════════════════
 
     public void updateDynamicFields(String typeDemande, VBox container, TitledPane detailsPane) {
         System.out.println("=== updateDynamicFields called ===");
@@ -132,12 +151,18 @@ public class DemandeFormHelper {
         dynamicFields.clear();
         dynamicErrorLabels.clear();
         locationFieldKeys.clear();
-        container.getChildren().clear();
+        fieldDefinitions.clear();
+
+        if (container != null) {
+            container.getChildren().clear();
+        }
 
         if (typeDemande == null || typeDemande.isEmpty()) {
-            Label placeholder = new Label("Sélectionnez un type de demande pour voir les champs spécifiques");
+            Label placeholder = new Label("💡 Sélectionnez un type de demande pour voir les champs spécifiques");
             placeholder.setStyle("-fx-text-fill: #999; -fx-font-style: italic;");
-            container.getChildren().add(placeholder);
+            if (container != null) {
+                container.getChildren().add(placeholder);
+            }
             if (detailsPane != null) {
                 detailsPane.setExpanded(false);
             }
@@ -153,30 +178,136 @@ public class DemandeFormHelper {
         System.out.println("Fields count for '" + typeDemande + "': " + fields.size());
 
         if (fields.isEmpty()) {
-            Label noFields = new Label("Aucun champ spécifique requis pour ce type");
+            Label noFields = new Label("ℹ️ Aucun champ spécifique requis pour ce type");
             noFields.setStyle("-fx-text-fill: #999; -fx-font-style: italic;");
-            container.getChildren().add(noFields);
+            if (container != null) {
+                container.getChildren().add(noFields);
+            }
             return;
         }
 
         Label header = new Label("📋 Informations spécifiques pour: " + typeDemande);
         header.setStyle("-fx-font-weight: bold; -fx-font-size: 14; -fx-text-fill: #2c3e50; -fx-padding: 0 0 10 0;");
-        container.getChildren().add(header);
+        if (container != null) {
+            container.getChildren().add(header);
+        }
 
         for (FieldDefinition field : fields) {
             System.out.println("Creating field: " + field.key + " (" + field.label + ")");
+            fieldDefinitions.put(field.key, field);
             VBox fieldBox = createFieldBox(field);
-            container.getChildren().add(fieldBox);
+            if (container != null) {
+                container.getChildren().add(fieldBox);
+            }
         }
 
         System.out.println("Dynamic fields created: " + dynamicFields.size());
     }
 
+    /**
+     * Fill dynamic fields from JSON - FIXED VERSION
+     */
+    public void fillDynamicFieldsFromJson(String detailsJson) {
+        System.out.println("=== fillDynamicFieldsFromJson ===");
+        System.out.println("JSON: " + detailsJson);
+        System.out.println("Available fields: " + dynamicFields.keySet());
+
+        if (detailsJson == null || detailsJson.isEmpty() || detailsJson.equals("{}")) {
+            System.out.println("No details to fill");
+            return;
+        }
+
+        try {
+            Map<String, String> parsedValues = parseDetailsJson(detailsJson);
+            System.out.println("Parsed values: " + parsedValues);
+
+            for (Map.Entry<String, String> entry : parsedValues.entrySet()) {
+                String key = entry.getKey();
+                String value = entry.getValue();
+
+                // Skip coordinate fields
+                if (key.endsWith("Lat") || key.endsWith("Lon")) {
+                    continue;
+                }
+
+                Control control = findFieldByKey(key);
+                if (control != null) {
+                    setFieldValue(control, value);
+                    System.out.println("✅ Set field '" + key + "' = '" + value + "'");
+
+                    // Handle location coordinates
+                    if (locationFieldKeys.contains(key) && control instanceof TextField) {
+                        TextField locationField = (TextField) control;
+                        String latStr = parsedValues.get(key + "Lat");
+                        String lonStr = parsedValues.get(key + "Lon");
+
+                        if (latStr != null && lonStr != null) {
+                            try {
+                                double lat = Double.parseDouble(latStr);
+                                double lon = Double.parseDouble(lonStr);
+                                locationField.setUserData(new double[]{lat, lon});
+                                locationField.setStyle("-fx-background-color: #f8f9fa; -fx-border-color: #27ae60; -fx-border-width: 2;");
+                                System.out.println("✅ Set location coordinates: " + lat + ", " + lon);
+                            } catch (NumberFormatException e) {
+                                System.err.println("Could not parse coordinates for " + key);
+                            }
+                        }
+                    }
+                } else {
+                    System.out.println("⚠️ Field not found for key: " + key);
+                }
+            }
+
+            System.out.println("✅ Dynamic fields filled from JSON");
+
+        } catch (Exception e) {
+            System.err.println("Error filling dynamic fields: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    private Control findFieldByKey(String key) {
+        if (key == null) return null;
+
+        // Direct match
+        if (dynamicFields.containsKey(key)) {
+            return dynamicFields.get(key);
+        }
+
+        // Normalized match
+        String normalizedKey = normalizeKey(key);
+        for (Map.Entry<String, Control> entry : dynamicFields.entrySet()) {
+            if (normalizeKey(entry.getKey()).equals(normalizedKey)) {
+                return entry.getValue();
+            }
+        }
+
+        return null;
+    }
+
+    private String normalizeKey(String key) {
+        if (key == null) return "";
+        return key.toLowerCase()
+                .replaceAll("[\\s_-]", "")
+                .replaceAll("[àâäáã]", "a")
+                .replaceAll("[éèêëẽ]", "e")
+                .replaceAll("[ïîíì]", "i")
+                .replaceAll("[ôöóòõ]", "o")
+                .replaceAll("[ùûüúũ]", "u")
+                .replaceAll("ç", "c")
+                .replaceAll("ñ", "n");
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // FIELD DEFINITIONS BY TYPE
+    // ═══════════════════════════════════════════════════════════════════════════
+
     private List<FieldDefinition> getFieldsForType(String typeDemande) {
         List<FieldDefinition> fields = new ArrayList<>();
 
+        if (typeDemande == null) return fields;
+
         switch (typeDemande) {
-            // ===== CONGÉ =====
             case "Congé":
                 fields.add(new FieldDefinition("typeConge", "Type de congé", FieldType.COMBO,
                         true, Arrays.asList("Congé annuel", "Congé maladie", "Congé sans solde",
@@ -187,7 +318,6 @@ public class DemandeFormHelper {
                 fields.add(new FieldDefinition("motif", "Motif", FieldType.TEXTAREA, false));
                 break;
 
-            // ===== ATTESTATION DE TRAVAIL =====
             case "Attestation de travail":
                 fields.add(new FieldDefinition("nombreExemplaires", "Nombre d'exemplaires",
                         FieldType.NUMBER, true));
@@ -198,7 +328,6 @@ public class DemandeFormHelper {
                         FieldType.TEXT, false));
                 break;
 
-            // ===== ATTESTATION DE SALAIRE =====
             case "Attestation de salaire":
                 fields.add(new FieldDefinition("nombreExemplaires", "Nombre d'exemplaires",
                         FieldType.NUMBER, true));
@@ -208,14 +337,12 @@ public class DemandeFormHelper {
                 fields.add(new FieldDefinition("motif", "Motif", FieldType.TEXT, false));
                 break;
 
-            // ===== CERTIFICAT DE TRAVAIL =====
             case "Certificat de travail":
                 fields.add(new FieldDefinition("nombreExemplaires", "Nombre d'exemplaires",
                         FieldType.NUMBER, true));
                 fields.add(new FieldDefinition("motif", "Motif", FieldType.TEXT, false));
                 break;
 
-            // ===== MUTATION =====
             case "Mutation":
                 fields.add(new FieldDefinition("departementActuel", "Département actuel",
                         FieldType.TEXT, true));
@@ -229,7 +356,6 @@ public class DemandeFormHelper {
                         FieldType.TEXTAREA, true));
                 break;
 
-            // ===== DÉMISSION =====
             case "Démission":
                 fields.add(new FieldDefinition("dateSouhaitee", "Date de départ souhaitée",
                         FieldType.DATE, true));
@@ -239,7 +365,6 @@ public class DemandeFormHelper {
                         FieldType.TEXTAREA, false));
                 break;
 
-            // ===== AVANCE SUR SALAIRE =====
             case "Avance sur salaire":
                 fields.add(new FieldDefinition("montant", "Montant demandé (TND)",
                         FieldType.NUMBER, true));
@@ -249,7 +374,6 @@ public class DemandeFormHelper {
                         FieldType.TEXTAREA, true));
                 break;
 
-            // ===== REMBOURSEMENT =====
             case "Remboursement":
                 fields.add(new FieldDefinition("typeRemboursement", "Type de remboursement",
                         FieldType.COMBO, true, Arrays.asList("Frais de transport",
@@ -262,7 +386,6 @@ public class DemandeFormHelper {
                 fields.add(new FieldDefinition("details", "Détails", FieldType.TEXTAREA, false));
                 break;
 
-            // ===== MATÉRIEL DE BUREAU =====
             case "Matériel de bureau":
                 fields.add(new FieldDefinition("typeMateriel", "Type de matériel", FieldType.COMBO,
                         true, Arrays.asList("Fournitures", "Mobilier", "Équipement", "Autre")));
@@ -273,7 +396,6 @@ public class DemandeFormHelper {
                         false, Arrays.asList("Normale", "Urgente", "Très urgente")));
                 break;
 
-            // ===== BADGE D'ACCÈS =====
             case "Badge d'accès":
                 fields.add(new FieldDefinition("motifBadge", "Motif de la demande", FieldType.COMBO,
                         true, Arrays.asList("Nouveau badge", "Badge perdu", "Badge défectueux",
@@ -282,7 +404,6 @@ public class DemandeFormHelper {
                         FieldType.TEXT, false));
                 break;
 
-            // ===== CARTE DE VISITE =====
             case "Carte de visite":
                 fields.add(new FieldDefinition("quantiteCarte", "Quantité", FieldType.COMBO,
                         true, Arrays.asList("50", "100", "200", "500")));
@@ -293,7 +414,6 @@ public class DemandeFormHelper {
                 fields.add(new FieldDefinition("email", "Email", FieldType.TEXT, false));
                 break;
 
-            // ===== MATÉRIEL INFORMATIQUE =====
             case "Matériel informatique":
                 fields.add(new FieldDefinition("typeMaterielInfo", "Type de matériel", FieldType.COMBO,
                         true, Arrays.asList("Ordinateur portable", "Ordinateur fixe", "Écran",
@@ -304,7 +424,6 @@ public class DemandeFormHelper {
                         FieldType.TEXTAREA, false));
                 break;
 
-            // ===== ACCÈS SYSTÈME =====
             case "Accès système":
                 fields.add(new FieldDefinition("systeme", "Système/Application",
                         FieldType.TEXT, true));
@@ -314,7 +433,6 @@ public class DemandeFormHelper {
                         FieldType.TEXTAREA, true));
                 break;
 
-            // ===== LOGICIEL =====
             case "Logiciel":
                 fields.add(new FieldDefinition("nomLogiciel", "Nom du logiciel",
                         FieldType.TEXT, true));
@@ -327,7 +445,6 @@ public class DemandeFormHelper {
                         FieldType.TEXTAREA, true));
                 break;
 
-            // ===== PROBLÈME TECHNIQUE =====
             case "Problème technique":
                 fields.add(new FieldDefinition("typeProbleme", "Type de problème", FieldType.COMBO,
                         true, Arrays.asList("Matériel", "Logiciel", "Réseau", "Email",
@@ -338,7 +455,6 @@ public class DemandeFormHelper {
                         true, Arrays.asList("Bloquant", "Important", "Modéré", "Faible")));
                 break;
 
-            // ===== FORMATION INTERNE =====
             case "Formation interne":
                 fields.add(new FieldDefinition("nomFormation", "Nom de la formation",
                         FieldType.TEXT, true));
@@ -350,7 +466,6 @@ public class DemandeFormHelper {
                         FieldType.TEXTAREA, true));
                 break;
 
-            // ===== FORMATION EXTERNE =====
             case "Formation externe":
                 fields.add(new FieldDefinition("nomFormationExt", "Nom de la formation",
                         FieldType.TEXT, true));
@@ -367,7 +482,6 @@ public class DemandeFormHelper {
                         FieldType.TEXTAREA, true));
                 break;
 
-            // ===== CERTIFICATION =====
             case "Certification":
                 fields.add(new FieldDefinition("nomCertification", "Nom de la certification",
                         FieldType.TEXT, true));
@@ -382,7 +496,6 @@ public class DemandeFormHelper {
                         FieldType.TEXTAREA, true));
                 break;
 
-            // ===== TÉLÉTRAVAIL =====
             case "Télétravail":
                 fields.add(new FieldDefinition("typeTeletravail", "Type de demande", FieldType.COMBO,
                         true, Arrays.asList("Télétravail régulier", "Télétravail occasionnel",
@@ -399,7 +512,6 @@ public class DemandeFormHelper {
                 fields.add(new FieldDefinition("motifTeletravail", "Motif", FieldType.TEXTAREA, false));
                 break;
 
-            // ===== CHANGEMENT D'HORAIRES =====
             case "Changement d'horaires":
                 fields.add(new FieldDefinition("horairesActuels", "Horaires actuels",
                         FieldType.TEXT, true));
@@ -412,7 +524,6 @@ public class DemandeFormHelper {
                 fields.add(new FieldDefinition("motifHoraires", "Motif", FieldType.TEXTAREA, true));
                 break;
 
-            // ===== HEURES SUPPLÉMENTAIRES =====
             case "Heures supplémentaires":
                 fields.add(new FieldDefinition("dateHeuresSup", "Date", FieldType.DATE, true));
                 fields.add(new FieldDefinition("nombreHeures", "Nombre d'heures",
@@ -434,20 +545,23 @@ public class DemandeFormHelper {
         return fields;
     }
 
+    // ═══════════════════════════════════════════════════════════════════════════
+    // FIELD CREATION
+    // ═══════════════════════════════════════════════════════════════════════════
+
     private VBox createFieldBox(FieldDefinition field) {
         VBox fieldBox = new VBox(5);
-        fieldBox.setPadding(new Insets(5, 0, 5, 0));
-        fieldBox.setStyle("-fx-background-color: #f9f9f9; -fx-background-radius: 5; -fx-padding: 10;");
+        fieldBox.setPadding(new Insets(8));
+        fieldBox.setStyle("-fx-background-color: #f9f9f9; -fx-background-radius: 6; -fx-padding: 10;");
 
         Label label = new Label(field.label + (field.required ? " *" : ""));
         label.setStyle("-fx-font-weight: bold; -fx-text-fill: #333;");
 
         Label errorLabel = new Label();
-        errorLabel.setStyle("-fx-text-fill: red; -fx-font-size: 11;");
+        errorLabel.setStyle("-fx-text-fill: #e74c3c; -fx-font-size: 11;");
         dynamicErrorLabels.put(field.key, errorLabel);
 
         if (field.type == FieldType.LOCATION) {
-            // Create location field with map button
             HBox locationBox = createLocationField(field);
             fieldBox.getChildren().addAll(label, locationBox, errorLabel);
         } else {
@@ -468,6 +582,8 @@ public class DemandeFormHelper {
                 TextField textField = new TextField();
                 textField.setPromptText("Entrez " + field.label.toLowerCase());
                 textField.setPrefWidth(400);
+                textField.setMaxWidth(Double.MAX_VALUE);
+                textField.setStyle("-fx-background-radius: 6;");
                 control = textField;
                 break;
 
@@ -475,8 +591,9 @@ public class DemandeFormHelper {
                 TextField numberField = new TextField();
                 numberField.setPromptText("Entrez un nombre");
                 numberField.setPrefWidth(200);
+                numberField.setStyle("-fx-background-radius: 6;");
                 numberField.textProperty().addListener((o, ov, nv) -> {
-                    if (!nv.matches("\\d*\\.?\\d*")) {
+                    if (nv != null && !nv.matches("\\d*\\.?\\d*")) {
                         numberField.setText(ov);
                     }
                 });
@@ -488,7 +605,9 @@ public class DemandeFormHelper {
                 textArea.setPromptText("Entrez " + field.label.toLowerCase());
                 textArea.setPrefRowCount(3);
                 textArea.setPrefWidth(400);
+                textArea.setMaxWidth(Double.MAX_VALUE);
                 textArea.setWrapText(true);
+                textArea.setStyle("-fx-background-radius: 6;");
                 control = textArea;
                 break;
 
@@ -496,6 +615,7 @@ public class DemandeFormHelper {
                 DatePicker datePicker = new DatePicker();
                 datePicker.setPromptText("Sélectionnez une date");
                 datePicker.setPrefWidth(200);
+                datePicker.setStyle("-fx-background-radius: 6;");
                 control = datePicker;
                 break;
 
@@ -506,20 +626,21 @@ public class DemandeFormHelper {
                 }
                 comboBox.setPromptText("Sélectionnez...");
                 comboBox.setPrefWidth(300);
+                comboBox.setMaxWidth(Double.MAX_VALUE);
+                comboBox.setStyle("-fx-background-radius: 6;");
                 control = comboBox;
                 break;
 
             default:
-                control = new TextField();
+                TextField defaultField = new TextField();
+                defaultField.setStyle("-fx-background-radius: 6;");
+                control = defaultField;
                 break;
         }
 
         return control;
     }
 
-    /**
-     * Create location field with map button - uses callback pattern
-     */
     private HBox createLocationField(FieldDefinition field) {
         HBox locationBox = new HBox(10);
         locationBox.setAlignment(Pos.CENTER_LEFT);
@@ -528,10 +649,10 @@ public class DemandeFormHelper {
 
         TextField locationField = new TextField();
         locationField.setPromptText("Cliquez sur 📍 pour sélectionner une adresse");
-        locationField.setEditable(false); // Read-only, must use map
+        locationField.setEditable(false);
         locationField.setMaxWidth(Double.MAX_VALUE);
         locationField.setPrefWidth(350);
-        locationField.setStyle("-fx-background-color: #f8f9fa;");
+        locationField.setStyle("-fx-background-color: #f8f9fa; -fx-background-radius: 6;");
         HBox.setHgrow(locationField, Priority.ALWAYS);
 
         Button mapButton = new Button("📍 Carte");
@@ -539,31 +660,33 @@ public class DemandeFormHelper {
                 "-fx-cursor: hand; -fx-font-weight: bold; -fx-padding: 8 15; -fx-background-radius: 6;");
         mapButton.setMinWidth(100);
 
-        // Use callback pattern for MapPickerDialog
         mapButton.setOnAction(e -> {
-            MapPickerDialog dialog = new MapPickerDialog();
-            dialog.show(result -> {
-                // This callback is called when user selects a location
-                if (result != null) {
-                    Platform.runLater(() -> {
-                        locationField.setText(result.cityName);
-                        // Store lat/lon in userData for later use
-                        locationField.setUserData(new double[]{result.lat, result.lon});
-                        locationField.setStyle("-fx-background-color: #f8f9fa; -fx-border-color: #27ae60; -fx-border-width: 2;");
-                        System.out.println("📍 Location selected: " + result.cityName +
-                                " (Lat: " + result.lat + ", Lon: " + result.lon + ")");
+            try {
+                MapPickerDialog dialog = new MapPickerDialog();
+                dialog.show(result -> {
+                    if (result != null) {
+                        Platform.runLater(() -> {
+                            locationField.setText(result.cityName);
+                            locationField.setUserData(new double[]{result.lat, result.lon});
+                            locationField.setStyle("-fx-background-color: #f8f9fa; " +
+                                    "-fx-border-color: #27ae60; -fx-border-width: 2; -fx-background-radius: 6;");
 
-                        // Clear error if any
-                        Label errorLabel = dynamicErrorLabels.get(field.key);
-                        if (errorLabel != null) {
-                            errorLabel.setText("");
-                        }
-                    });
-                }
-            });
+                            System.out.println("📍 Location selected: " + result.cityName +
+                                    " (Lat: " + result.lat + ", Lon: " + result.lon + ")");
+
+                            Label errorLabel = dynamicErrorLabels.get(field.key);
+                            if (errorLabel != null) {
+                                errorLabel.setText("");
+                            }
+                        });
+                    }
+                });
+            } catch (Exception ex) {
+                System.err.println("Error opening map: " + ex.getMessage());
+                ex.printStackTrace();
+            }
         });
 
-        // Hover effects
         mapButton.setOnMouseEntered(e ->
                 mapButton.setStyle("-fx-background-color: #2980b9; -fx-text-fill: white; " +
                         "-fx-cursor: hand; -fx-font-weight: bold; -fx-padding: 8 15; -fx-background-radius: 6;"));
@@ -573,11 +696,9 @@ public class DemandeFormHelper {
 
         locationBox.getChildren().addAll(locationField, mapButton);
 
-        // Store the TextField in dynamicFields
         dynamicFields.put(field.key, locationField);
         locationFieldKeys.add(field.key);
 
-        // Add error clear listener
         Label errorLabel = dynamicErrorLabels.get(field.key);
         if (errorLabel != null) {
             locationField.textProperty().addListener((o, ov, nv) -> {
@@ -618,65 +739,9 @@ public class DemandeFormHelper {
         }
     }
 
-    // ==================== VALIDATION ====================
-
-    public boolean validateForm(TextField titreField, Label titreError,
-                                ComboBox<String> categorieCombo, Label categorieError,
-                                ComboBox<String> typeDemandeCombo, Label typeError,
-                                ComboBox<String> prioriteCombo, Label prioriteError,
-                                TextArea descriptionArea, Label descriptionError,
-                                ComboBox<String> statusCombo, Label statusError,
-                                DatePicker dateCreationPicker, Label dateError) {
-        boolean valid = true;
-
-        if (titreField.getText().trim().isEmpty()) {
-            titreError.setText("Le titre est obligatoire");
-            titreField.setStyle("-fx-border-color: red;");
-            valid = false;
-        }
-
-        if (categorieCombo.getValue() == null) {
-            categorieError.setText("La catégorie est obligatoire");
-            categorieCombo.setStyle("-fx-border-color: red;");
-            valid = false;
-        }
-
-        if (typeDemandeCombo.getValue() == null) {
-            typeError.setText("Le type est obligatoire");
-            typeDemandeCombo.setStyle("-fx-border-color: red;");
-            valid = false;
-        }
-
-        if (prioriteCombo.getValue() == null) {
-            prioriteError.setText("La priorité est obligatoire");
-            prioriteCombo.setStyle("-fx-border-color: red;");
-            valid = false;
-        }
-
-        if (descriptionArea.getText().trim().isEmpty()) {
-            descriptionError.setText("La description est obligatoire");
-            descriptionArea.setStyle("-fx-border-color: red;");
-            valid = false;
-        }
-
-        if (statusCombo != null && statusCombo.getValue() == null) {
-            statusError.setText("Le statut est obligatoire");
-            statusCombo.setStyle("-fx-border-color: red;");
-            valid = false;
-        }
-
-        if (dateCreationPicker.getValue() == null) {
-            dateError.setText("La date est obligatoire");
-            dateCreationPicker.setStyle("-fx-border-color: red;");
-            valid = false;
-        }
-
-        if (!validateDynamicFields()) {
-            valid = false;
-        }
-
-        return valid;
-    }
+    // ═══════════════════════════════════════════════════════════════════════════
+    // VALIDATION
+    // ═══════════════════════════════════════════════════════════════════════════
 
     public boolean validateDynamicFields() {
         boolean valid = true;
@@ -686,36 +751,15 @@ public class DemandeFormHelper {
             Control control = entry.getValue();
             Label errorLabel = dynamicErrorLabels.get(key);
 
-            boolean isEmpty = isFieldEmpty(control);
+            FieldDefinition fieldDef = fieldDefinitions.get(key);
+            boolean isRequired = fieldDef != null && fieldDef.required;
 
-            // Check if required by looking at parent VBox label
-            if (control.getParent() != null) {
-                VBox parent = null;
-
-                // For location fields, the parent is HBox, grandparent is VBox
-                if (control.getParent() instanceof HBox) {
-                    if (control.getParent().getParent() instanceof VBox) {
-                        parent = (VBox) control.getParent().getParent();
-                    }
-                } else if (control.getParent() instanceof VBox) {
-                    parent = (VBox) control.getParent();
+            if (isRequired && isFieldEmpty(control)) {
+                if (errorLabel != null) {
+                    errorLabel.setText("Ce champ est obligatoire");
                 }
-
-                if (parent != null && !parent.getChildren().isEmpty()) {
-                    Node firstChild = parent.getChildren().get(0);
-                    if (firstChild instanceof Label) {
-                        Label fieldLabel = (Label) firstChild;
-                        boolean isRequired = fieldLabel.getText().endsWith("*");
-
-                        if (isRequired && isEmpty) {
-                            if (errorLabel != null) {
-                                errorLabel.setText("Ce champ est obligatoire");
-                            }
-                            control.setStyle("-fx-border-color: red;");
-                            valid = false;
-                        }
-                    }
-                }
+                control.setStyle(control.getStyle() + "; -fx-border-color: #e74c3c; -fx-border-width: 2;");
+                valid = false;
             }
         }
 
@@ -723,10 +767,14 @@ public class DemandeFormHelper {
     }
 
     private boolean isFieldEmpty(Control control) {
+        if (control == null) return true;
+
         if (control instanceof TextField) {
-            return ((TextField) control).getText().trim().isEmpty();
+            String text = ((TextField) control).getText();
+            return text == null || text.trim().isEmpty();
         } else if (control instanceof TextArea) {
-            return ((TextArea) control).getText().trim().isEmpty();
+            String text = ((TextArea) control).getText();
+            return text == null || text.trim().isEmpty();
         } else if (control instanceof ComboBox) {
             return ((ComboBox<?>) control).getValue() == null;
         } else if (control instanceof DatePicker) {
@@ -737,43 +785,77 @@ public class DemandeFormHelper {
 
     public void clearFieldError(Control control, Label errorLabel) {
         if (control != null) {
-            control.setStyle("");
+            String style = control.getStyle();
+            if (style != null) {
+                style = style.replaceAll("-fx-border-color:[^;]*;?", "")
+                        .replaceAll("-fx-border-width:[^;]*;?", "");
+                control.setStyle(style);
+            }
         }
         if (errorLabel != null) {
             errorLabel.setText("");
         }
     }
 
-    // ==================== FIELD VALUE MANIPULATION ====================
+    // ═══════════════════════════════════════════════════════════════════════════
+    // FIELD VALUE MANIPULATION
+    // ═══════════════════════════════════════════════════════════════════════════
 
     public void setFieldValue(Control control, String value) {
-        if (control == null || value == null || value.isEmpty()) {
-            return;
-        }
+        if (control == null || value == null) return;
 
-        if (control instanceof TextField) {
-            ((TextField) control).setText(value);
-        } else if (control instanceof TextArea) {
-            ((TextArea) control).setText(value);
-        } else if (control instanceof ComboBox) {
-            @SuppressWarnings("unchecked")
-            ComboBox<String> comboBox = (ComboBox<String>) control;
-            comboBox.setValue(value);
-        } else if (control instanceof DatePicker) {
-            try {
-                LocalDate date = LocalDate.parse(value);
-                ((DatePicker) control).setValue(date);
-            } catch (Exception e) {
-                System.out.println("Could not parse date: " + value);
+        try {
+            if (control instanceof TextField) {
+                ((TextField) control).setText(value);
+            } else if (control instanceof TextArea) {
+                ((TextArea) control).setText(value);
+            } else if (control instanceof ComboBox) {
+                @SuppressWarnings("unchecked")
+                ComboBox<String> comboBox = (ComboBox<String>) control;
+                if (!comboBox.getItems().contains(value) && !value.isEmpty()) {
+                    comboBox.getItems().add(value);
+                }
+                comboBox.setValue(value);
+            } else if (control instanceof DatePicker) {
+                DatePicker datePicker = (DatePicker) control;
+                LocalDate date = parseDate(value);
+                if (date != null) {
+                    datePicker.setValue(date);
+                }
             }
+        } catch (Exception e) {
+            System.err.println("Error setting field value: " + e.getMessage());
         }
     }
 
+    private LocalDate parseDate(String value) {
+        if (value == null || value.isEmpty()) return null;
+
+        try {
+            return LocalDate.parse(value);
+        } catch (DateTimeParseException ignored) {}
+
+        String[] formats = {"dd/MM/yyyy", "dd-MM-yyyy", "yyyy/MM/dd", "MM/dd/yyyy"};
+        for (String format : formats) {
+            try {
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern(format);
+                return LocalDate.parse(value, formatter);
+            } catch (DateTimeParseException ignored) {}
+        }
+
+        System.err.println("Could not parse date: " + value);
+        return null;
+    }
+
     public String getFieldValue(Control control) {
+        if (control == null) return "";
+
         if (control instanceof TextField) {
-            return ((TextField) control).getText().trim();
+            String text = ((TextField) control).getText();
+            return text != null ? text.trim() : "";
         } else if (control instanceof TextArea) {
-            return ((TextArea) control).getText().trim();
+            String text = ((TextArea) control).getText();
+            return text != null ? text.trim() : "";
         } else if (control instanceof ComboBox) {
             Object value = ((ComboBox<?>) control).getValue();
             return value != null ? value.toString() : "";
@@ -784,7 +866,9 @@ public class DemandeFormHelper {
         return "";
     }
 
-    // ==================== JSON BUILDING ====================
+    // ═══════════════════════════════════════════════════════════════════════════
+    // JSON BUILDING
+    // ═══════════════════════════════════════════════════════════════════════════
 
     public String buildDetailsJson() {
         if (dynamicFields.isEmpty()) {
@@ -807,7 +891,6 @@ public class DemandeFormHelper {
                         .append(escapeJson(value)).append("\"");
                 first = false;
 
-                // If it's a location field, also save lat/lon
                 if (locationFieldKeys.contains(key) && control instanceof TextField) {
                     TextField locationField = (TextField) control;
                     Object userData = locationField.getUserData();
@@ -833,7 +916,9 @@ public class DemandeFormHelper {
                 .replace("\t", "\\t");
     }
 
-    // ==================== JSON PARSING ====================
+    // ═══════════════════════════════════════════════════════════════════════════
+    // JSON PARSING
+    // ═══════════════════════════════════════════════════════════════════════════
 
     public Map<String, String> parseDetailsJson(String json) {
         Map<String, String> result = new LinkedHashMap<>();
@@ -847,15 +932,16 @@ public class DemandeFormHelper {
             if (content.startsWith("{")) content = content.substring(1);
             if (content.endsWith("}")) content = content.substring(0, content.length() - 1);
 
+            if (content.isEmpty()) return result;
+
             List<String> pairs = splitJsonPairs(content);
 
             for (String pair : pairs) {
-                int colonIndex = pair.indexOf(':');
+                int colonIndex = findColonIndex(pair);
                 if (colonIndex > 0) {
                     String key = removeQuotes(pair.substring(0, colonIndex).trim());
                     String value = pair.substring(colonIndex + 1).trim();
 
-                    // Handle numeric values (lat/lon)
                     if (value.startsWith("\"") && value.endsWith("\"")) {
                         value = removeQuotes(value);
                     }
@@ -866,36 +952,65 @@ public class DemandeFormHelper {
                 }
             }
         } catch (Exception e) {
-            System.out.println("Error parsing JSON: " + e.getMessage());
+            System.err.println("Error parsing JSON: " + e.getMessage());
+            e.printStackTrace();
         }
 
         return result;
+    }
+
+    private int findColonIndex(String pair) {
+        boolean inQuotes = false;
+        for (int i = 0; i < pair.length(); i++) {
+            char c = pair.charAt(i);
+            if (c == '"' && (i == 0 || pair.charAt(i - 1) != '\\')) {
+                inQuotes = !inQuotes;
+            }
+            if (c == ':' && !inQuotes) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     private List<String> splitJsonPairs(String content) {
         List<String> pairs = new ArrayList<>();
         StringBuilder current = new StringBuilder();
         boolean inQuotes = false;
+        int braceDepth = 0;
 
         for (int i = 0; i < content.length(); i++) {
             char c = content.charAt(i);
+
             if (c == '"' && (i == 0 || content.charAt(i - 1) != '\\')) {
                 inQuotes = !inQuotes;
             }
-            if (c == ',' && !inQuotes) {
-                pairs.add(current.toString().trim());
+            if (!inQuotes) {
+                if (c == '{') braceDepth++;
+                if (c == '}') braceDepth--;
+            }
+            if (c == ',' && !inQuotes && braceDepth == 0) {
+                String pair = current.toString().trim();
+                if (!pair.isEmpty()) {
+                    pairs.add(pair);
+                }
                 current = new StringBuilder();
             } else {
                 current.append(c);
             }
         }
-        if (current.length() > 0) {
-            pairs.add(current.toString().trim());
+
+        String lastPair = current.toString().trim();
+        if (!lastPair.isEmpty()) {
+            pairs.add(lastPair);
         }
+
         return pairs;
     }
 
     private String removeQuotes(String s) {
+        if (s == null) return "";
+        s = s.trim();
         if (s.startsWith("\"") && s.endsWith("\"") && s.length() >= 2) {
             return s.substring(1, s.length() - 1);
         }
@@ -903,6 +1018,7 @@ public class DemandeFormHelper {
     }
 
     private String unescapeJson(String text) {
+        if (text == null) return "";
         return text.replace("\\n", "\n")
                 .replace("\\r", "\r")
                 .replace("\\t", "\t")
@@ -910,7 +1026,9 @@ public class DemandeFormHelper {
                 .replace("\\\\", "\\");
     }
 
-    // ==================== GETTERS ====================
+    // ═══════════════════════════════════════════════════════════════════════════
+    // GETTERS
+    // ═══════════════════════════════════════════════════════════════════════════
 
     public Map<String, Control> getDynamicFields() {
         return dynamicFields;
@@ -924,7 +1042,13 @@ public class DemandeFormHelper {
         return locationFieldKeys.contains(key);
     }
 
-    // ==================== INNER CLASSES ====================
+    public Set<String> getLocationFieldKeys() {
+        return locationFieldKeys;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // INNER CLASSES
+    // ═══════════════════════════════════════════════════════════════════════════
 
     private enum FieldType {
         TEXT, NUMBER, TEXTAREA, DATE, COMBO, LOCATION

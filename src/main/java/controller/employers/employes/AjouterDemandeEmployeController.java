@@ -1,11 +1,14 @@
 package controller.employers.employes;
 
 import controller.demandes.DemandeFormHelper;
-import controller.demandes.NavigationHelper;
 import entities.demande.Demande;
 import entities.demande.DemandeDetails;
 import entities.employers.employe;
 import entities.employers.session;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
+import javafx.scene.layout.StackPane;
+import javafx.stage.Modality;
 import javafx.stage.Stage;
 import service.api.EmailService;
 import service.api.MapPickerDialog;
@@ -15,7 +18,9 @@ import service.demande.DemandeDetailsCRUD;
 import javafx.application.Platform;
 import javafx.concurrent.Task;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
+import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -38,13 +43,21 @@ public class AjouterDemandeEmployeController implements Initializable {
     @FXML private ComboBox<String> prioriteCombo;
     @FXML private TextArea descriptionArea;
     @FXML private DatePicker dateCreationPicker;
-    @FXML private Label titreError, categorieError, typeError,
-            prioriteError, descriptionError, dateError;
+
+    @FXML private Label titreError;
+    @FXML private Label categorieError;
+    @FXML private Label typeError;
+    @FXML private Label prioriteError;
+    @FXML private Label descriptionError;
+    @FXML private Label dateError;
+
     @FXML private TitledPane detailsPane;
     @FXML private VBox dynamicFieldsContainer;
+
     @FXML private Button submitButton;
     @FXML private Button resetButton;
 
+    // Destination fields
     @FXML private TextField destinationField;
     @FXML private Button mapButton;
     @FXML private Label destinationError;
@@ -72,22 +85,28 @@ public class AjouterDemandeEmployeController implements Initializable {
     };
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // INITIALIZATION
+    // SETTERS
     // ═══════════════════════════════════════════════════════════════════════════
 
     public void setParentController(DemandesEmployeController p) {
         this.parentController = p;
     }
 
+    // ═══════════════════════════════════════════════════════════════════════════
+    // INITIALIZATION
+    // ═══════════════════════════════════════════════════════════════════════════
+
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         System.out.println("=== AjouterDemandeEmployeController.initialize() ===");
 
+        // Initialize services
         demandeCRUD = new DemandeCRUD();
         detailsCRUD = new DemandeDetailsCRUD();
         formHelper = new DemandeFormHelper();
         emailService = new EmailService();
 
+        // Initialize UI
         initializeUI();
 
         System.out.println("Initialization complete!");
@@ -95,23 +114,30 @@ public class AjouterDemandeEmployeController implements Initializable {
 
     private void initializeUI() {
         try {
+            // Initialize combo boxes
             formHelper.initializeEmployeeComboBoxes(categorieCombo, typeDemandeCombo, prioriteCombo);
 
+            // Setup date picker
             setupDatePickerWithValidation();
 
+            // Setup destination field
             setupDestinationField();
 
-            typeDemandeCombo.valueProperty().addListener((observable, oldValue, newValue) -> {
-                System.out.println("Type changed: " + oldValue + " -> " + newValue);
-                if (newValue != null && !newValue.isEmpty()) {
-                    formHelper.updateDynamicFields(newValue, dynamicFieldsContainer, detailsPane);
-                    updateDestinationVisibility(newValue);
-                } else {
-                    formHelper.updateDynamicFields(null, dynamicFieldsContainer, detailsPane);
-                    hideDestinationField();
-                }
-            });
+            // Type change listener for dynamic fields
+            if (typeDemandeCombo != null) {
+                typeDemandeCombo.valueProperty().addListener((observable, oldValue, newValue) -> {
+                    System.out.println("Type changed: " + oldValue + " -> " + newValue);
+                    if (newValue != null && !newValue.isEmpty()) {
+                        formHelper.updateDynamicFields(newValue, dynamicFieldsContainer, detailsPane);
+                        updateDestinationVisibility(newValue);
+                    } else {
+                        formHelper.updateDynamicFields(null, dynamicFieldsContainer, detailsPane);
+                        hideDestinationField();
+                    }
+                });
+            }
 
+            // Setup realtime validation
             setupRealtimeValidation();
 
             System.out.println("UI initialized successfully");
@@ -224,6 +250,7 @@ public class AjouterDemandeEmployeController implements Initializable {
 
         dateCreationPicker.setValue(LocalDate.now());
 
+        // Day cell factory to disable past dates
         Callback<DatePicker, DateCell> dayCellFactory = datePicker -> new DateCell() {
             @Override
             public void updateItem(LocalDate item, boolean empty) {
@@ -242,6 +269,7 @@ public class AjouterDemandeEmployeController implements Initializable {
 
         dateCreationPicker.setDayCellFactory(dayCellFactory);
 
+        // Value change listener
         dateCreationPicker.valueProperty().addListener((obs, oldVal, newVal) -> {
             if (newVal != null && newVal.isBefore(LocalDate.now())) {
                 Platform.runLater(() -> {
@@ -281,36 +309,36 @@ public class AjouterDemandeEmployeController implements Initializable {
         if (titreField != null) {
             titreField.textProperty().addListener((o, ov, nv) -> {
                 if (nv != null && !nv.trim().isEmpty()) {
-                    formHelper.clearFieldError(titreField, titreError);
+                    clearFieldError(titreField, titreError);
                 }
             });
         }
         if (descriptionArea != null) {
             descriptionArea.textProperty().addListener((o, ov, nv) -> {
                 if (nv != null && !nv.trim().isEmpty()) {
-                    formHelper.clearFieldError(descriptionArea, descriptionError);
+                    clearFieldError(descriptionArea, descriptionError);
                 }
             });
         }
         if (categorieCombo != null) {
             categorieCombo.valueProperty().addListener((o, ov, nv) -> {
-                if (nv != null) formHelper.clearFieldError(categorieCombo, categorieError);
+                if (nv != null) clearFieldError(categorieCombo, categorieError);
             });
         }
         if (typeDemandeCombo != null) {
             typeDemandeCombo.valueProperty().addListener((o, ov, nv) -> {
-                if (nv != null) formHelper.clearFieldError(typeDemandeCombo, typeError);
+                if (nv != null) clearFieldError(typeDemandeCombo, typeError);
             });
         }
         if (prioriteCombo != null) {
             prioriteCombo.valueProperty().addListener((o, ov, nv) -> {
-                if (nv != null) formHelper.clearFieldError(prioriteCombo, prioriteError);
+                if (nv != null) clearFieldError(prioriteCombo, prioriteError);
             });
         }
         if (dateCreationPicker != null) {
             dateCreationPicker.valueProperty().addListener((o, ov, nv) -> {
                 if (nv != null && !nv.isBefore(LocalDate.now())) {
-                    formHelper.clearFieldError(dateCreationPicker, dateError);
+                    clearFieldError(dateCreationPicker, dateError);
                 }
             });
         }
@@ -322,6 +350,11 @@ public class AjouterDemandeEmployeController implements Initializable {
                 }
             });
         }
+    }
+
+    private void clearFieldError(Control field, Label errorLabel) {
+        if (errorLabel != null) errorLabel.setText("");
+        if (field != null) field.setStyle("");
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -345,6 +378,7 @@ public class AjouterDemandeEmployeController implements Initializable {
         isSubmitting = true;
         setFormEnabled(false);
 
+        // Collect form data
         final String titre = titreField.getText().trim();
         final String description = descriptionArea.getText().trim();
         final String categorie = categorieCombo.getValue();
@@ -361,6 +395,7 @@ public class AjouterDemandeEmployeController implements Initializable {
         System.out.println("  Date: " + dateCreation);
         System.out.println("  Details: " + detailsJson);
 
+        // Get employee info
         employe currentEmployee = session.getEmploye();
         if (currentEmployee == null) {
             System.err.println("ERROR: No employee in session!");
@@ -376,6 +411,7 @@ public class AjouterDemandeEmployeController implements Initializable {
 
         System.out.println("Employee: " + empName + " (ID: " + employeId + ", Email: " + empEmail + ")");
 
+        // Submit task
         Task<Boolean> submitTask = new Task<Boolean>() {
             @Override
             protected Boolean call() throws Exception {
@@ -395,6 +431,7 @@ public class AjouterDemandeEmployeController implements Initializable {
                 demandeCRUD.ajouter(demande);
                 System.out.println("Demande saved with ID: " + demande.getIdDemande());
 
+                // Save details if not empty
                 if (!detailsJson.equals("{}")) {
                     System.out.println("Saving demande details...");
                     DemandeDetails details = new DemandeDetails();
@@ -430,7 +467,7 @@ public class AjouterDemandeEmployeController implements Initializable {
                 setFormEnabled(true);
                 showAlert(Alert.AlertType.INFORMATION, "Succès",
                         "✅ Demande soumise avec succès!\nVotre demande sera traitée par le service RH.");
-                retourListe();
+                returnToDemandesList();
             });
         });
 
@@ -529,67 +566,57 @@ public class AjouterDemandeEmployeController implements Initializable {
 
         // Titre validation
         if (titreField == null || titreField.getText() == null || titreField.getText().trim().isEmpty()) {
-            if (titreError != null) titreError.setText("Le titre est obligatoire");
-            if (titreField != null) titreField.setStyle("-fx-border-color: #e74c3c;");
+            setFieldError(titreField, titreError, "Le titre est obligatoire");
             valid = false;
         } else {
             String titre = titreField.getText().trim();
             if (titre.length() < 3) {
-                if (titreError != null) titreError.setText("Le titre doit contenir au moins 3 caractères");
-                titreField.setStyle("-fx-border-color: #e74c3c;");
+                setFieldError(titreField, titreError, "Le titre doit contenir au moins 3 caractères");
                 valid = false;
             } else if (titre.length() > 100) {
-                if (titreError != null) titreError.setText("Le titre ne peut pas dépasser 100 caractères");
-                titreField.setStyle("-fx-border-color: #e74c3c;");
+                setFieldError(titreField, titreError, "Le titre ne peut pas dépasser 100 caractères");
                 valid = false;
             }
         }
 
         // Catégorie validation
         if (categorieCombo == null || categorieCombo.getValue() == null) {
-            if (categorieError != null) categorieError.setText("La catégorie est obligatoire");
-            if (categorieCombo != null) categorieCombo.setStyle("-fx-border-color: #e74c3c;");
+            setFieldError(categorieCombo, categorieError, "La catégorie est obligatoire");
             valid = false;
         }
 
         // Type validation
         if (typeDemandeCombo == null || typeDemandeCombo.getValue() == null) {
-            if (typeError != null) typeError.setText("Le type est obligatoire");
-            if (typeDemandeCombo != null) typeDemandeCombo.setStyle("-fx-border-color: #e74c3c;");
+            setFieldError(typeDemandeCombo, typeError, "Le type est obligatoire");
             valid = false;
         }
 
         // Priorité validation
         if (prioriteCombo == null || prioriteCombo.getValue() == null) {
-            if (prioriteError != null) prioriteError.setText("La priorité est obligatoire");
-            if (prioriteCombo != null) prioriteCombo.setStyle("-fx-border-color: #e74c3c;");
+            setFieldError(prioriteCombo, prioriteError, "La priorité est obligatoire");
             valid = false;
         }
 
         // Description validation
         if (descriptionArea == null || descriptionArea.getText() == null || descriptionArea.getText().trim().isEmpty()) {
-            if (descriptionError != null) descriptionError.setText("La description est obligatoire");
-            if (descriptionArea != null) descriptionArea.setStyle("-fx-border-color: #e74c3c;");
+            setFieldError(descriptionArea, descriptionError, "La description est obligatoire");
             valid = false;
         } else {
             String description = descriptionArea.getText().trim();
             if (description.length() < 10) {
-                if (descriptionError != null) descriptionError.setText("La description doit contenir au moins 10 caractères");
-                descriptionArea.setStyle("-fx-border-color: #e74c3c;");
+                setFieldError(descriptionArea, descriptionError, "La description doit contenir au moins 10 caractères");
                 valid = false;
             }
         }
 
         // Date validation
         if (dateCreationPicker == null || dateCreationPicker.getValue() == null) {
-            if (dateError != null) dateError.setText("La date est obligatoire");
-            if (dateCreationPicker != null) dateCreationPicker.setStyle("-fx-border-color: #e74c3c;");
+            setFieldError(dateCreationPicker, dateError, "La date est obligatoire");
             valid = false;
         } else {
             LocalDate selectedDate = dateCreationPicker.getValue();
             if (selectedDate.isBefore(LocalDate.now())) {
-                if (dateError != null) dateError.setText("⚠️ La date ne peut pas être dans le passé");
-                dateCreationPicker.setStyle("-fx-border-color: #e74c3c; -fx-border-width: 2;");
+                setFieldError(dateCreationPicker, dateError, "⚠️ La date ne peut pas être dans le passé");
                 valid = false;
             }
         }
@@ -615,8 +642,13 @@ public class AjouterDemandeEmployeController implements Initializable {
         return valid;
     }
 
+    private void setFieldError(Control field, Label errorLabel, String message) {
+        if (errorLabel != null) errorLabel.setText(message);
+        if (field != null) field.setStyle("-fx-border-color: #e74c3c; -fx-border-width: 2;");
+    }
+
     // ═══════════════════════════════════════════════════════════════════════════
-    // RESET & NAVIGATION
+    // RESET FORM
     // ═══════════════════════════════════════════════════════════════════════════
 
     @FXML
@@ -666,31 +698,219 @@ public class AjouterDemandeEmployeController implements Initializable {
         if (destinationError != null) destinationError.setText("");
     }
 
+    // ═══════════════════════════════════════════════════════════════════════════
+    // NAVIGATION - RETURN TO LIST (FIXED)
+    // ═══════════════════════════════════════════════════════════════════════════
+
     @FXML
     private void retourListe() {
+        System.out.println("=== retourListe() called ===");
+        returnToDemandesList();
+    }
+
+    /**
+     * Return to the demandes list - handles both in-view and modal scenarios
+     */
+    private void returnToDemandesList() {
         try {
-            // Get the current window
-            Stage stage = (Stage) titreField.getScene().getWindow();
+            System.out.println("Attempting to return to demandes list...");
 
-            // Simply close the window - the parent controller will refresh automatically
-            stage.close();
+            // Get any available node
+            Node anyNode = getAnyFXMLNode();
+            if (anyNode == null) {
+                System.err.println("❌ No FXML node available!");
+                showAlert(Alert.AlertType.ERROR, "Erreur", "Erreur de navigation");
+                return;
+            }
 
-            System.out.println("Add demande window closed.");
+            Scene scene = anyNode.getScene();
+            if (scene == null) {
+                System.err.println("❌ Scene is null!");
+                showAlert(Alert.AlertType.ERROR, "Erreur", "Erreur de navigation");
+                return;
+            }
+
+            Stage currentStage = (Stage) scene.getWindow();
+
+            // Method 1: Check if we're in a modal window - just close it
+            if (currentStage != null && currentStage.getModality() != Modality.NONE) {
+                System.out.println("✅ Method 1: Closing modal window");
+                currentStage.close();
+                return;
+            }
+
+            // Method 2: Direct scene lookup for contentArea
+            Node contentNode = scene.lookup("#contentArea");
+            if (contentNode instanceof StackPane) {
+                System.out.println("✅ Method 2: Found via scene.lookup()");
+                loadDemandesEmployeIntoContentArea((StackPane) contentNode);
+                return;
+            }
+
+            // Method 3: Lookup from root
+            Parent root = scene.getRoot();
+            if (root != null) {
+                contentNode = root.lookup("#contentArea");
+                if (contentNode instanceof StackPane) {
+                    System.out.println("✅ Method 3: Found via root.lookup()");
+                    loadDemandesEmployeIntoContentArea((StackPane) contentNode);
+                    return;
+                }
+
+                // Method 4: If root is BorderPane, check center
+                if (root instanceof javafx.scene.layout.BorderPane) {
+                    javafx.scene.layout.BorderPane bp = (javafx.scene.layout.BorderPane) root;
+                    Node center = bp.getCenter();
+                    if (center instanceof StackPane) {
+                        System.out.println("✅ Method 4: Found as BorderPane center");
+                        loadDemandesEmployeIntoContentArea((StackPane) center);
+                        return;
+                    }
+                }
+            }
+
+            // Method 5: Parent traversal
+            StackPane contentArea = findContentAreaByTraversal(anyNode);
+            if (contentArea != null) {
+                System.out.println("✅ Method 5: Found via traversal");
+                loadDemandesEmployeIntoContentArea(contentArea);
+                return;
+            }
+
+            // Method 6: Use parent controller if available
+            if (parentController != null) {
+                System.out.println("✅ Method 6: Using parent controller");
+                parentController.loadDemandes();
+
+                // Try to close window if we're in one
+                if (currentStage != null && currentStage.getOwner() != null) {
+                    currentStage.close();
+                }
+                return;
+            }
+
+            // Method 7: Last resort - close any window
+            if (currentStage != null) {
+                System.out.println("✅ Method 7: Closing current window");
+                currentStage.close();
+                return;
+            }
+
+            System.err.println("❌ All navigation methods failed!");
+            showAlert(Alert.AlertType.WARNING, "Navigation",
+                    "Impossible de retourner automatiquement.\n" +
+                            "Veuillez cliquer sur 'Demandes' dans le menu.");
 
         } catch (Exception e) {
-            System.err.println("Error closing window: " + e.getMessage());
+            e.printStackTrace();
+            showAlert(Alert.AlertType.ERROR, "Erreur", "Erreur de navigation: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Find content area by traversing parent hierarchy
+     */
+    private StackPane findContentAreaByTraversal(Node startNode) {
+        if (startNode == null) return null;
+
+        Parent parent = startNode.getParent();
+        int depth = 0;
+        final int MAX_DEPTH = 50;
+
+        while (parent != null && depth < MAX_DEPTH) {
+            depth++;
+
+            // Check StackPane
+            if (parent instanceof StackPane) {
+                StackPane sp = (StackPane) parent;
+                String id = sp.getId();
+
+                if ("contentArea".equals(id)) {
+                    System.out.println("Found contentArea at depth " + depth);
+                    return sp;
+                }
+
+                if (sp.getStyleClass().contains("content-area")) {
+                    System.out.println("Found content-area by style class at depth " + depth);
+                    return sp;
+                }
+            }
+
+            // Check BorderPane center
+            if (parent instanceof javafx.scene.layout.BorderPane) {
+                javafx.scene.layout.BorderPane bp = (javafx.scene.layout.BorderPane) parent;
+                Node center = bp.getCenter();
+                if (center instanceof StackPane) {
+                    StackPane sp = (StackPane) center;
+                    if ("contentArea".equals(sp.getId())) {
+                        System.out.println("Found contentArea in BorderPane center at depth " + depth);
+                        return sp;
+                    }
+                }
+            }
+
+            parent = parent.getParent();
+        }
+
+        System.out.println("contentArea not found after " + depth + " levels");
+        return null;
+    }
+
+    /**
+     * Load demandes-employe.fxml into content area
+     */
+    private void loadDemandesEmployeIntoContentArea(StackPane contentArea) {
+        try {
+            System.out.println("Loading demandes-employe.fxml into content area...");
+
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/demandes-employe.fxml"));
+            Parent demandesView = loader.load();
+
+            contentArea.getChildren().setAll(demandesView);
+            System.out.println("✅ Demandes employe view loaded successfully!");
+
+        } catch (IOException e) {
+            System.err.println("❌ Error loading demandes-employe.fxml: " + e.getMessage());
             e.printStackTrace();
 
+            // Try alternative path
             try {
-                if (titreField != null && titreField.getScene() != null) {
-                    Stage stage = (Stage) titreField.getScene().getWindow();
-                    stage.close();
-                }
-            } catch (Exception ex) {
-                showAlert(Alert.AlertType.ERROR, "Erreur", "Impossible de fermer la fenêtre: " + e.getMessage());
+                System.out.println("Trying alternative path...");
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/emp/employes/demandes-employe.fxml"));
+                Parent demandesView = loader.load();
+                contentArea.getChildren().setAll(demandesView);
+                System.out.println("✅ Loaded from alternative path!");
+            } catch (IOException e2) {
+                System.err.println("❌ Alternative path also failed: " + e2.getMessage());
+                showAlert(Alert.AlertType.ERROR, "Erreur",
+                        "Impossible de charger la liste des demandes.\n" +
+                                "Veuillez cliquer sur 'Demandes' dans le menu.");
             }
         }
     }
+
+    /**
+     * Get any available FXML node
+     */
+    private Node getAnyFXMLNode() {
+        if (titreField != null) return titreField;
+        if (descriptionArea != null) return descriptionArea;
+        if (categorieCombo != null) return categorieCombo;
+        if (typeDemandeCombo != null) return typeDemandeCombo;
+        if (prioriteCombo != null) return prioriteCombo;
+        if (dateCreationPicker != null) return dateCreationPicker;
+        if (submitButton != null) return submitButton;
+        if (resetButton != null) return resetButton;
+        if (dynamicFieldsContainer != null) return dynamicFieldsContainer;
+        if (detailsPane != null) return detailsPane;
+        if (destinationField != null) return destinationField;
+        if (mapButton != null) return mapButton;
+        return null;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // UTILITY
+    // ═══════════════════════════════════════════════════════════════════════════
 
     private void showAlert(Alert.AlertType type, String title, String message) {
         Alert alert = new Alert(type);

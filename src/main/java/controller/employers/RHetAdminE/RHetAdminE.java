@@ -11,9 +11,7 @@ import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.Alert;
-import javafx.scene.control.Button;
-import javafx.scene.control.Label;
+import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
@@ -26,6 +24,7 @@ import javafx.util.Duration;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
+import java.util.Optional;
 import java.util.ResourceBundle;
 
 public class RHetAdminE implements Initializable {
@@ -189,27 +188,48 @@ public class RHetAdminE implements Initializable {
 
     @FXML
     private void handleDeconnexion() {
-        try {
-            session.logout();
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Déconnexion");
+        alert.setHeaderText("Voulez-vous vraiment vous déconnecter ?");
+        alert.setContentText("Votre session sera fermée.");
 
-            Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-            alert.setTitle("Déconnexion");
-            alert.setHeaderText(null);
-            alert.setContentText("Vous voulez déconnecter?");
-            alert.showAndWait();
+        ButtonType btnOui = new ButtonType("Oui", ButtonBar.ButtonData.YES);
+        ButtonType btnNon = new ButtonType("Non", ButtonBar.ButtonData.NO);
+        alert.getButtonTypes().setAll(btnOui, btnNon);
 
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/emp/Login.fxml"));
-            Parent root = loader.load();
-            Stage loginStage = new Stage();
-            loginStage.setTitle("Connexion");
-            loginStage.setScene(new Scene(root));
-            loginStage.show();
+        alert.showAndWait().ifPresent(response -> {
+            if (response == btnOui) {
+                session.logout();
 
-            Stage currentStage = (Stage) sidebar.getScene().getWindow();
-            currentStage.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+                try {
+                    Parent loginRoot = FXMLLoader.load(getClass().getResource("/emp/Login.fxml"));
+                    Scene scene = new Scene(loginRoot);
+                    Stage loginStage = new Stage();
+                    loginStage.setTitle("Connexion - Momentum");
+                    loginStage.getIcons().add(new Image(getClass().getResourceAsStream("/icons/logo.png")));
+                    loginStage.setMinWidth(900);
+                    loginStage.setMinHeight(650);
+                    loginStage.setScene(scene);
+                    loginStage.show();
+
+                    Stage currentStage = (Stage) btnDeconnexion.getScene().getWindow();
+                    currentStage.close();
+
+                } catch (IOException ex) {
+                    ex.printStackTrace();
+                    new Alert(Alert.AlertType.ERROR, "Impossible de charger l'écran de connexion.", ButtonType.OK).show();
+                }
+            }
+        });
+    }
+
+    // Helper method to show error alerts (optional but clean)
+    private void showError(String title, String message) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle(title);
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.showAndWait();
     }
 
     // ═══ Navigation (SANS lblPageTitle) ═══

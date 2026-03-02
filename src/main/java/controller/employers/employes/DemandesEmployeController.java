@@ -1203,11 +1203,39 @@ public class DemandesEmployeController implements Initializable {
         System.out.println("=== ouvrirAjouter() called ===");
 
         try {
-            openAddDemandeInNewWindow();
-        } catch (Exception e) {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/emp/employes/ajouter-demande-employe.fxml"));
+            Parent formView = loader.load();
+
+            // Get the controller
+            AjouterDemandeEmployeController controller = loader.getController();
+            controller.setParentController(this);
+
+            if (cardsContainer != null && cardsContainer.getParent() != null) {
+                StackPane contentArea = findContentArea(cardsContainer);
+                if (contentArea != null) {
+                    contentArea.getChildren().setAll(formView);
+                    System.out.println("✅ Form loaded in content area");
+                } else {
+                    System.err.println("❌ Could not find content area!");
+                    showAlert(Alert.AlertType.ERROR, "Erreur", "Impossible de charger le formulaire");
+                }
+            }
+
+        } catch (IOException e) {
             e.printStackTrace();
             showAlert(Alert.AlertType.ERROR, "Erreur", "Impossible de charger le formulaire: " + e.getMessage());
         }
+    }
+
+    private StackPane findContentArea(javafx.scene.Node node) {
+        javafx.scene.Parent parent = node.getParent();
+        while (parent != null) {
+            if (parent instanceof StackPane && parent.getId() != null && parent.getId().equals("contentArea")) {
+                return (StackPane) parent;
+            }
+            parent = parent.getParent();
+        }
+        return null;
     }
 
     private void openAddDemandeInNewWindow() {

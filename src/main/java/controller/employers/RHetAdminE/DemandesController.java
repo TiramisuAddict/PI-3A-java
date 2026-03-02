@@ -1648,35 +1648,6 @@ public class DemandesController implements Initializable {
 // ACTIONS - FIXED NAVIGATION (Open in New Window)
 // ═══════════════════════════════════════════════════════════════════════════
 
-    @FXML
-    public void ouvrirAvancer() {
-        try {
-            if (selectedDemande == null) {
-                showAlert(Alert.AlertType.WARNING, "Avertissement",
-                        "⚠️ Sélectionnez une demande d'abord !");
-                return;
-            }
-
-            if ("Fermée".equals(selectedDemande.getStatus())) {
-                showAlert(Alert.AlertType.WARNING, "Avertissement",
-                        "Cette demande est déjà fermée !");
-                return;
-            }
-
-            if ("Annulée".equals(selectedDemande.getStatus())) {
-                showAlert(Alert.AlertType.WARNING, "Avertissement",
-                        "Cette demande a été annulée !");
-                return;
-            }
-
-            // Open in new window
-            openAvancerInNewWindow(selectedDemande);
-
-        } catch (Exception e) {
-            showAlert(Alert.AlertType.ERROR, "Erreur", "❌ " + e.getMessage());
-            e.printStackTrace();
-        }
-    }
 
     private void openAvancerInNewWindow(Demande demande) {
         try {
@@ -1713,38 +1684,65 @@ public class DemandesController implements Initializable {
         }
     }
 
+    // Add this helper method to your DemandesController class
+    private StackPane findContentArea() {
+        if (demandesTable != null && demandesTable.getScene() != null) {
+            Node node = demandesTable.getScene().lookup("#contentArea");
+            if (node instanceof StackPane) {
+                return (StackPane) node;
+            }
+        }
+        return null;
+    }
+
+    @FXML
+    public void ouvrirAvancer() {
+        try {
+            if (selectedDemande == null) {
+                showAlert(Alert.AlertType.WARNING, "Avertissement", "⚠️ Sélectionnez une demande d'abord !");
+                return;
+            }
+
+            // Load the view
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/emp/RHetAdminE/avancer-demande.fxml"));
+            Parent view = loader.load();
+
+            // Pass data to the controller
+            AvancerDemandeController ctrl = loader.getController();
+            ctrl.setParentController(this);
+            ctrl.setDemande(selectedDemande);
+
+            // Switch view inside contentArea
+            StackPane area = findContentArea();
+            if (area != null) {
+                area.getChildren().setAll(view);
+            } else {
+                // Fallback if contentArea ID isn't found
+                openAvancerInNewWindow(selectedDemande);
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            showAlert(Alert.AlertType.ERROR, "Erreur", "❌ " + e.getMessage());
+        }
+    }
+
     private void ouvrirModifier(Demande demande) {
         try {
-            System.out.println("Opening modifier demande in new window...");
-
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/emp/RHetAdminE/modifier-demande.fxml"));
-            Parent root = loader.load();
+            Parent view = loader.load();
 
             ModifierDemandeController ctrl = loader.getController();
             ctrl.setParentController(this);
             ctrl.setDemande(demande);
 
-            Stage stage = new Stage();
-            stage.setTitle("✏️ Modifier la Demande: " + demande.getTitre());
-            stage.setScene(new Scene(root, 950, 750));
-            stage.initModality(Modality.APPLICATION_MODAL);
-            stage.setResizable(true);
-            stage.setMinWidth(800);
-            stage.setMinHeight(600);
-
-            // Refresh list when window closes
-            stage.setOnHidden(event -> {
-                System.out.println("Modifier window closed, refreshing list...");
-                loadAllDemandes();
-                resetDetailsPanel();
-            });
-
-            stage.show();
-            System.out.println("Modifier window opened successfully!");
-
+            StackPane area = findContentArea();
+            if (area != null) {
+                area.getChildren().setAll(view);
+            }
         } catch (IOException e) {
             e.printStackTrace();
-            showAlert(Alert.AlertType.ERROR, "Erreur", "Impossible de charger le formulaire: " + e.getMessage());
+            showAlert(Alert.AlertType.ERROR, "Erreur", "❌ " + e.getMessage());
         }
     }
 
