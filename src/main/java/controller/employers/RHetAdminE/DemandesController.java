@@ -1115,16 +1115,28 @@ public class DemandesController implements Initializable {
             String position = emp.getPoste() != null ? emp.getPoste() : "Employé";
             String employeeId = "EMP" + emp.getId_employé();
 
-            // Get additional details
-            String additionalInfo = selectedDemande.getDescription() != null ?
-                    selectedDemande.getDescription() : "";
+            // Get additional details - PROPERLY FORMATTED
+            StringBuilder additionalInfo = new StringBuilder();
+
+            // Add description if exists
+            if (selectedDemande.getDescription() != null && !selectedDemande.getDescription().isEmpty()) {
+                additionalInfo.append(selectedDemande.getDescription());
+            }
+
+            // Get and format specific details
             try {
                 DemandeDetails details = detailsCRUD.getByDemande(selectedDemande.getIdDemande());
                 if (details != null && details.getDetails() != null && !details.getDetails().isEmpty()) {
-                    additionalInfo += "\n\nDétails:\n" + details.getDetails();
+                    String formattedDetails = formatJsonDetails(details.getDetails());
+                    if (!formattedDetails.isEmpty()) {
+                        if (additionalInfo.length() > 0) {
+                            additionalInfo.append("\n\n");
+                        }
+                        additionalInfo.append(formattedDetails);
+                    }
                 }
             } catch (Exception e) {
-                // Ignore
+                System.err.println("Error getting details: " + e.getMessage());
             }
 
             // Show loading
@@ -1136,7 +1148,7 @@ public class DemandesController implements Initializable {
             final String finalEmployeeName = employeeName;
             final String finalPosition = position;
             final String finalEmployeeId = employeeId;
-            final String finalAdditionalInfo = additionalInfo;
+            final String finalAdditionalInfo = additionalInfo.toString();
             final File finalFolder = folder;
 
             docService.generateDocumentAsync(
@@ -1146,35 +1158,68 @@ public class DemandesController implements Initializable {
                     finalEmployeeId,
                     selectedDemande.getDateCreation(),
                     finalAdditionalInfo
-            ).thenAccept(doc -> {
+            ).thenCompose(doc -> {
+                if (doc != null && doc.isValid) {
+                    String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+                    String baseName = sanitizeFilename(doc.title + "_" + finalEmployeeName);
+
+                    String pdfPath = finalFolder.getAbsolutePath() + File.separator +
+                            baseName + "_" + timestamp + ".pdf";
+                    String wordPath = finalFolder.getAbsolutePath() + File.separator +
+                            baseName + "_" + timestamp + ".docx";
+
+                    System.out.println("╔═══════════════════════════════════════════════════════╗");
+                    System.out.println("║ 📤 EXPORTING BOTH FORMATS                             ║");
+                    System.out.println("╠═══════════════════════════════════════════════════════╣");
+                    System.out.println("║ PDF:  " + pdfPath);
+                    System.out.println("║ Word: " + wordPath);
+                    System.out.println("╚═══════════════════════════════════════════════════════╝");
+
+                    return docService.exportBothFormatsAsync(doc, pdfPath, wordPath)
+                            .thenApply(exportResult -> {
+                                return new Object[]{doc, exportResult, baseName + "_" + timestamp, finalFolder};
+                            });
+                } else {
+                    return java.util.concurrent.CompletableFuture.completedFuture(null);
+                }
+            }).thenAccept(result -> {
                 hideLoadingDialog();
 
                 Platform.runLater(() -> {
-                    if (doc != null && doc.isValid) {
-                        String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-                        String baseName = sanitizeFilename(doc.title + "_" + finalEmployeeName);
+                    if (result != null) {
+                        Object[] data = (Object[]) result;
+                        AIDocumentGeneratorService.GeneratedDocument doc =
+                                (AIDocumentGeneratorService.GeneratedDocument) data[0];
+                        AIDocumentGeneratorService.ExportResult exportResult =
+                                (AIDocumentGeneratorService.ExportResult) data[1];
+                        String baseName = (String) data[2];
+                        File folder2 = (File) data[3];
 
-                        String pdfPath = finalFolder.getAbsolutePath() + File.separator +
-                                baseName + "_" + timestamp + ".pdf";
-                        String wordPath = finalFolder.getAbsolutePath() + File.separator +
-                                baseName + "_" + timestamp + ".docx";
+                        System.out.println("╔═══════════════════════════════════════════════════════╗");
+                        System.out.println("║ 📊 EXPORT COMPLETED                                   ║");
+                        System.out.println("║ " + exportResult);
+                        System.out.println("╚═══════════════════════════════════════════════════════╝");
 
-                        // Export
-                        docService.exportToPDFAsync(doc, pdfPath);
-                        docService.exportToWordAsync(doc, wordPath);
-
-                        // Show success
-                        showSuccessDialog(finalFolder, baseName + "_" + timestamp);
-
+                        if (exportResult.isFullySuccessful()) {
+                            showSuccessDialogBoth(folder2, baseName, exportResult);
+                        } else if (exportResult.isPartiallySuccessful()) {
+                            showPartialSuccessDialog(folder2, baseName, exportResult);
+                        } else {
+                            showAlert(Alert.AlertType.ERROR, "Erreur d'export",
+                                    "❌ Échec de l'export:\n" +
+                                            "PDF: " + exportResult.pdfError + "\n" +
+                                            "Word: " + exportResult.wordError);
+                        }
                     } else {
                         showAlert(Alert.AlertType.WARNING, "Avertissement",
-                                "⚠️ Document généré avec le modèle par défaut.");
+                                "⚠️ Document généré mais export échoué.");
                     }
                 });
             }).exceptionally(ex -> {
                 hideLoadingDialog();
                 Platform.runLater(() -> {
                     showAlert(Alert.AlertType.ERROR, "Erreur", "❌ " + ex.getMessage());
+                    ex.printStackTrace();
                 });
                 return null;
             });
@@ -1184,6 +1229,196 @@ public class DemandesController implements Initializable {
             showAlert(Alert.AlertType.ERROR, "Erreur", "❌ " + e.getMessage());
             e.printStackTrace();
         }
+    }
+
+    /**
+     * Formats JSON details into readable text for documents
+     */
+    private String formatJsonDetails(String jsonString) {
+        if (jsonString == null || jsonString.trim().isEmpty()) {
+            return "";
+        }
+
+        try {
+            String trimmed = jsonString.trim();
+
+            // Check if it's JSON
+            if (trimmed.startsWith("{")) {
+                org.json.JSONObject json = new org.json.JSONObject(trimmed);
+                StringBuilder formatted = new StringBuilder();
+
+                for (String key : json.keySet()) {
+                    String value = json.optString(key, "");
+                    if (!value.isEmpty()) {
+                        String formattedKey = formatJsonKey(key);
+                        formatted.append("• ").append(formattedKey).append(": ").append(value).append("\n");
+                    }
+                }
+
+                return formatted.toString().trim();
+
+            } else if (trimmed.startsWith("[")) {
+                // JSON Array
+                org.json.JSONArray jsonArray = new org.json.JSONArray(trimmed);
+                StringBuilder formatted = new StringBuilder();
+
+                for (int i = 0; i < jsonArray.length(); i++) {
+                    Object item = jsonArray.get(i);
+                    if (item instanceof org.json.JSONObject) {
+                        org.json.JSONObject obj = (org.json.JSONObject) item;
+                        for (String key : obj.keySet()) {
+                            String value = obj.optString(key, "");
+                            if (!value.isEmpty()) {
+                                String formattedKey = formatJsonKey(key);
+                                formatted.append("• ").append(formattedKey).append(": ").append(value).append("\n");
+                            }
+                        }
+                    } else {
+                        formatted.append("• ").append(item.toString()).append("\n");
+                    }
+                }
+
+                return formatted.toString().trim();
+            }
+
+            // Not JSON, return as is
+            return jsonString;
+
+        } catch (Exception e) {
+            // If JSON parsing fails, return original string
+            System.err.println("JSON parsing error: " + e.getMessage());
+            return jsonString;
+        }
+    }
+
+    /**
+     * Formats a JSON key into human-readable text
+     * Example: "nomLogiciel" -> "Nom du logiciel"
+     */
+    private String formatJsonKey(String key) {
+        if (key == null || key.isEmpty()) return "";
+
+        // Common key translations
+        Map<String, String> translations = new HashMap<>();
+        translations.put("nomLogiciel", "Nom du logiciel");
+        translations.put("version", "Version");
+        translations.put("typeLicence", "Type de licence");
+        translations.put("justificationLogiciel", "Justification");
+        translations.put("dateDebut", "Date de début");
+        translations.put("dateFin", "Date de fin");
+        translations.put("nombreJours", "Nombre de jours");
+        translations.put("typeConge", "Type de congé");
+        translations.put("motif", "Motif");
+        translations.put("description", "Description");
+        translations.put("quantite", "Quantité");
+        translations.put("urgence", "Urgence");
+        translations.put("justification", "Justification");
+        translations.put("nomEquipement", "Nom de l'équipement");
+        translations.put("typeEquipement", "Type d'équipement");
+        translations.put("marque", "Marque");
+        translations.put("modele", "Modèle");
+        translations.put("specifications", "Spécifications");
+        translations.put("raisonDemande", "Raison de la demande");
+        translations.put("dateNecessite", "Date de nécessité");
+        translations.put("priorite", "Priorité");
+        translations.put("commentaires", "Commentaires");
+        translations.put("montant", "Montant");
+        translations.put("devise", "Devise");
+        translations.put("periode", "Période");
+        translations.put("destinataire", "Destinataire");
+        translations.put("objetDocument", "Objet du document");
+
+        // Check if we have a translation
+        if (translations.containsKey(key)) {
+            return translations.get(key);
+        }
+
+        // Convert camelCase to readable text
+        String result = key
+                .replaceAll("([a-z])([A-Z])", "$1 $2")  // camelCase -> camel Case
+                .replaceAll("_", " ")                     // snake_case -> snake case
+                .trim();
+
+        // Capitalize first letter
+        if (!result.isEmpty()) {
+            result = result.substring(0, 1).toUpperCase() + result.substring(1).toLowerCase();
+        }
+
+        return result;
+    }
+
+    private void showSuccessDialogBoth(File folder, String baseName,
+                                       AIDocumentGeneratorService.ExportResult result) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Succès ✅");
+        alert.setHeaderText("Documents générés avec succès !");
+
+        StringBuilder content = new StringBuilder();
+        content.append("Les fichiers ont été créés:\n\n");
+
+        if (result.pdfFile != null) {
+            content.append("📄 PDF: ").append(result.pdfFile.getName())
+                    .append(" (").append(formatFileSize(result.pdfFile.length())).append(")\n");
+        }
+
+        if (result.wordFile != null) {
+            content.append("📝 Word: ").append(result.wordFile.getName())
+                    .append(" (").append(formatFileSize(result.wordFile.length())).append(")\n");
+        }
+
+        content.append("\n📂 ").append(folder.getAbsolutePath());
+
+        alert.setContentText(content.toString());
+
+        ButtonType openFolder = new ButtonType("📂 Ouvrir le dossier");
+        ButtonType close = new ButtonType("Fermer", ButtonBar.ButtonData.CANCEL_CLOSE);
+        alert.getButtonTypes().setAll(openFolder, close);
+
+        alert.showAndWait().ifPresent(response -> {
+            if (response == openFolder) {
+                try {
+                    if (java.awt.Desktop.isDesktopSupported()) {
+                        new Thread(() -> {
+                            try {
+                                java.awt.Desktop.getDesktop().open(folder);
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                        }).start();
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+    }
+
+    private void showPartialSuccessDialog(File folder, String baseName,
+                                          AIDocumentGeneratorService.ExportResult result) {
+        Alert alert = new Alert(Alert.AlertType.WARNING);
+        alert.setTitle("Export Partiel ⚠️");
+        alert.setHeaderText("Un seul fichier a été créé");
+
+        StringBuilder content = new StringBuilder();
+
+        if (result.pdfSuccess) {
+            content.append("✅ PDF créé: ").append(result.pdfFile.getName()).append("\n");
+            content.append("❌ Word échoué: ").append(result.wordError).append("\n");
+        } else if (result.wordSuccess) {
+            content.append("❌ PDF échoué: ").append(result.pdfError).append("\n");
+            content.append("✅ Word créé: ").append(result.wordFile.getName()).append("\n");
+        }
+
+        content.append("\n📂 ").append(folder.getAbsolutePath());
+
+        alert.setContentText(content.toString());
+        alert.showAndWait();
+    }
+
+    private String formatFileSize(long bytes) {
+        if (bytes < 1024) return bytes + " B";
+        if (bytes < 1024 * 1024) return String.format("%.1f KB", bytes / 1024.0);
+        return String.format("%.1f MB", bytes / (1024.0 * 1024.0));
     }
 
     private void showLoadingDialog(String title, String message) {

@@ -11,8 +11,11 @@ import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import service.api.AIDocumentGeneratorService;
 import service.api.AIDocumentGeneratorService.GeneratedDocument;
+import service.api.AIDocumentGeneratorService.ExportResult;
 
 import java.io.File;
+import java.nio.file.Paths;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 
 public class DocumentGeneratorPanel extends VBox {
@@ -31,9 +34,19 @@ public class DocumentGeneratorPanel extends VBox {
     public DocumentGeneratorPanel() {
         try {
             docService = new AIDocumentGeneratorService();
+
+            String userHome = System.getProperty("user.home");
+            selectedFolder = new File(userHome, "Downloads");
+            if (!selectedFolder.exists()) selectedFolder = new File(userHome, "Documents");
+            if (!selectedFolder.exists()) selectedFolder = new File(userHome);
+
             setupUI();
+
+            System.out.println("✅ DocumentGeneratorPanel initialized");
+            System.out.println("📁 Default folder: " + selectedFolder.getAbsolutePath());
+
         } catch (Exception e) {
-            System.err.println("DocumentGeneratorPanel init error: " + e.getMessage());
+            System.err.println("❌ DocumentGeneratorPanel init error: " + e.getMessage());
             e.printStackTrace();
         }
     }
@@ -41,7 +54,9 @@ public class DocumentGeneratorPanel extends VBox {
     private void setupUI() {
         setSpacing(15);
         setPadding(new Insets(20));
-        setStyle("-fx-background-color: white; -fx-background-radius: 12; -fx-border-color: #e0e0e0; -fx-border-radius: 12;");
+        setStyle("-fx-background-color: white; -fx-background-radius: 12; " +
+                "-fx-border-color: #e0e0e0; -fx-border-radius: 12; " +
+                "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 10, 0, 0, 2);");
 
         // Header
         HBox header = new HBox(12);
@@ -51,10 +66,10 @@ public class DocumentGeneratorPanel extends VBox {
         icon.setStyle("-fx-font-size: 28;");
 
         VBox titleBox = new VBox(2);
-        Label title = new Label("Document Généré");
+        Label title = new Label("Générateur de Documents");
         title.setStyle("-fx-font-size: 18; -fx-font-weight: bold; -fx-text-fill: #2c3e50;");
 
-        statusLabel = new Label("En attente...");
+        statusLabel = new Label("Prêt à générer");
         statusLabel.setStyle("-fx-text-fill: #7f8c8d; -fx-font-size: 11;");
         titleBox.getChildren().addAll(title, statusLabel);
 
@@ -69,182 +84,255 @@ public class DocumentGeneratorPanel extends VBox {
         // Folder selection
         HBox folderBox = new HBox(10);
         folderBox.setAlignment(Pos.CENTER_LEFT);
+        folderBox.setPadding(new Insets(12));
+        folderBox.setStyle("-fx-background-color: #f8f9fa; -fx-background-radius: 8; -fx-border-color: #dee2e6; -fx-border-radius: 8;");
 
-        Button chooseFolderBtn = new Button("📁 Choisir dossier");
-        chooseFolderBtn.setStyle("-fx-background-color: #4A5DEF; -fx-text-fill: white; -fx-background-radius: 8; -fx-cursor: hand; -fx-padding: 8 15;");
+        Button chooseFolderBtn = createStyledButton("📁 Choisir dossier", "#4A5DEF", "#3944D5");
         chooseFolderBtn.setOnAction(e -> chooseFolder());
 
-        folderLabel = new Label("Aucun dossier sélectionné");
-        folderLabel.setStyle("-fx-text-fill: #999;");
+        folderLabel = new Label(selectedFolder != null ? "📂 " + selectedFolder.getName() : "Aucun dossier");
+        folderLabel.setStyle("-fx-text-fill: #27ae60; -fx-font-weight: bold; -fx-font-size: 12;");
+        folderLabel.setWrapText(true);
+        HBox.setHgrow(folderLabel, Priority.ALWAYS);
+
         folderBox.getChildren().addAll(chooseFolderBtn, folderLabel);
 
+        // Separator
+        Separator sep1 = new Separator();
+
         // Preview
-        Label previewLabel = new Label("📋 Aperçu");
-        previewLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: #555;");
+        Label previewLabel = new Label("📋 Aperçu du document");
+        previewLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: #555; -fx-font-size: 13;");
 
         documentPreview = new TextArea();
         documentPreview.setWrapText(true);
         documentPreview.setPrefRowCount(15);
-        documentPreview.setStyle("-fx-font-family: Consolas;");
+        documentPreview.setEditable(false);
+        documentPreview.setStyle("-fx-font-family: 'Consolas', 'Monaco', 'Courier New', monospace; " +
+                "-fx-font-size: 11; -fx-control-inner-background: #f8f9fa;");
+        documentPreview.setPromptText("Le document généré apparaîtra ici...");
         VBox.setVgrow(documentPreview, Priority.ALWAYS);
 
         // Buttons
         HBox buttons = new HBox(10);
         buttons.setAlignment(Pos.CENTER);
+        buttons.setPadding(new Insets(10, 0, 0, 0));
 
-        exportPDFButton = new Button("📥 PDF");
-        exportPDFButton.setStyle("-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-background-radius: 8; -fx-cursor: hand; -fx-padding: 8 15;");
+        exportPDFButton = createStyledButton("📥 Exporter PDF", "#e74c3c", "#c0392b");
         exportPDFButton.setDisable(true);
         exportPDFButton.setOnAction(e -> exportPDF());
 
-        exportWordButton = new Button("📄 Word");
-        exportWordButton.setStyle("-fx-background-color: #2185d0; -fx-text-fill: white; -fx-background-radius: 8; -fx-cursor: hand; -fx-padding: 8 15;");
+        exportWordButton = createStyledButton("📄 Exporter Word", "#2185d0", "#1678c2");
         exportWordButton.setDisable(true);
         exportWordButton.setOnAction(e -> exportWord());
 
-        copyButton = new Button("📋 Copier");
-        copyButton.setStyle("-fx-background-color: #95a5a6; -fx-text-fill: white; -fx-background-radius: 8; -fx-cursor: hand; -fx-padding: 8 15;");
+        copyButton = createStyledButton("📋 Copier", "#95a5a6", "#7f8c8d");
         copyButton.setDisable(true);
         copyButton.setOnAction(e -> copyText());
 
         buttons.getChildren().addAll(exportPDFButton, exportWordButton, copyButton);
 
-        getChildren().addAll(header, folderBox, new Separator(), previewLabel, documentPreview, buttons);
+        getChildren().addAll(header, folderBox, sep1, previewLabel, documentPreview, buttons);
+    }
+
+    private Button createStyledButton(String text, String normalColor, String hoverColor) {
+        Button btn = new Button(text);
+        String normalStyle = "-fx-background-color: " + normalColor + "; -fx-text-fill: white; " +
+                "-fx-background-radius: 8; -fx-cursor: hand; -fx-padding: 10 20; -fx-font-weight: bold; " +
+                "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 4, 0, 0, 2);";
+        String hoverStyle = "-fx-background-color: " + hoverColor + "; -fx-text-fill: white; " +
+                "-fx-background-radius: 8; -fx-cursor: hand; -fx-padding: 10 20; -fx-font-weight: bold; " +
+                "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 6, 0, 0, 3);";
+
+        btn.setStyle(normalStyle);
+        btn.setOnMouseEntered(e -> btn.setStyle(hoverStyle));
+        btn.setOnMouseExited(e -> btn.setStyle(normalStyle));
+
+        return btn;
     }
 
     private void chooseFolder() {
         try {
             DirectoryChooser chooser = new DirectoryChooser();
-            chooser.setTitle("Choisir dossier");
+            chooser.setTitle("Choisir le dossier de destination");
+
+            if (selectedFolder != null && selectedFolder.exists()) {
+                chooser.setInitialDirectory(selectedFolder);
+            }
+
             File folder = chooser.showDialog(getScene().getWindow());
-            if (folder != null) {
+
+            if (folder != null && folder.exists() && folder.isDirectory()) {
                 selectedFolder = folder;
                 folderLabel.setText("📂 " + folder.getName());
-                folderLabel.setStyle("-fx-text-fill: #27ae60;");
+                folderLabel.setStyle("-fx-text-fill: #27ae60; -fx-font-weight: bold; -fx-font-size: 12;");
+                updateStatus("📁 Dossier: " + folder.getName(), "#27ae60");
+                System.out.println("✅ Folder selected: " + folder.getAbsolutePath());
             }
         } catch (Exception e) {
             e.printStackTrace();
-            statusLabel.setText("❌ Erreur lors de la sélection du dossier");
-            statusLabel.setStyle("-fx-text-fill: #e74c3c;");
+            updateStatus("❌ Erreur lors de la sélection du dossier", "#e74c3c");
         }
     }
 
+    /**
+     * Main method called to generate and export document
+     */
     public void generateDocument(String type, String name, String position, String id, Date date, String info) {
-        if (selectedFolder == null) {
-            statusLabel.setText("⚠️ Choisissez un dossier d'abord");
-            statusLabel.setStyle("-fx-text-fill: #e74c3c;");
+        System.out.println("╔═══════════════════════════════════════════════════════╗");
+        System.out.println("║ 📄 DOCUMENT GENERATION REQUEST                        ║");
+        System.out.println("╠═══════════════════════════════════════════════════════╣");
+        System.out.println("║ Type: " + type);
+        System.out.println("║ Employee: " + name);
+        System.out.println("║ Folder: " + (selectedFolder != null ? selectedFolder.getAbsolutePath() : "null"));
+        System.out.println("╚═══════════════════════════════════════════════════════╝");
+
+        if (selectedFolder == null || !selectedFolder.exists()) {
+            updateStatus("⚠️ Dossier invalide", "#e74c3c");
+            showAlert(Alert.AlertType.WARNING, "Dossier requis",
+                    "Aucun dossier sélectionné",
+                    "Veuillez choisir un dossier de destination avant de générer le document.");
             return;
         }
 
         if (docService == null) {
-            statusLabel.setText("❌ Erreur: Service de génération non initialisé");
-            statusLabel.setStyle("-fx-text-fill: #e74c3c;");
+            updateStatus("❌ Service non initialisé", "#e74c3c");
             return;
         }
 
-        statusLabel.setText("🔄 Génération en cours...");
-        statusLabel.setStyle("-fx-text-fill: #f39c12;");
+        updateStatus("🔄 Génération en cours...", "#f39c12");
         loadingIndicator.setVisible(true);
+        disableButtons(true);
 
+        // Generate document async
         docService.generateDocumentAsync(type, name, position, id, date, info)
-                .thenAccept(doc -> Platform.runLater(() -> {
-                    loadingIndicator.setVisible(false);
+                .thenAccept(doc -> {
                     if (doc != null && doc.isValid) {
-                        currentDocument = doc;
-                        documentPreview.setText(doc.getFormattedText());
-                        statusLabel.setText("✅ Document généré avec succès !");
-                        statusLabel.setStyle("-fx-text-fill: #27ae60;");
+                        // Document generated, now export
+                        Platform.runLater(() -> {
+                            currentDocument = doc;
+                            documentPreview.setText(doc.getFormattedText());
+                            updateStatus("✅ Généré! Export en cours...", "#27ae60");
+                        });
 
-                        String base = sanitize(doc.title);
-                        String pdfPath = selectedFolder.getPath() + File.separator + base + ".pdf";
-                        String wordPath = selectedFolder.getPath() + File.separator + base + ".docx";
+                        // Build file paths
+                        String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+                        String baseName = sanitizeFilename(type) + "_" + sanitizeFilename(name) + "_" + timestamp;
+                        String pdfPath = Paths.get(selectedFolder.getPath(), baseName + ".pdf").toString();
+                        String wordPath = Paths.get(selectedFolder.getPath(), baseName + ".docx").toString();
 
-                        docService.exportToPDFAsync(doc, pdfPath)
-                                .thenAccept(f -> {
-                                    Platform.runLater(() -> {
-                                        if (f != null) {
-                                            statusLabel.setText("✅ PDF exporté avec succès !");
-                                            statusLabel.setStyle("-fx-text-fill: #27ae60;");
-                                        } else {
-                                            statusLabel.setText("❌ Erreur lors de l'exportation du PDF");
-                                            statusLabel.setStyle("-fx-text-fill: #e74c3c;");
-                                        }
-                                    });
-                                })
-                                .exceptionally(ex -> {
-                                    Platform.runLater(() -> {
-                                        statusLabel.setText("❌ Erreur lors de l'exportation du PDF: " + ex.getMessage());
-                                        statusLabel.setStyle("-fx-text-fill: #e74c3c;");
-                                    });
-                                    return null;
-                                });
+                        // Export both formats (this is synchronous within the async context)
+                        ExportResult result = docService.exportBothFormats(doc, pdfPath, wordPath);
 
-                        docService.exportToWordAsync(doc, wordPath)
-                                .thenAccept(f -> {
-                                    Platform.runLater(() -> {
-                                        if (f != null) {
-                                            statusLabel.setText("✅ Word exporté avec succès !");
-                                            statusLabel.setStyle("-fx-text-fill: #27ae60;");
-                                        } else {
-                                            statusLabel.setText("❌ Erreur lors de l'exportation du Word");
-                                            statusLabel.setStyle("-fx-text-fill: #e74c3c;");
-                                        }
-                                    });
-                                })
-                                .exceptionally(ex -> {
-                                    Platform.runLater(() -> {
-                                        statusLabel.setText("❌ Erreur lors de l'exportation du Word: " + ex.getMessage());
-                                        statusLabel.setStyle("-fx-text-fill: #e74c3c;");
-                                    });
-                                    return null;
-                                });
+                        // Update UI with results
+                        Platform.runLater(() -> {
+                            loadingIndicator.setVisible(false);
+                            disableButtons(false);
+                            handleExportResult(result);
+                        });
 
-                        exportPDFButton.setDisable(false);
-                        exportWordButton.setDisable(false);
-                        copyButton.setDisable(false);
                     } else {
-                        statusLabel.setText("❌ Échec de la génération du document");
-                        statusLabel.setStyle("-fx-text-fill: #e74c3c;");
+                        Platform.runLater(() -> {
+                            loadingIndicator.setVisible(false);
+                            disableButtons(false);
+                            updateStatus("❌ Échec de la génération", "#e74c3c");
+                        });
                     }
-                }))
+                })
                 .exceptionally(ex -> {
                     Platform.runLater(() -> {
                         loadingIndicator.setVisible(false);
-                        statusLabel.setText("❌ Erreur: " + ex.getMessage());
-                        statusLabel.setStyle("-fx-text-fill: #e74c3c;");
+                        disableButtons(false);
+                        updateStatus("❌ Erreur: " + ex.getMessage(), "#e74c3c");
+                        ex.printStackTrace();
                     });
                     return null;
                 });
     }
 
+    private void handleExportResult(ExportResult result) {
+        System.out.println("╔═══════════════════════════════════════════════════════╗");
+        System.out.println("║ 📊 HANDLING EXPORT RESULT                             ║");
+        System.out.println("║ " + result);
+        System.out.println("╚═══════════════════════════════════════════════════════╝");
+
+        if (result.isFullySuccessful()) {
+            updateStatus("✅ PDF + Word exportés!", "#27ae60");
+
+            StringBuilder content = new StringBuilder();
+            content.append("Les fichiers ont été créés dans:\n");
+            content.append(selectedFolder.getAbsolutePath()).append("\n\n");
+
+            if (result.pdfFile != null) {
+                content.append("📄 ").append(result.pdfFile.getName()).append("\n");
+            }
+            if (result.wordFile != null) {
+                content.append("📝 ").append(result.wordFile.getName()).append("\n");
+            }
+
+            showAlert(Alert.AlertType.INFORMATION, "Export Réussi",
+                    "Documents exportés avec succès!", content.toString());
+
+        } else if (result.pdfSuccess && !result.wordSuccess) {
+            updateStatus("⚠️ PDF OK, Word échoué: " + result.wordError, "#f39c12");
+            showAlert(Alert.AlertType.WARNING, "Export Partiel",
+                    "Seul le PDF a été exporté",
+                    "PDF: ✅ Créé\nWord: ❌ " + result.wordError);
+
+        } else if (!result.pdfSuccess && result.wordSuccess) {
+            updateStatus("⚠️ Word OK, PDF échoué: " + result.pdfError, "#f39c12");
+            showAlert(Alert.AlertType.WARNING, "Export Partiel",
+                    "Seul le Word a été exporté",
+                    "PDF: ❌ " + result.pdfError + "\nWord: ✅ Créé");
+
+        } else {
+            updateStatus("❌ Échec de l'export", "#e74c3c");
+            showAlert(Alert.AlertType.ERROR, "Export Échoué",
+                    "Aucun fichier n'a été créé",
+                    "PDF: " + result.pdfError + "\nWord: " + result.wordError);
+        }
+    }
+
+    private void showAlert(Alert.AlertType type, String title, String header, String content) {
+        Alert alert = new Alert(type);
+        alert.setTitle(title);
+        alert.setHeaderText(header);
+        alert.setContentText(content);
+        alert.showAndWait();
+    }
+
     private void exportPDF() {
         if (currentDocument == null) {
-            statusLabel.setText("❌ Aucun document à exporter");
-            statusLabel.setStyle("-fx-text-fill: #e74c3c;");
+            updateStatus("❌ Aucun document", "#e74c3c");
             return;
         }
 
         FileChooser fileChooser = new FileChooser();
-        fileChooser.setInitialFileName("document.pdf");
-        File file = fileChooser.showSaveDialog(getScene().getWindow());
+        fileChooser.setTitle("Exporter en PDF");
+        fileChooser.setInitialFileName(sanitizeFilename(currentDocument.title) + ".pdf");
+        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("PDF", "*.pdf"));
+        if (selectedFolder != null && selectedFolder.exists()) {
+            fileChooser.setInitialDirectory(selectedFolder);
+        }
 
+        File file = fileChooser.showSaveDialog(getScene().getWindow());
         if (file != null) {
+            updateStatus("🔄 Export PDF...", "#f39c12");
+            loadingIndicator.setVisible(true);
+
             docService.exportToPDFAsync(currentDocument, file.getAbsolutePath())
-                    .thenAccept(f -> {
-                        Platform.runLater(() -> {
-                            if (f != null) {
-                                statusLabel.setText("✅ PDF exporté avec succès !");
-                                statusLabel.setStyle("-fx-text-fill: #27ae60;");
-                            } else {
-                                statusLabel.setText("❌ Erreur lors de l'exportation du PDF");
-                                statusLabel.setStyle("-fx-text-fill: #e74c3c;");
-                            }
-                        });
-                    })
+                    .thenAccept(f -> Platform.runLater(() -> {
+                        loadingIndicator.setVisible(false);
+                        if (f != null && f.exists()) {
+                            updateStatus("✅ PDF: " + f.getName(), "#27ae60");
+                        } else {
+                            updateStatus("❌ Échec export PDF", "#e74c3c");
+                        }
+                    }))
                     .exceptionally(ex -> {
                         Platform.runLater(() -> {
-                            statusLabel.setText("❌ Erreur lors de l'exportation du PDF: " + ex.getMessage());
-                            statusLabel.setStyle("-fx-text-fill: #e74c3c;");
+                            loadingIndicator.setVisible(false);
+                            updateStatus("❌ Erreur: " + ex.getMessage(), "#e74c3c");
                         });
                         return null;
                     });
@@ -253,32 +341,36 @@ public class DocumentGeneratorPanel extends VBox {
 
     private void exportWord() {
         if (currentDocument == null) {
-            statusLabel.setText("❌ Aucun document à exporter");
-            statusLabel.setStyle("-fx-text-fill: #e74c3c;");
+            updateStatus("❌ Aucun document", "#e74c3c");
             return;
         }
 
         FileChooser fileChooser = new FileChooser();
-        fileChooser.setInitialFileName("document.docx");
-        File file = fileChooser.showSaveDialog(getScene().getWindow());
+        fileChooser.setTitle("Exporter en Word");
+        fileChooser.setInitialFileName(sanitizeFilename(currentDocument.title) + ".docx");
+        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Word", "*.docx"));
+        if (selectedFolder != null && selectedFolder.exists()) {
+            fileChooser.setInitialDirectory(selectedFolder);
+        }
 
+        File file = fileChooser.showSaveDialog(getScene().getWindow());
         if (file != null) {
+            updateStatus("🔄 Export Word...", "#f39c12");
+            loadingIndicator.setVisible(true);
+
             docService.exportToWordAsync(currentDocument, file.getAbsolutePath())
-                    .thenAccept(f -> {
-                        Platform.runLater(() -> {
-                            if (f != null) {
-                                statusLabel.setText("✅ Word exporté avec succès !");
-                                statusLabel.setStyle("-fx-text-fill: #27ae60;");
-                            } else {
-                                statusLabel.setText("❌ Erreur lors de l'exportation du Word");
-                                statusLabel.setStyle("-fx-text-fill: #e74c3c;");
-                            }
-                        });
-                    })
+                    .thenAccept(f -> Platform.runLater(() -> {
+                        loadingIndicator.setVisible(false);
+                        if (f != null && f.exists()) {
+                            updateStatus("✅ Word: " + f.getName(), "#27ae60");
+                        } else {
+                            updateStatus("❌ Échec export Word", "#e74c3c");
+                        }
+                    }))
                     .exceptionally(ex -> {
                         Platform.runLater(() -> {
-                            statusLabel.setText("❌ Erreur lors de l'exportation du Word: " + ex.getMessage());
-                            statusLabel.setStyle("-fx-text-fill: #e74c3c;");
+                            loadingIndicator.setVisible(false);
+                            updateStatus("❌ Erreur: " + ex.getMessage(), "#e74c3c");
                         });
                         return null;
                     });
@@ -286,9 +378,8 @@ public class DocumentGeneratorPanel extends VBox {
     }
 
     private void copyText() {
-        if (currentDocument == null) {
-            statusLabel.setText("❌ Aucun texte à copier");
-            statusLabel.setStyle("-fx-text-fill: #e74c3c;");
+        if (currentDocument == null || documentPreview.getText().isEmpty()) {
+            updateStatus("❌ Aucun texte", "#e74c3c");
             return;
         }
 
@@ -296,15 +387,36 @@ public class DocumentGeneratorPanel extends VBox {
             ClipboardContent content = new ClipboardContent();
             content.putString(documentPreview.getText());
             Clipboard.getSystemClipboard().setContent(content);
-            statusLabel.setText("✅ Texte copié dans le presse-papiers !");
-            statusLabel.setStyle("-fx-text-fill: #27ae60;");
+            updateStatus("✅ Texte copié!", "#27ae60");
         } catch (Exception ex) {
-            statusLabel.setText("❌ Erreur lors de la copie du texte");
-            statusLabel.setStyle("-fx-text-fill: #e74c3c;");
+            updateStatus("❌ Erreur copie", "#e74c3c");
         }
     }
 
-    private String sanitize(String s) {
-        return s == null ? "document" : s.replaceAll("[^a-zA-Z0-9]", "_");
+    private void updateStatus(String message, String color) {
+        if (statusLabel != null) {
+            statusLabel.setText(message);
+            statusLabel.setStyle("-fx-text-fill: " + color + "; -fx-font-size: 11;");
+        }
+    }
+
+    private void disableButtons(boolean disable) {
+        if (!disable && currentDocument != null) {
+            exportPDFButton.setDisable(false);
+            exportWordButton.setDisable(false);
+            copyButton.setDisable(false);
+        } else {
+            exportPDFButton.setDisable(disable);
+            exportWordButton.setDisable(disable);
+            copyButton.setDisable(disable);
+        }
+    }
+
+    private String sanitizeFilename(String name) {
+        if (name == null || name.isEmpty()) return "document";
+        return name.replaceAll("[^a-zA-Z0-9_-]", "_")
+                .replaceAll("_{2,}", "_")
+                .replaceAll("^_|_$", "")
+                .toLowerCase();
     }
 }
