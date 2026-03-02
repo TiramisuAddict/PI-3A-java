@@ -2,6 +2,7 @@ package controller.employers.employes;
 
 import entities.employers.employe;
 import entities.employers.session;
+import service.annonce.NotificationCRUD;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
@@ -29,6 +30,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.Optional;
 import java.util.ResourceBundle;
+import java.sql.SQLException;
 
 public class employes implements Initializable {
 
@@ -48,6 +50,22 @@ public class employes implements Initializable {
 
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
+        loadView("annonce/annonce-display");
+        refreshNotifBadge();
+        notifContainer.setOnMouseClicked(e -> {
+            loadView("annonce/annonce-display");
+            // Récupérer le contrôleur chargé et ouvrir le panel
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/annonce/annonce-display.fxml"));
+                Parent view = loader.load();
+                controller.evenements.AnnonceDisplayController ctrl = loader.getController();
+                contentArea.getChildren().setAll(view);
+                ctrl.toggleNotifPanel();
+                refreshNotifBadge();
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            }
+        });
         chargerInfoUtilisateur();
         chargerImageTopBar();
     }
@@ -233,7 +251,7 @@ public class employes implements Initializable {
 
     @FXML
     private void showHome(ActionEvent event) {
-        loadView("evenements");
+        loadView("annonce/annonce-display");
         updateActiveButton(btnHome);
     }
 
@@ -261,5 +279,22 @@ public class employes implements Initializable {
         btnFormation.getStyleClass().remove("nav-active");
         btnDemande.getStyleClass().remove("nav-active");
         btnProjet.getStyleClass().remove("nav-active");
+    }
+
+    private void refreshNotifBadge() {
+        try {
+            NotificationCRUD notifCRUD = new NotificationCRUD();
+            int unread = notifCRUD.countUnread(session.getEmploye().getId_employé());
+            if (unread > 0) {
+                lblNotifBadge.setText(unread > 9 ? "9+" : String.valueOf(unread));
+                lblNotifBadge.setVisible(true);
+                lblNotifBadge.setManaged(true);
+            } else {
+                lblNotifBadge.setVisible(false);
+                lblNotifBadge.setManaged(false);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 }

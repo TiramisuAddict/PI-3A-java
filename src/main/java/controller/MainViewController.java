@@ -76,7 +76,7 @@ public class MainViewController {
 
     @FXML
     private void showHome(ActionEvent event) {
-        loadView("evenements");
+        loadView("annonce/annonce-display");
         updateActiveButton(btnHome);
     }
 

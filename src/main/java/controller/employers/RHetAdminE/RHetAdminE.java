@@ -48,6 +48,7 @@ public class RHetAdminE implements Initializable {
 
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
+        loadView("annonce/annonces");
         chargerInfoUtilisateur();
         chargerImageTopBar();
     }
@@ -234,7 +235,7 @@ public class RHetAdminE implements Initializable {
 
     @FXML
     private void showHome(ActionEvent event) {
-        loadView("evenements");
+        loadView("annonce/annonces");
         updateActiveButton(btnHome);
     }
 

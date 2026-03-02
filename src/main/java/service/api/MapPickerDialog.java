@@ -445,4 +445,24 @@ public class MapPickerDialog {
                 "-fx-border-width: 1; -fx-text-fill: #333;");
         return btn;
     }
+
+    // ── Read-only mode: view a location without selection ────────
+    public void showReadOnly(double lat, double lon, String locationName) {
+        this.centerLat = lat;
+        this.centerLon = lon;
+        this.zoom = 14;
+
+        // Reuse show() with a dummy callback, but disable interaction
+        show(result -> {}); // callback ignored
+
+        // After stage opens, add marker and update label
+        javafx.application.Platform.runLater(() -> {
+            addMarker(lat, lon);
+            infoLabel.setText("📍 " + locationName);
+            confirmBtn.setVisible(false);
+            confirmBtn.setManaged(false);
+            // Update title
+            stage.setTitle("Localisation : " + locationName);
+        });
+    }
 }
