@@ -7,10 +7,10 @@ It is designed to help HR efficiently manage applications and **automate** key r
 
 ## Screenshot
 #### _Back-office (HR interface)_
-<img src="https://raw.githubusercontent.com/TiramisuAddict/PI-3A-java/refs/heads/gestion-offre/assets/Screenshot-1.png" alt="app_screenshot" width="400">
+<img src="https://raw.githubusercontent.com/TiramisuAddict/PI-3A-java/refs/heads/gestion-offre/assets/Screenshot-1.png" alt="app_screenshot" width="800">
 
 #### _Front-office (candidate interface)_
-<img src="https://raw.githubusercontent.com/TiramisuAddict/PI-3A-java/refs/heads/gestion-offre/assets/Screenshot-2.png" alt="app_sccreenshot" width="400">
+<img src="https://raw.githubusercontent.com/TiramisuAddict/PI-3A-java/refs/heads/gestion-offre/assets/Screenshot-2.png" alt="app_sccreenshot" width="800">
 
 ## Features
 ### BackOffice (HR Interface)
