@@ -1,16 +1,16 @@
-# <img src="" alt="icon" width="40" > Momentum - Gestion des recrutements
+# Momentum - Gestion des recrutements
 
 ## Overview
-<img src="" alt="app_screenshot" width="400">
-
 The Recruitment Management (Gestion Offres) module is a core component of the application that streamlines the entire hiring process, from job offer creation to candidate evaluation and interview scheduling.
 
 It is designed to help HR efficiently manage applications and **automate** key recruitment tasks.
 
 ## Screenshot
-<img src="" alt="app_screenshot" width="400">
-<br>
-<img src="" alt="app_sccreenshot" width="400">
+#### _Back-office (HR interface)_
+<img src="https://raw.githubusercontent.com/TiramisuAddict/PI-3A-java/refs/heads/gestion-offre/assets/Screenshot-1.png" alt="app_screenshot" width="400">
+
+#### _Front-office (candidate interface)_
+<img src="https://raw.githubusercontent.com/TiramisuAddict/PI-3A-java/refs/heads/gestion-offre/assets/Screenshot-2.png" alt="app_sccreenshot" width="400">
 
 ## Features
 ### BackOffice (HR Interface)
