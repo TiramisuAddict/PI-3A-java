@@ -1,4 +1,4 @@
-## <img src="https://raw.githubusercontent.com/TiramisuAddict/PI-3A-java/refs/heads/main/assets/Logo.png" width="25"> Momentum - Human Resource Management Desktop Application
+## <img src="https://raw.githubusercontent.com/TiramisuAddict/PI-3A-java/refs/heads/main/assets/Logo.png" width="25"> Momentum
 
 ![Symfony Version](https://img.shields.io/badge/Java-SDK_21-orange?logo=coffeescript&logoColor=white)
 ![Project Type](https://img.shields.io/badge/Project-Academic-blue)
