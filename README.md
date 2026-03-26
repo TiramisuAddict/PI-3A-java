@@ -8,12 +8,6 @@
 
 ## Overview
 Momentum is an AI-powered HR management desktop application featuring a modern and smooth UI to streamline recruitment and HR workflows. It is built using Java and JavaFX with an MVC architecture, separating FXML views, controllers, and business logic to ensure scalability, maintainability.
-## Screenshots
-
-<img src="https://raw.githubusercontent.com/TiramisuAddict/PI-3A-java/refs/heads/main/assets/Screenshot-4.png" width="800">
-<br>
-<img src="https://raw.githubusercontent.com/TiramisuAddict/PI-3A-java/refs/heads/main/assets/Screenshot-5.png" width="800">
-
 ## Main features & Contributions
 
 | Feature / Branch                                                                                     | Contributors                                                                                                                         |
